@@ -29,7 +29,7 @@
     <script>
         (async () => {
             const CLIENT_ID = '0ea5b2463294464f882a3b3c9798352e';
-            const REDIRECT_URI = 'http://127.0.0.1:5500/callback.html';
+            const REDIRECT_URI = 'https://maxsalmon1999-cloud.github.io/dnd/callback.html';
             const status = document.getElementById('status');
 
             const code = new URLSearchParams(window.location.search).get('code');
@@ -67,7 +67,7 @@
                     localStorage.setItem('spotify_token_expiry', String(Date.now() + data.expires_in * 1000));
                     localStorage.removeItem('spotify_code_verifier');
                     status.textContent = 'Connected! Redirecting…';
-                    window.location.href = '/';
+                    window.location.href = '/dnd/';
                 } else {
                     status.innerHTML = 'Token exchange failed.<div class="err">' + (data.error_description || JSON.stringify(data)) + '</div>';
                 }
