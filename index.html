@@ -1,0 +1,3134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Session Manager</title>
+    <style>
+        @font-face {
+            font-family: 'Chicago';
+            src: local('Chicago'), local('Geneva'), local('Monaco');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Geneva', 'Chicago', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            background: #0c0a08;
+            color: #d4c4a0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: unset;
+        }
+
+        /* ========== TOP BAR ========== */
+        .menu-bar {
+            background: #1a1815;
+            border-bottom: 2px solid #3a3530;
+            padding: 2px 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            height: 22px;
+            flex-shrink: 0;
+            font-size: 12px;
+            font-weight: bold;
+            color: #c4a44e;
+        }
+
+        .menu-bar .apple {
+            font-size: 14px;
+            color: #c4a44e;
+        }
+
+        .menu-bar span {
+            cursor: default;
+        }
+
+        .menu-bar .menu-campaign {
+            letter-spacing: 0.05em;
+        }
+
+        /* ========== WINDOW CHROME ========== */
+        .mac-window {
+            background: #1a1815;
+            border: 2px solid #3a3530;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 2px 0 #000;
+        }
+
+        .window-title {
+            background: #2a2620;
+            border-bottom: 2px solid #3a3530;
+            padding: 2px 6px;
+            display: flex;
+            align-items: center;
+            height: 22px;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .window-title .close-box {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid #5a5040;
+            background: #2a2620;
+            flex-shrink: 0;
+        }
+
+        .window-title .title-text {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: #c4a44e;
+        }
+
+        /* Title bar stripes */
+        .window-title .stripes-left,
+        .window-title .stripes-right {
+            flex: 1;
+            height: 12px;
+            background: repeating-linear-gradient(
+                transparent 0px, transparent 1px,
+                #3a3530 1px, #3a3530 2px,
+                transparent 2px, transparent 3px
+            );
+            margin: 0 6px;
+        }
+
+        /* ========== MAIN LAYOUT ========== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        /* ========== SIDEBAR (Characters window) ========== */
+        .sidebar {
+            width: 220px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar .window-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+            background: #161412;
+            border-top: none;
+        }
+
+        .character-card {
+            border: 1.5px solid #3a3530;
+            margin-bottom: 4px;
+            background: #1e1c18;
+        }
+
+        .character-header {
+            padding: 4px 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1e1c18;
+        }
+
+        .character-header:hover {
+            background: #c4a44e;
+            color: #0c0a08;
+        }
+
+        .character-header:hover .character-name,
+        .character-header:hover .character-class,
+        .character-header:hover .character-hp,
+        .character-header:hover .character-arrow {
+            color: #0c0a08;
+        }
+
+        .character-name {
+            font-weight: bold;
+            font-size: 11px;
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+            color: #e0d6c0;
+        }
+
+        .character-hp {
+            font-size: 10px;
+            font-weight: normal;
+            opacity: 0.6;
+        }
+
+        .character-class {
+            font-size: 10px;
+            color: #8a7e68;
+        }
+
+        .character-arrow {
+            font-size: 10px;
+            color: #8a7e68;
+        }
+
+        .character-card.open .character-arrow {
+            transform: rotate(90deg);
+        }
+
+        .character-details {
+            display: none;
+            padding: 4px 6px;
+            border-top: 1px solid #3a3530;
+            font-size: 10px;
+            line-height: 1.5;
+            background: #161412;
+        }
+
+        .character-card.open .character-details {
+            display: block;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted #3a3530;
+        }
+
+        .stat-label {
+            font-weight: bold;
+            color: #8a7e68;
+        }
+
+        /* ========== MUSIC BAR ========== */
+        .music-section {
+            border-top: 2px solid #3a3530;
+            margin-top: auto;
+            background: #1a1815;
+        }
+
+        .music-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .music-header:hover {
+            background: #2a2620;
+        }
+
+        .music-header-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #8a7e68;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .music-header-arrow {
+            font-size: 8px;
+            color: #8a7e68;
+            transition: transform 0.15s;
+        }
+
+        .music-section.open .music-header-arrow {
+            transform: rotate(90deg);
+        }
+
+        .music-body {
+            display: none;
+            padding: 0 6px 6px;
+        }
+
+        .music-section.open .music-body {
+            display: block;
+        }
+
+        .music-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px;
+        }
+
+        .music-btn {
+            background: #2a2620;
+            border: 1.5px solid #5a5040;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 10px;
+            padding: 4px 0;
+            cursor: pointer;
+            text-align: center;
+            transition: background 0.1s, border-color 0.1s;
+        }
+
+        .music-btn:hover {
+            background: #3a3530;
+            color: #e0d6c0;
+        }
+
+        .music-btn.active {
+            background: #3a2a10;
+            border-color: #c4a44e;
+            color: #e0d6c0;
+        }
+
+        .music-now-playing {
+            font-size: 9px;
+            color: #8a7e68;
+            text-align: center;
+            padding: 4px 0 2px;
+            font-style: italic;
+            min-height: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .spotify-connect {
+            margin-bottom: 4px;
+        }
+
+        .spotify-connect-btn {
+            width: 100%;
+            background: #1DB954 !important;
+            border-color: #1DB954 !important;
+            color: #000 !important;
+            font-weight: bold;
+            padding: 5px 0 !important;
+        }
+
+        .spotify-connect-btn:hover {
+            background: #1ed760 !important;
+        }
+
+        .spotify-connect.hidden {
+            display: none;
+        }
+
+        .music-controls {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            padding: 2px 0;
+        }
+
+        .music-ctrl {
+            background: #2a2620;
+            border: 1.5px solid #5a5040;
+            color: #c4a44e;
+            font-size: 11px;
+            width: 32px;
+            height: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: inherit;
+        }
+
+        .music-ctrl:hover {
+            background: #3a3530;
+            color: #e0d6c0;
+        }
+
+        .music-ctrl-play {
+            width: 40px;
+        }
+
+        .music-volume {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 0 0;
+        }
+
+        .music-vol-label {
+            font-size: 9px;
+            color: #5a5040;
+            flex-shrink: 0;
+        }
+
+        .music-vol-slider {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #3a3530;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .music-vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            background: #c4a44e;
+            border: none;
+            cursor: pointer;
+        }
+
+        .music-vol-slider::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            background: #c4a44e;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* ========== TIMER ========== */
+        .timer-section {
+            margin-top: auto;
+            border-top: 2px solid #3a3530;
+            padding: 6px;
+            text-align: center;
+            background: #1a1815;
+        }
+
+        .timer-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #8a7e68;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+        }
+
+        .timer-display {
+            font-size: 28px;
+            font-weight: bold;
+            color: #c4a44e;
+            font-family: 'Monaco', 'Courier New', monospace;
+            letter-spacing: 2px;
+            padding: 4px 0;
+            border: 1.5px solid #3a3530;
+            background: #0c0a08;
+            margin-bottom: 6px;
+        }
+
+        .timer-display.warning {
+            color: #e07040;
+            animation: timer-pulse 0.5s ease-in-out infinite alternate;
+        }
+
+        .timer-display.done {
+            color: #e04040;
+            animation: timer-flash 0.4s ease-in-out infinite alternate;
+        }
+
+        @keyframes timer-pulse {
+            from { opacity: 1; }
+            to { opacity: 0.6; }
+        }
+
+        @keyframes timer-flash {
+            from { opacity: 1; background: #0c0a08; }
+            to { opacity: 1; background: #3a1510; }
+        }
+
+        .timer-presets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px;
+            margin-bottom: 4px;
+        }
+
+        .timer-preset {
+            background: #2a2620;
+            border: 1.5px solid #5a5040;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 10px;
+            padding: 3px 0;
+            cursor: pointer;
+        }
+
+        .timer-preset:hover {
+            background: #3a3530;
+            color: #e0d6c0;
+        }
+
+        .timer-custom {
+            display: flex;
+            gap: 3px;
+            margin-bottom: 4px;
+        }
+
+        .timer-input {
+            flex: 1;
+            background: #0c0a08;
+            border: 1.5px solid #5a5040;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 10px;
+            padding: 3px 4px;
+            text-align: center;
+            outline: none;
+        }
+
+        .timer-input:focus {
+            border-color: #c4a44e;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 3px;
+        }
+
+        .timer-ctrl-btn {
+            flex: 1;
+            background: #2a2620;
+            border: 1.5px solid #5a5040;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 4px 0;
+            cursor: pointer;
+        }
+
+        .timer-ctrl-btn:hover {
+            background: #3a3530;
+            color: #e0d6c0;
+        }
+
+        .timer-ctrl-btn.running {
+            background: #3a2010;
+            border-color: #e07040;
+            color: #e07040;
+        }
+
+        /* ========== STORYBOARD (main window) ========== */
+        .storyboard {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .story-display {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            background: #121010;
+        }
+
+        .story-display::-webkit-scrollbar {
+            width: 14px;
+        }
+        .story-display::-webkit-scrollbar-track {
+            background: #161412;
+            border-left: 1.5px solid #3a3530;
+        }
+        .story-display::-webkit-scrollbar-thumb {
+            background: #3a3530;
+            border: 1.5px solid #4a4540;
+        }
+        .story-display::-webkit-scrollbar-thumb:hover {
+            background: #4a4540;
+        }
+
+        .story-entry {
+            margin-bottom: 10px;
+            line-height: 1.5;
+            font-size: 12px;
+        }
+
+        .story-entry.user .label {
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            text-decoration: underline;
+            color: #e0d6c0;
+            text-decoration-color: #5a5040;
+        }
+
+        .story-entry.assistant .label {
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 2px;
+            font-style: italic;
+            color: #c4a44e;
+        }
+
+        .story-entry .text {
+            padding-left: 6px;
+            border-left: 2px solid #3a3530;
+        }
+
+        /* ========== UNDO / REDO ========== */
+        .story-exchange {
+            position: relative;
+        }
+
+        .story-exchange .undo-btn {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            background: #2a2620;
+            border: 1.5px solid #5a5040;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 10px;
+            padding: 1px 6px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 2;
+        }
+
+        .story-exchange:hover .undo-btn {
+            opacity: 1;
+        }
+
+        .story-exchange .undo-btn:hover {
+            background: #3a3530;
+            color: #e0d6c0;
+        }
+
+        .undo-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 10px;
+            color: #5a5040;
+            border-top: 1px dashed #3a3530;
+            margin-top: 4px;
+        }
+
+        .undo-bar button {
+            background: #2a2620;
+            border: 1.5px solid #5a5040;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 10px;
+            padding: 1px 8px;
+            cursor: pointer;
+        }
+
+        .undo-bar button:hover {
+            background: #3a3530;
+            color: #e0d6c0;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 30px 16px;
+            color: #5a5040;
+        }
+
+        .welcome-message h2 {
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #c4a44e;
+        }
+
+        /* ========== PROMPT TABS ========== */
+        .prompt-tabs {
+            display: flex;
+            border-top: 2px solid #3a3530;
+            background: #201e1a;
+            flex-shrink: 0;
+        }
+
+        .prompt-tab {
+            padding: 3px 10px;
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            background: #201e1a;
+            border: none;
+            border-right: 1px solid #3a3530;
+            color: #8a7e68;
+        }
+
+        .prompt-tab:hover {
+            background: #2a2620;
+            color: #d4c4a0;
+        }
+
+        .prompt-tab.active {
+            background: #121010;
+            color: #c4a44e;
+            position: relative;
+        }
+
+        /* ========== PROMPT AREA ========== */
+        .prompt-area {
+            padding: 4px;
+            display: flex;
+            gap: 4px;
+            background: #121010;
+        }
+
+        .prompt-area textarea {
+            flex: 1;
+            background: #161412;
+            border: 1.5px solid #3a3530;
+            color: #d4c4a0;
+            padding: 4px 6px;
+            font-family: inherit;
+            font-size: 12px;
+            resize: none;
+            height: 32px;
+            outline: none;
+            -webkit-font-smoothing: none;
+        }
+
+        .prompt-area textarea::placeholder {
+            color: #5a5040;
+        }
+
+        /* ========== RIGHT SIDEBAR (Notes window) ========== */
+        .right-sidebar {
+            width: 200px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .right-sidebar .window-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            background: #161412;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Meta comments dropdown */
+        .meta-section {
+            border-bottom: 1.5px solid #3a3530;
+        }
+
+        .meta-header {
+            padding: 4px 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2a2620;
+            font-size: 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #3a3530;
+            color: #c4a44e;
+        }
+
+        .meta-header:hover {
+            background: #3a3530;
+        }
+
+        .meta-list {
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+            background: #161412;
+        }
+
+        .meta-section.open .meta-list {
+            display: block;
+        }
+
+        .meta-section.open .character-arrow,
+        .notes-section.open .character-arrow {
+            transform: rotate(90deg);
+        }
+
+        .meta-item {
+            padding: 3px 6px;
+            font-size: 10px;
+            border-bottom: 1px dotted #3a3530;
+            line-height: 1.4;
+        }
+
+        .meta-empty {
+            padding: 6px;
+            font-size: 10px;
+            color: #5a5040;
+            font-style: italic;
+            text-align: center;
+        }
+
+        /* Story notes scratchpad */
+        .notes-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .notes-header {
+            padding: 4px 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2a2620;
+            font-size: 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #3a3530;
+            color: #c4a44e;
+            flex-shrink: 0;
+        }
+
+        .notes-header:hover {
+            background: #3a3530;
+        }
+
+        .notes-pad {
+            display: none;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .notes-section.open .notes-pad {
+            display: flex;
+        }
+
+        .notes-pad textarea {
+            flex: 1;
+            width: 100%;
+            background: #161412;
+            border: none;
+            color: #d4c4a0;
+            padding: 4px 6px;
+            font-family: inherit;
+            font-size: 11px;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+            -webkit-font-smoothing: none;
+            /* Lined paper effect */
+            background-image: repeating-linear-gradient(
+                transparent 0px, transparent 17px,
+                #2a2620 17px, #2a2620 18px
+            );
+            background-position: 0 4px;
+        }
+
+        .notes-pad textarea::placeholder {
+            color: #5a5040;
+        }
+
+        /* Mode badge on story entries */
+        .story-entry .mode-badge {
+            display: inline-block;
+            font-size: 9px;
+            font-weight: bold;
+            border: 1px solid #5a5040;
+            padding: 0 4px;
+            margin-left: 4px;
+            vertical-align: middle;
+            color: #8a7e68;
+        }
+
+        .story-entry .mode-badge.mode-action {
+            background: #c4a44e;
+            color: #0c0a08;
+            border-color: #c4a44e;
+        }
+
+        .mac-btn {
+            background: #2a2620;
+            border: 2px solid #5a5040;
+            border-radius: 6px;
+            padding: 4px 14px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 1px 1px 0 #000;
+            color: #c4a44e;
+        }
+
+        .mac-btn:active {
+            background: #c4a44e;
+            color: #0c0a08;
+        }
+
+        .mac-btn:disabled {
+            color: #3a3530;
+            border-color: #3a3530;
+            box-shadow: none;
+            cursor: default;
+        }
+
+        /* ========== DICE TABLE ========== */
+        .dice-table {
+            height: 25vh;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            margin: 0 4px 4px 4px;
+        }
+
+        .dice-table-top {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background: #161412;
+            border-left: 2px solid #3a3530;
+            border-right: 2px solid #3a3530;
+        }
+
+        .table-surface {
+            flex: 1;
+            display: flex;
+            overflow-x: auto;
+            padding: 4px;
+            gap: 4px;
+            min-height: 0;
+            background-image:
+                repeating-conic-gradient(#161412 0% 25%, #1a1815 0% 50%) 0 0 / 4px 4px;
+        }
+
+        .table-empty-msg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            color: #5a5040;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .table-portion {
+            background: #1e1c18;
+            border: 1.5px solid #3a3530;
+            min-width: 130px;
+            max-width: 190px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-portion.drag-over {
+            background: #c4a44e;
+            color: #0c0a08;
+        }
+
+        .table-portion.drag-over .portion-header {
+            background: #c4a44e;
+            color: #0c0a08;
+            border-bottom-color: #0c0a08;
+        }
+
+        .portion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 6px;
+            border-bottom: 1.5px solid #3a3530;
+            font-size: 11px;
+            font-weight: bold;
+            background: #2a2620;
+            color: #c4a44e;
+        }
+
+        .portion-header .portion-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .portion-delete {
+            background: none;
+            border: 1px solid #5a5040;
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            font-size: 11px;
+            line-height: 12px;
+            text-align: center;
+            padding: 0;
+            color: #8a7e68;
+        }
+
+        .portion-delete:hover {
+            background: #c4a44e;
+            color: #0c0a08;
+            border-color: #c4a44e;
+        }
+
+        .portion-dice {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            padding: 4px;
+            align-content: flex-start;
+            overflow-y: auto;
+        }
+
+        /* ========== DICE CHIPS ========== */
+        .dice-chip {
+            background: #1e1c18;
+            border: 1.5px solid #4a4540;
+            padding: 2px 5px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: grab;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #d4c4a0;
+        }
+
+        .dice-chip.rolled {
+            background: #c4a44e;
+            color: #0c0a08;
+            border-color: #c4a44e;
+        }
+
+        .dice-chip .chip-pixel-die {
+            image-rendering: pixelated;
+            flex-shrink: 0;
+        }
+
+        .dice-chip .chip-result {
+            font-size: 11px;
+        }
+
+        .dice-chip .chip-remove {
+            cursor: pointer;
+            font-size: 9px;
+            margin-left: 1px;
+            opacity: 0.6;
+        }
+
+        .dice-chip .chip-remove:hover {
+            opacity: 1;
+        }
+
+        .dice-chip.dragging {
+            opacity: 0.4;
+        }
+
+        /* ========== RIGHT ADD PANEL ========== */
+        .table-add-panel {
+            width: 130px;
+            flex-shrink: 0;
+            border-left: 1.5px solid #3a3530;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            overflow-y: auto;
+            background: #1a1815;
+        }
+
+        .table-add-panel h3 {
+            font-size: 10px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #3a3530;
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+            color: #c4a44e;
+        }
+
+        .add-char-btn {
+            background: #1e1c18;
+            border: 1.5px solid #4a4540;
+            color: #d4c4a0;
+            padding: 3px 6px;
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .add-char-btn:hover {
+            background: #c4a44e;
+            color: #0c0a08;
+            border-color: #c4a44e;
+        }
+
+        .add-char-btn.add-npc {
+            border-style: dashed;
+            border-color: #5a5040;
+        }
+
+        /* ========== NPC PICKER MODAL ========== */
+        #npcPickerBackdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 999;
+            display: none;
+        }
+
+        #npcPickerBackdrop.open {
+            display: block;
+        }
+
+        #npcPicker {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            flex-direction: column;
+            width: 360px;
+            background: #1a1815;
+            border: 1.5px solid #4a4540;
+            z-index: 1000;
+            box-shadow: 3px 3px 0 #000;
+        }
+
+        #npcPicker.open {
+            display: flex;
+        }
+
+        .npc-picker-titlebar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 6px;
+            background: #2a2620;
+            border-bottom: 1.5px solid #3a3530;
+            flex-shrink: 0;
+        }
+
+        .npc-picker-titlebar span {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #c4a44e;
+        }
+
+        .npc-picker-close {
+            background: none;
+            border: 1px solid #5a5040;
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            font-size: 10px;
+            line-height: 12px;
+            text-align: center;
+            padding: 0;
+            font-family: inherit;
+            color: #8a7e68;
+        }
+
+        .npc-picker-close:hover {
+            background: #c4a44e;
+            color: #0c0a08;
+        }
+
+        .npc-picker-columns {
+            display: flex;
+            min-height: 0;
+        }
+
+        .npc-picker-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            border-right: 1.5px solid #3a3530;
+        }
+
+        .npc-picker-col:last-child {
+            border-right: none;
+        }
+
+        .npc-picker-col-header {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            background: #201e1a;
+            border-bottom: 1px solid #3a3530;
+            flex-shrink: 0;
+            color: #8a7e68;
+        }
+
+        .npc-picker-col-list {
+            overflow-y: auto;
+            max-height: 240px;
+        }
+
+        .npc-picker-section {
+            font-size: 9px;
+            text-transform: uppercase;
+            padding: 2px 8px 1px;
+            color: #5a5040;
+            background: #1e1c18;
+            border-bottom: 1px solid #2a2620;
+        }
+
+        .npc-picker-name {
+            display: block;
+            width: 100%;
+            background: none;
+            border: none;
+            border-bottom: 1px solid #2a2620;
+            padding: 4px 10px;
+            font-family: inherit;
+            font-size: 10px;
+            text-align: left;
+            cursor: pointer;
+            color: #d4c4a0;
+        }
+
+        .npc-picker-name:hover {
+            background: #c4a44e;
+            color: #0c0a08;
+        }
+
+        .npc-picker-custom {
+            display: flex;
+            border-top: 1.5px solid #3a3530;
+            flex-shrink: 0;
+        }
+
+        .npc-picker-custom input {
+            flex: 1;
+            border: none;
+            padding: 4px 6px;
+            font-family: inherit;
+            font-size: 10px;
+            outline: none;
+            background: #161412;
+            color: #d4c4a0;
+            min-width: 0;
+        }
+
+        .npc-picker-custom input::placeholder {
+            color: #5a5040;
+        }
+
+        .npc-picker-custom button {
+            background: #2a2620;
+            border: none;
+            border-left: 1px solid #3a3530;
+            padding: 4px 8px;
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            color: #c4a44e;
+        }
+
+        .npc-picker-custom button:hover {
+            background: #c4a44e;
+            color: #0c0a08;
+        }
+
+        /* ========== SESSION END MODAL ========== */
+        #sessionEndBackdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 1001;
+            display: none;
+        }
+
+        #sessionEndBackdrop.open { display: block; }
+
+        #sessionEndModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            flex-direction: column;
+            width: 520px;
+            max-width: 92vw;
+            max-height: 85vh;
+            background: #1a1815;
+            border: 1.5px solid #4a4540;
+            z-index: 1002;
+            box-shadow: 3px 3px 0 #000;
+        }
+
+        #sessionEndModal.open { display: flex; }
+
+        .session-modal-titlebar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 6px;
+            background: #2a2620;
+            border-bottom: 1.5px solid #3a3530;
+            flex-shrink: 0;
+        }
+
+        .session-modal-titlebar span {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #c4a44e;
+        }
+
+        .session-modal-close {
+            background: none;
+            border: 1px solid #5a5040;
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            font-size: 10px;
+            line-height: 12px;
+            text-align: center;
+            padding: 0;
+            font-family: inherit;
+            color: #8a7e68;
+        }
+
+        .session-modal-close:hover { background: #c4a44e; color: #0c0a08; }
+
+        .session-modal-body {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            padding: 6px;
+            gap: 6px;
+            overflow-y: auto;
+        }
+
+        .session-modal-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: bold;
+            color: #8a7e68;
+            margin-bottom: 2px;
+        }
+
+        #sessionSummaryText {
+            flex: 2;
+            min-height: 200px;
+            width: 100%;
+            border: 1px solid #3a3530;
+            background: #161412;
+            font-family: inherit;
+            font-size: 10px;
+            padding: 5px;
+            resize: vertical;
+            outline: none;
+            line-height: 1.6;
+            box-sizing: border-box;
+            color: #d4c4a0;
+        }
+
+        #sessionAdditions {
+            flex: 1;
+            min-height: 80px;
+            width: 100%;
+            border: 1px solid #3a3530;
+            background: #1e1c18;
+            font-family: inherit;
+            font-size: 10px;
+            padding: 5px;
+            resize: vertical;
+            outline: none;
+            line-height: 1.6;
+            box-sizing: border-box;
+            color: #d4c4a0;
+        }
+
+        .session-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            padding: 5px 6px;
+            border-top: 1.5px solid #3a3530;
+            flex-shrink: 0;
+        }
+
+        .session-modal-footer button {
+            background: #2a2620;
+            border: 1.5px solid #4a4540;
+            padding: 3px 10px;
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            color: #d4c4a0;
+        }
+
+        .session-modal-footer button:hover { background: #c4a44e; color: #0c0a08; }
+
+        .session-modal-footer .btn-save {
+            background: #c4a44e;
+            color: #0c0a08;
+            border-color: #c4a44e;
+        }
+
+        .session-modal-footer .btn-save:hover { background: #d4b45e; }
+
+        .menu-end-session {
+            margin-left: auto;
+            background: none;
+            border: 1px solid #5a5040;
+            padding: 1px 8px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #c4a44e;
+        }
+
+        .menu-end-session:hover { background: #c4a44e; color: #0c0a08; }
+
+        /* ========== DICE STRIP ========== */
+        .dice-strip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 6px;
+            border: 2px solid #3a3530;
+            border-top: none;
+            background: #1a1815;
+            flex-shrink: 0;
+        }
+
+        .dice-strip-label {
+            font-size: 10px;
+            font-weight: bold;
+            margin-right: 2px;
+            color: #8a7e68;
+        }
+
+        .die-sym {
+            width: 36px;
+            height: 36px;
+            border: 1.5px solid #4a4540;
+            background: #1e1c18;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            position: relative;
+        }
+
+        .die-sym canvas {
+            image-rendering: pixelated;
+        }
+
+        .die-sym .die-label {
+            position: absolute;
+            bottom: 1px;
+            right: 2px;
+            font-size: 7px;
+            font-weight: bold;
+            color: #8a7e68;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .die-sym:hover .die-label {
+            color: #c4a44e;
+        }
+
+        .die-sym:hover {
+            background: #2a2620;
+            border-color: #c4a44e;
+        }
+
+        .die-sym.dragging {
+            opacity: 0.4;
+        }
+
+        .dice-chip .chip-sides {
+            font-size: 8px;
+            color: #8a7e68;
+            margin-left: -2px;
+        }
+
+        .dice-chip.rolled .chip-sides {
+            color: #0c0a08;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Classic Mac Menu Bar -->
+    <div class="menu-bar">
+        <span class="apple">&#63743;</span>
+        <span class="menu-campaign">The Delian Tomb</span>
+        <button class="menu-end-session" onclick="endSession()">End Session</button>
+    </div>
+
+    <div class="main-area">
+        <!-- Character sidebar window -->
+        <div class="sidebar mac-window">
+            <div class="window-title">
+                <div class="close-box"></div>
+                <div class="stripes-left"></div>
+                <span class="title-text">Characters</span>
+                <div class="stripes-right"></div>
+            </div>
+            <div class="window-content">
+                <div class="character-card">
+                    <div class="character-header" onclick="toggleCharacter(this)">
+                        <div>
+                            <div class="character-name">Akwan Akusian <span class="character-hp">21 / 21 HP</span></div>
+                            <div class="character-class">Bard — Lvl 4</div>
+                        </div>
+                        <span class="character-arrow">&#9654;</span>
+                    </div>
+                    <div class="character-details">
+                        <div class="stat-row"><span class="stat-label">HP</span><span>21 / 21</span></div>
+                        <div class="stat-row"><span class="stat-label">AC</span><span>15</span></div>
+                        <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
+                        <div class="stat-row"><span class="stat-label">DEX</span><span>+3</span></div>
+                        <div class="stat-row"><span class="stat-label">CON</span><span>+1</span></div>
+                        <div class="stat-row"><span class="stat-label">INT</span><span>+1</span></div>
+                        <div class="stat-row"><span class="stat-label">WIS</span><span>+0</span></div>
+                        <div class="stat-row"><span class="stat-label">CHA</span><span>+3</span></div>
+                    </div>
+                </div>
+
+                <div class="character-card">
+                    <div class="character-header" onclick="toggleCharacter(this)">
+                        <div>
+                            <div class="character-name">Fiel Amimso <span class="character-hp">24 / 24 HP</span></div>
+                            <div class="character-class">Halfling Rogue — Lvl 4</div>
+                        </div>
+                        <span class="character-arrow">&#9654;</span>
+                    </div>
+                    <div class="character-details">
+                        <div class="stat-row"><span class="stat-label">HP</span><span>24 / 24</span></div>
+                        <div class="stat-row"><span class="stat-label">AC</span><span>13</span></div>
+                        <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
+                        <div class="stat-row"><span class="stat-label">DEX</span><span>+3</span></div>
+                        <div class="stat-row"><span class="stat-label">CON</span><span>+2</span></div>
+                        <div class="stat-row"><span class="stat-label">INT</span><span>+0</span></div>
+                        <div class="stat-row"><span class="stat-label">WIS</span><span>+2</span></div>
+                        <div class="stat-row"><span class="stat-label">CHA</span><span>-1</span></div>
+                    </div>
+                </div>
+
+                <div class="character-card">
+                    <div class="character-header" onclick="toggleCharacter(this)">
+                        <div>
+                            <div class="character-name">Flicker <span class="character-hp">24 / 24 HP</span></div>
+                            <div class="character-class">Changeling Warlock — Lvl 4</div>
+                        </div>
+                        <span class="character-arrow">&#9654;</span>
+                    </div>
+                    <div class="character-details">
+                        <div class="stat-row"><span class="stat-label">HP</span><span>24 / 24</span></div>
+                        <div class="stat-row"><span class="stat-label">AC</span><span>15</span></div>
+                        <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
+                        <div class="stat-row"><span class="stat-label">DEX</span><span>+2</span></div>
+                        <div class="stat-row"><span class="stat-label">CON</span><span>+2</span></div>
+                        <div class="stat-row"><span class="stat-label">INT</span><span>+0</span></div>
+                        <div class="stat-row"><span class="stat-label">WIS</span><span>+0</span></div>
+                        <div class="stat-row"><span class="stat-label">CHA</span><span>+3</span></div>
+                    </div>
+                </div>
+
+                <!-- Music -->
+                <div class="music-section" id="musicSection">
+                    <div class="music-header" onclick="document.getElementById('musicSection').classList.toggle('open')">
+                        <span class="music-header-label">♫ Music</span>
+                        <span class="music-header-arrow">▶</span>
+                    </div>
+                    <div class="music-body">
+                        <div id="spotifyConnect" class="spotify-connect">
+                            <button class="music-btn spotify-connect-btn" onclick="spotifyAuth()">Connect Spotify</button>
+                        </div>
+                        <div class="music-grid" id="moodGrid">
+                            <button class="music-btn" data-mood="tavern" onclick="playMood(this)">Tavern</button>
+                            <button class="music-btn" data-mood="battle" onclick="playMood(this)">Battle</button>
+                            <button class="music-btn" data-mood="suspense" onclick="playMood(this)">Suspense</button>
+                            <button class="music-btn" data-mood="forest" onclick="playMood(this)">Forest</button>
+                            <button class="music-btn" data-mood="feast" onclick="playMood(this)">Feast</button>
+                            <button class="music-btn" data-mood="walking" onclick="playMood(this)">Walking</button>
+                        </div>
+                        <div class="music-now-playing" id="musicNowPlaying"></div>
+                        <div class="music-controls" id="spotifyControls" style="display:none">
+                            <button class="music-ctrl" onclick="spotifyPrev()" title="Previous">⏮</button>
+                            <button class="music-ctrl music-ctrl-play" onclick="spotifyToggle()" id="spotifyPlayBtn" title="Play/Pause">▶</button>
+                            <button class="music-ctrl" onclick="spotifyNext()" title="Next">⏭</button>
+                        </div>
+                        <div class="music-volume" id="spotifyVolumeWrap" style="display:none">
+                            <span class="music-vol-label">Vol</span>
+                            <input type="range" id="spotifyVolume" class="music-vol-slider" min="0" max="100" value="50" oninput="spotifySetVolume(this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timer -->
+                <div class="timer-section">
+                    <div class="timer-label">⏱ Timer</div>
+                    <div class="timer-display" id="timerDisplay">0:00</div>
+                    <div class="timer-presets">
+                        <button class="timer-preset" onclick="setTimer(30)">0:30</button>
+                        <button class="timer-preset" onclick="setTimer(60)">1:00</button>
+                        <button class="timer-preset" onclick="setTimer(120)">2:00</button>
+                        <button class="timer-preset" onclick="setTimer(300)">5:00</button>
+                    </div>
+                    <div class="timer-custom">
+                        <input type="text" id="timerCustom" class="timer-input" placeholder="m:ss" maxlength="5">
+                        <button class="timer-preset" onclick="setCustomTimer()">Set</button>
+                    </div>
+                    <div class="timer-controls">
+                        <button class="timer-ctrl-btn" id="timerStartBtn" onclick="toggleTimer()">Start</button>
+                        <button class="timer-ctrl-btn" onclick="resetTimer()">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storyboard window -->
+        <div class="storyboard mac-window">
+            <div class="window-title">
+                <div class="close-box"></div>
+                <div class="stripes-left"></div>
+                <span class="title-text">Scrapbook - Session Log</span>
+                <div class="stripes-right"></div>
+            </div>
+            <div class="story-display" id="storyDisplay">
+                <div class="welcome-message">
+                    <h2>Welcome, Dungeon Master</h2>
+                    <p>Type a prompt below to begin your session.</p>
+                </div>
+            </div>
+            <div class="prompt-tabs">
+                <button class="prompt-tab active" data-mode="description" onclick="setMode(this)">Description</button>
+                <button class="prompt-tab" data-mode="action" onclick="setMode(this)">Action</button>
+                <button class="prompt-tab" data-mode="both" onclick="setMode(this)">Both</button>
+                <button class="prompt-tab" data-mode="meta" onclick="setMode(this)">Meta</button>
+            </div>
+            <div class="prompt-area">
+                <textarea id="promptInput" placeholder="Describe what happens next..." onkeydown="handleKey(event)"></textarea>
+                <button class="mac-btn" onclick="sendPrompt()">Send</button>
+            </div>
+        </div>
+
+        <!-- Right sidebar: Meta & Notes -->
+        <div class="right-sidebar mac-window">
+            <div class="window-title">
+                <div class="close-box"></div>
+                <div class="stripes-left"></div>
+                <span class="title-text">Notes</span>
+                <div class="stripes-right"></div>
+            </div>
+            <div class="window-content">
+                <div class="meta-section open" id="metaSection">
+                    <div class="meta-header" onclick="this.parentElement.classList.toggle('open')">
+                        <span>Meta Comments</span>
+                        <span class="character-arrow">&#9654;</span>
+                    </div>
+                    <div class="meta-list" id="metaList">
+                        <div class="meta-empty" id="metaEmpty">No meta comments yet</div>
+                    </div>
+                </div>
+                <div class="notes-section open" id="notesSection">
+                    <div class="notes-header" onclick="this.parentElement.classList.toggle('open')">
+                        <span>Story Notes</span>
+                        <span class="character-arrow">&#9654;</span>
+                    </div>
+                    <div class="notes-pad">
+                        <textarea id="storyNotes" placeholder="Freeform notes..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dice Table window -->
+    <div class="dice-table mac-window" style="margin: 0 4px 4px 4px;">
+        <div class="window-title">
+            <div class="close-box"></div>
+            <div class="stripes-left"></div>
+            <span class="title-text">Dice Table</span>
+            <div class="stripes-right"></div>
+        </div>
+        <div class="dice-table-top">
+            <div class="table-surface" id="tableSurface">
+                <div class="table-empty-msg" id="tableEmptyMsg">Add characters or NPCs to start an encounter</div>
+            </div>
+            <div class="table-add-panel">
+                <h3>Add to Table</h3>
+                <div id="charButtons"></div>
+                <button class="add-char-btn add-npc" onclick="toggleNpcPicker()">+ NPC / Enemy</button>
+            </div>
+        </div>
+        <div class="dice-strip">
+            <span class="dice-strip-label">Dice:</span>
+            <div class="die-sym" draggable="true" data-sides="4"></div>
+            <div class="die-sym" draggable="true" data-sides="6"></div>
+            <div class="die-sym" draggable="true" data-sides="8"></div>
+            <div class="die-sym" draggable="true" data-sides="10"></div>
+            <div class="die-sym" draggable="true" data-sides="12"></div>
+            <div class="die-sym" draggable="true" data-sides="20"></div>
+            <div class="die-sym" draggable="true" data-sides="100"></div>
+            <button class="mac-btn" id="rollAllBtn" onclick="rollAll()" disabled style="margin-left:auto;">Roll All</button>
+        </div>
+    </div>
+
+    <script>
+        const storyDisplay = document.getElementById('storyDisplay');
+        const promptInput = document.getElementById('promptInput');
+        const tableSurface = document.getElementById('tableSurface');
+        const tableEmptyMsg = document.getElementById('tableEmptyMsg');
+        const charButtonsEl = document.getElementById('charButtons');
+
+        // =========================================================
+        // API CONFIG
+        // =========================================================
+        const API_KEY = ''; // Paste your Anthropic API key here
+        const API_MODEL = 'claude-opus-4-6';
+        let conversationHistory = [];
+        let dmPrompts = null;
+
+        async function loadPrompts() {
+            if (dmPrompts) return dmPrompts;
+            const res = await fetch('prompts/dm_prompts.md');
+            if (!res.ok) throw new Error('Could not load prompts/dm_prompts.md');
+            const text = await res.text();
+            const sections = {};
+            for (const part of text.split(/^## /m)) {
+                const nl = part.indexOf('\n');
+                if (nl === -1) continue;
+                sections[part.slice(0, nl).trim().toLowerCase()] = part.slice(nl + 1).trim();
+            }
+            dmPrompts = sections;
+            return dmPrompts;
+        }
+
+        // =========================================================
+        // PIXEL ART DICE RENDERER  (dark fantasy palette)
+        // =========================================================
+        const PX = 2;
+
+        const C = {
+            outline:    '#8a7e68',
+            outlineDim: '#5a5040',
+            face:       '#1e1c18',
+            faceLight:  '#2a2620',
+            dot:        '#c4a44e',
+            dotDim:     '#6a5e48',
+            text:       '#c4a44e',
+            textDim:    '#6a5e48',
+        };
+
+        // Rolled palette (amber/gold on dark)
+        const CI = {
+            outline:    '#0c0a08',
+            outlineDim: '#6a5030',
+            face:       '#c4a44e',
+            faceLight:  '#b89840',
+            dot:        '#0c0a08',
+            dotDim:     '#5a4020',
+            text:       '#0c0a08',
+            textDim:    '#5a4020',
+        };
+
+        function px(ctx, x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * PX, y * PX, PX, PX);
+        }
+
+        function drawD4(ctx, frame, rolled, value, inv) {
+            const p = inv ? CI : C;
+            const f = frame % 4;
+            const oc = rolled ? p.outline : p.outlineDim;
+            const fc = p.face;
+            const tc = rolled ? p.text : p.textDim;
+            ctx.clearRect(0, 0, 32, 32);
+            const offY = [0, -1, 0, 1][f];
+            for (let row = 0; row < 10; row++) {
+                const half = Math.floor(row * 0.7);
+                for (let col = 7 - half; col <= 8 + half; col++)
+                    px(ctx, col, 4 + row + offY, fc);
+            }
+            for (let row = 0; row < 10; row++) {
+                const half = Math.floor(row * 0.7);
+                px(ctx, 7 - half, 4 + row + offY, oc);
+                px(ctx, 8 + half, 4 + row + offY, oc);
+            }
+            for (let col = 1; col <= 14; col++) px(ctx, col, 13 + offY, oc);
+            if (rolled && value != null) drawPixelNum(ctx, value, 7, 8 + offY, tc);
+        }
+
+        function drawD6(ctx, frame, rolled, value, inv) {
+            const p = inv ? CI : C;
+            const f = frame % 4;
+            const oc = rolled ? p.outline : p.outlineDim;
+            const fc = p.face;
+            const dc = rolled ? p.dot : p.dotDim;
+            ctx.clearRect(0, 0, 32, 32);
+            const offX = [0, 1, 0, -1][f];
+            for (let y = 3; y <= 13; y++)
+                for (let x = 3; x <= 13; x++)
+                    px(ctx, x + offX, y, fc);
+            for (let i = 3; i <= 13; i++) {
+                px(ctx, i + offX, 3, oc); px(ctx, i + offX, 13, oc);
+                px(ctx, 3 + offX, i, oc); px(ctx, 13 + offX, i, oc);
+            }
+            if (rolled && value != null) {
+                drawPixelNum(ctx, value, 7 + offX, 7, dc);
+            } else {
+                const dots = [[5,5],[8,8],[11,11],[5,11],[11,5],[8,5]][f % 3];
+                px(ctx, dots[0] + offX, dots[1], dc);
+            }
+        }
+
+        function drawD8(ctx, frame, rolled, value, inv) {
+            const p = inv ? CI : C;
+            const f = frame % 4;
+            const oc = rolled ? p.outline : p.outlineDim;
+            const fc = p.face;
+            const tc = rolled ? p.text : p.textDim;
+            ctx.clearRect(0, 0, 32, 32);
+            const rot = [0, 1, 0, -1][f];
+            for (let row = 0; row < 12; row++) {
+                const half = row < 6 ? row : 11 - row;
+                for (let col = 7 - half; col <= 8 + half; col++)
+                    px(ctx, col + rot, 2 + row, fc);
+                px(ctx, 7 - half + rot, 2 + row, oc);
+                px(ctx, 8 + half + rot, 2 + row, oc);
+            }
+            if (rolled && value != null) drawPixelNum(ctx, value, 7 + rot, 7, tc);
+        }
+
+        function drawD10(ctx, frame, rolled, value, inv) {
+            const p = inv ? CI : C;
+            const f = frame % 4;
+            const oc = rolled ? p.outline : p.outlineDim;
+            const fc = p.face;
+            const tc = rolled ? p.text : p.textDim;
+            ctx.clearRect(0, 0, 32, 32);
+            const offY = [0, -1, 0, 1][f];
+            for (let row = 0; row < 13; row++) {
+                const half = row < 5 ? row : Math.max(0, Math.floor((12 - row) * 1.2));
+                for (let col = 7 - half; col <= 8 + half; col++)
+                    px(ctx, col, 2 + row + offY, fc);
+                px(ctx, 7 - half, 2 + row + offY, oc);
+                px(ctx, 8 + half, 2 + row + offY, oc);
+            }
+            if (rolled && value != null) drawPixelNum(ctx, value, 7, 7 + offY, tc);
+        }
+
+        function drawD12(ctx, frame, rolled, value, inv) {
+            const p = inv ? CI : C;
+            const f = frame % 4;
+            const oc = rolled ? p.outline : p.outlineDim;
+            const fc = p.face;
+            const tc = rolled ? p.text : p.textDim;
+            ctx.clearRect(0, 0, 32, 32);
+            const rot = [0, 1, 0, -1][f];
+            const rows = [
+                [5,10],[4,11],[3,12],[2,13],[2,13],
+                [2,13],[2,13],[2,13],[3,12],[3,12],
+                [4,11],[5,10]
+            ];
+            rows.forEach((r, i) => {
+                for (let x = r[0]; x <= r[1]; x++) px(ctx, x + rot, 2 + i, fc);
+                px(ctx, r[0] + rot, 2 + i, oc);
+                px(ctx, r[1] + rot, 2 + i, oc);
+            });
+            for (let x = rows[0][0]; x <= rows[0][1]; x++) px(ctx, x + rot, 2, oc);
+            for (let x = rows[11][0]; x <= rows[11][1]; x++) px(ctx, x + rot, 13, oc);
+            if (rolled && value != null) drawPixelNum(ctx, value, 7 + rot, 7, tc);
+        }
+
+        function drawD20(ctx, frame, rolled, value, inv) {
+            const p = inv ? CI : C;
+            const f = frame % 4;
+            const oc = rolled ? p.outline : p.outlineDim;
+            const fc = p.face;
+            const tc = rolled ? p.text : p.textDim;
+            const hc = p.faceLight;
+            ctx.clearRect(0, 0, 32, 32);
+            const offY = [0, -1, 0, 1][f];
+            for (let row = 0; row < 12; row++) {
+                const half = Math.floor(row * 0.65);
+                for (let col = 7 - half; col <= 8 + half; col++)
+                    px(ctx, col, 2 + row + offY, row < 6 ? hc : fc);
+                px(ctx, 7 - half, 2 + row + offY, oc);
+                px(ctx, 8 + half, 2 + row + offY, oc);
+            }
+            for (let col = 1; col <= 14; col++) px(ctx, col, 13 + offY, oc);
+            for (let i = 0; i < 5; i++) {
+                px(ctx, 5 + i, 7 + offY, oc);
+                px(ctx, 11 - i, 7 + offY, oc);
+            }
+            if (rolled && value != null) drawPixelNum(ctx, value, 7, 9 + offY, tc);
+        }
+
+        function drawD100(ctx, frame, rolled, value, inv) {
+            const p = inv ? CI : C;
+            const f = frame % 4;
+            const oc = rolled ? p.outline : p.outlineDim;
+            const fc = p.face;
+            const tc = rolled ? p.text : p.textDim;
+            ctx.clearRect(0, 0, 32, 32);
+            const offX = [0, 1, 0, -1][f];
+            const cx1 = 6 + offX, cy1 = 8, cx2 = 10 + offX, cy2 = 8, r = 5;
+            for (let y = 1; y <= 15; y++) {
+                for (let x = 1; x <= 15; x++) {
+                    const d1 = Math.sqrt((x-cx1)**2 + (y-cy1)**2);
+                    const d2 = Math.sqrt((x-cx2)**2 + (y-cy2)**2);
+                    if (d1 <= r || d2 <= r) {
+                        const onEdge1 = Math.abs(d1 - r) < 1.0;
+                        const onEdge2 = Math.abs(d2 - r) < 1.0;
+                        if (onEdge1 || onEdge2) px(ctx, x, y, oc);
+                        else px(ctx, x, y, fc);
+                    }
+                }
+            }
+            if (rolled && value != null) drawPixelNum(ctx, value, 8 + offX, 8, tc);
+        }
+
+        const DIGITS = {
+            0: [0b111,0b101,0b101,0b101,0b111],
+            1: [0b010,0b110,0b010,0b010,0b111],
+            2: [0b111,0b001,0b111,0b100,0b111],
+            3: [0b111,0b001,0b111,0b001,0b111],
+            4: [0b101,0b101,0b111,0b001,0b001],
+            5: [0b111,0b100,0b111,0b001,0b111],
+            6: [0b111,0b100,0b111,0b101,0b111],
+            7: [0b111,0b001,0b010,0b010,0b010],
+            8: [0b111,0b101,0b111,0b101,0b111],
+            9: [0b111,0b101,0b111,0b001,0b111],
+        };
+
+        function drawPixelNum(ctx, num, cx, cy, color) {
+            const s = String(num);
+            const totalW = s.length * 4 - 1;
+            let startX = cx - Math.floor(totalW / 2);
+            for (let d = 0; d < s.length; d++) {
+                const glyph = DIGITS[s[d]];
+                if (!glyph) continue;
+                for (let row = 0; row < 5; row++) {
+                    for (let col = 0; col < 3; col++) {
+                        if (glyph[row] & (1 << (2 - col)))
+                            px(ctx, startX + col, cy - 2 + row, color);
+                    }
+                }
+                startX += 4;
+            }
+        }
+
+        const drawFns = {
+            4: drawD4, 6: drawD6, 8: drawD8, 10: drawD10,
+            12: drawD12, 20: drawD20, 100: drawD100
+        };
+
+        function drawDie(ctx, sides, frame, rolled, value, inv) {
+            (drawFns[sides] || drawD6)(ctx, frame, rolled, value, inv);
+        }
+
+        // =========================================================
+        // ANIMATION LOOP
+        // =========================================================
+        const FPS = 4;
+        let globalFrame = 0;
+        let animCanvases = [];
+
+        function registerAnim(canvas, sides, getRolled, getValue, getInv) {
+            animCanvases.push({ canvas, sides, getRolled, getValue, getInv: getInv || (() => false) });
+        }
+
+        function unregisterAnim(canvas) {
+            animCanvases = animCanvases.filter(a => a.canvas !== canvas);
+        }
+
+        setInterval(() => {
+            globalFrame++;
+            animCanvases.forEach(a => {
+                const ctx = a.canvas.getContext('2d');
+                const rolled = a.getRolled();
+                const val = a.getValue();
+                const inv = a.getInv();
+                drawDie(ctx, a.sides, rolled ? 0 : globalFrame, rolled, val, inv);
+            });
+        }, 1000 / FPS);
+
+        // =========================================================
+        // INIT STRIP DICE
+        // =========================================================
+        document.querySelectorAll('.die-sym').forEach(die => {
+            const sides = parseInt(die.dataset.sides);
+            const c = document.createElement('canvas');
+            c.width = 32; c.height = 32;
+            c.style.width = '28px'; c.style.height = '28px';
+            die.appendChild(c);
+
+            const label = document.createElement('span');
+            label.className = 'die-label';
+            label.textContent = 'd' + sides;
+            die.appendChild(label);
+
+            let hovering = false;
+            die.addEventListener('mouseenter', () => { hovering = true; });
+            die.addEventListener('mouseleave', () => { hovering = false; });
+
+            registerAnim(c, sides, () => false, () => null, () => hovering);
+
+            die.addEventListener('dragstart', e => {
+                die.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', String(sides));
+            });
+            die.addEventListener('dragend', () => {
+                die.classList.remove('dragging');
+            });
+        });
+
+        // =========================================================
+        // Characters
+        // =========================================================
+        const characters = [
+            { name: 'Akwan Akusian', short: 'Akwan' },
+            { name: 'Fiel Amimso', short: 'Fiel' },
+            { name: 'Flicker', short: 'Flicker' }
+        ];
+
+        function buildCharButtons() {
+            charButtonsEl.innerHTML = '';
+            characters.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'add-char-btn';
+                btn.textContent = '+ ' + c.short;
+                btn.onclick = () => addPortion(c.name);
+                charButtonsEl.appendChild(btn);
+            });
+        }
+        buildCharButtons();
+
+        // =========================================================
+        // SESSION END
+        // =========================================================
+
+        async function endSession() {
+            openSessionModal(null); // open immediately in loading state
+
+            if (!API_KEY) {
+                document.getElementById('sessionSummaryText').value =
+                    '(API key not set — write your own summary below.)';
+                document.getElementById('sessionSummaryText').readOnly = false;
+                document.getElementById('sessionAdditions').focus();
+                return;
+            }
+
+            try {
+                const prompts = await loadPrompts();
+                const systemPrompt = prompts['session end'] || prompts['session-end'] || '';
+
+                let context = 'Please produce a structured session summary based on everything above.\n\n';
+                if (metaComments.length) {
+                    context += '### Meta Notes\n' + metaComments.map(c => '- ' + c).join('\n') + '\n\n';
+                }
+                const storyNotes = document.getElementById('storyNotes').value.trim();
+                if (storyNotes) {
+                    context += '### Story Notes\n' + storyNotes + '\n\n';
+                }
+
+                const messages = [...conversationHistory, { role: 'user', content: context }];
+
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': API_KEY,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true',
+                        'content-type': 'application/json',
+                    },
+                    body: JSON.stringify({ model: API_MODEL, max_tokens: 2048, system: systemPrompt, messages }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error?.message || `API error ${res.status}`);
+                }
+
+                const data = await res.json();
+                const summary = data.content?.[0]?.text || '';
+                document.getElementById('sessionSummaryText').value = summary;
+                document.getElementById('sessionSummaryText').readOnly = false;
+                document.getElementById('sessionAdditions').focus();
+            } catch (err) {
+                document.getElementById('sessionSummaryText').value =
+                    `[Error generating summary: ${err.message}]\n\nWrite your own notes below.`;
+                document.getElementById('sessionSummaryText').readOnly = false;
+                document.getElementById('sessionAdditions').focus();
+            }
+        }
+
+        function openSessionModal(summary) {
+            const summaryEl = document.getElementById('sessionSummaryText');
+            summaryEl.value = summary === null ? 'Generating summary…' : (summary || '');
+            summaryEl.readOnly = summary === null;
+            document.getElementById('sessionAdditions').value = '';
+            document.getElementById('sessionEndBackdrop').classList.add('open');
+            document.getElementById('sessionEndModal').classList.add('open');
+        }
+
+        function closeSessionModal() {
+            document.getElementById('sessionEndModal').classList.remove('open');
+            document.getElementById('sessionEndBackdrop').classList.remove('open');
+        }
+
+        function saveSession() {
+            const summary   = document.getElementById('sessionSummaryText').value.trim();
+            const additions = document.getElementById('sessionAdditions').value.trim();
+            const storyNotes = document.getElementById('storyNotes').value.trim();
+
+            const date    = new Date();
+            const dateStr = date.toISOString().slice(0, 10);
+            const timeStr = date.toTimeString().slice(0, 5).replace(':', '');
+            const key     = `dnd_session_${dateStr}_${timeStr}`;
+
+            const record = { date: date.toISOString(), summary, additions, metaNotes: [...metaComments], storyNotes };
+            localStorage.setItem(key, JSON.stringify(record));
+            localStorage.setItem('dnd_last_session', key);
+
+            // Download as markdown
+            const parts = [`# Session Log — ${dateStr}\n`];
+            if (summary)    parts.push(`## Summary\n\n${summary}\n`);
+            if (additions)  parts.push(`## DM Additions\n\n${additions}\n`);
+            if (metaComments.length) parts.push(`## Meta Notes\n\n${metaComments.map(c => '- ' + c).join('\n')}\n`);
+            if (storyNotes) parts.push(`## Story Notes\n\n${storyNotes}\n`);
+            const blob = new Blob([parts.join('\n')], { type: 'text/markdown' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `session_${dateStr}.md`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+
+            closeSessionModal();
+            addStoryEntry('assistant', 'System', `Session archived — ${dateStr}. File saved to downloads.`, 'meta');
+        }
+
+        // On load: show previous session summary if one exists
+        window.addEventListener('load', () => {
+            const key = localStorage.getItem('dnd_last_session');
+            if (!key) return;
+            try {
+                const record = JSON.parse(localStorage.getItem(key) || '');
+                if (!record.summary && !record.additions) return;
+                const dateStr = new Date(record.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                const el = document.createElement('div');
+                el.className = 'story-entry assistant';
+                const addText = record.additions ? `<div class="text" style="margin-top:5px;border-top:1px dotted #ccc;padding-top:4px">${escapeHtml(record.additions)}</div>` : '';
+                el.innerHTML = `<div class="label">Previous Session — ${escapeHtml(dateStr)}</div><div class="text">${escapeHtml(record.summary || '')}</div>${addText}`;
+                const welcome = storyDisplay.querySelector('.welcome-message');
+                if (welcome) welcome.insertAdjacentElement('afterend', el);
+                else storyDisplay.prepend(el);
+            } catch (e) {}
+        });
+
+        // =========================================================
+        // STORYBOARD & PROMPT MODES
+        // =========================================================
+        let currentMode = 'description';
+
+        const modePlaceholders = {
+            description: 'Describe a scene, location, or moment...',
+            action: 'Describe an action or encounter (stats only)...',
+            both: 'Describe an action with narrative context...',
+            meta: 'Add a comment about the game or system...',
+        };
+
+        const modeLabels = {
+            description: 'DESC',
+            action: 'ACT',
+            both: 'BOTH',
+            meta: 'META',
+        };
+
+        function setMode(tabEl) {
+            document.querySelectorAll('.prompt-tab').forEach(t => t.classList.remove('active'));
+            tabEl.classList.add('active');
+            currentMode = tabEl.dataset.mode;
+            promptInput.placeholder = modePlaceholders[currentMode];
+        }
+
+        function toggleCharacter(header) {
+            header.closest('.character-card').classList.toggle('open');
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendPrompt();
+            }
+        }
+
+        async function sendPrompt() {
+            const text = promptInput.value.trim();
+            if (!text) return;
+            const welcome = storyDisplay.querySelector('.welcome-message');
+            if (welcome) welcome.remove();
+
+            if (currentMode === 'meta') {
+                addMetaComment(text);
+                promptInput.value = '';
+                return;
+            }
+
+            addStoryEntry('user', 'You', text, currentMode);
+            promptInput.value = '';
+            conversationHistory.push({ role: 'user', content: text });
+
+            if (!API_KEY) {
+                setTimeout(() => {
+                    addStoryEntry('assistant', 'Dungeon Master',
+                        '(Claude API key not set — paste your Anthropic API key into API_KEY in the script.)',
+                        currentMode);
+                }, 300);
+                return;
+            }
+
+            const loadingEl = document.createElement('div');
+            loadingEl.className = 'story-entry assistant';
+            loadingEl.innerHTML = '<div class="label">Dungeon Master</div><div class="text">…</div>';
+            storyDisplay.appendChild(loadingEl);
+            storyDisplay.scrollTop = storyDisplay.scrollHeight;
+
+            try {
+                const prompts = await loadPrompts();
+                const base = prompts['system'] || '';
+                const modeSection = prompts[currentMode] || '';
+                const systemPrompt = [base, modeSection].filter(Boolean).join('\n\n---\n\n');
+
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': API_KEY,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true',
+                        'content-type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: API_MODEL,
+                        max_tokens: 1024,
+                        system: systemPrompt,
+                        messages: conversationHistory,
+                    }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error?.message || `API error ${res.status}`);
+                }
+
+                const data = await res.json();
+                const reply = data.content?.[0]?.text || '(No response)';
+                conversationHistory.push({ role: 'assistant', content: reply });
+                loadingEl.remove();
+                addStoryEntry('assistant', 'Dungeon Master', reply, currentMode);
+            } catch (err) {
+                loadingEl.remove();
+                addStoryEntry('assistant', 'Dungeon Master', `[Error: ${err.message}]`, currentMode);
+            }
+        }
+
+        let exchangeIndex = 0;
+        let currentExchange = null;  // the open .story-exchange wrapper
+        const undoStack = [];        // popped exchanges for redo
+
+        function addStoryEntry(role, label, text, mode) {
+            const entry = document.createElement('div');
+            entry.className = `story-entry ${role}`;
+            const badge = mode ? `<span class="mode-badge mode-${mode}">${modeLabels[mode]}</span>` : '';
+            entry.innerHTML = `<div class="label">${escapeHtml(label)}${badge}</div><div class="text">${escapeHtml(text)}</div>`;
+
+            if (role === 'user') {
+                // Start a new exchange wrapper
+                currentExchange = document.createElement('div');
+                currentExchange.className = 'story-exchange';
+                currentExchange.dataset.idx = exchangeIndex++;
+                const undoBtn = document.createElement('button');
+                undoBtn.className = 'undo-btn';
+                undoBtn.textContent = '↩ Undo';
+                undoBtn.onclick = () => undoExchange(currentExchange);
+                currentExchange.appendChild(undoBtn);
+                currentExchange.appendChild(entry);
+                storyDisplay.appendChild(currentExchange);
+            } else if (currentExchange) {
+                // Append assistant reply into the open exchange
+                currentExchange.appendChild(entry);
+                currentExchange = null; // close it
+            } else {
+                // Standalone system/assistant message (no exchange wrapper)
+                storyDisplay.appendChild(entry);
+            }
+
+            storyDisplay.scrollTop = storyDisplay.scrollHeight;
+            updateUndoBar();
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // =========================================================
+        // UNDO / REDO
+        // =========================================================
+
+        function undoExchange(exchangeEl) {
+            if (!exchangeEl) return;
+            const idx = parseInt(exchangeEl.dataset.idx);
+
+            // Remove this exchange and everything after it
+            const allExchanges = [...storyDisplay.querySelectorAll('.story-exchange')];
+            const toRemove = allExchanges.filter(ex => parseInt(ex.dataset.idx) >= idx);
+
+            // Each exchange = 1 user + 1 assistant message = 2 entries in conversationHistory
+            // Calculate how many history entries to pop
+            let entriesToPop = 0;
+            toRemove.forEach(ex => {
+                const storyEntries = ex.querySelectorAll('.story-entry');
+                storyEntries.forEach(se => {
+                    if (se.closest('.story-exchange')) entriesToPop++;
+                });
+            });
+
+            // Save to undo stack
+            const popped = conversationHistory.splice(conversationHistory.length - entriesToPop, entriesToPop);
+            const removedEls = toRemove.map(ex => {
+                const html = ex.outerHTML;
+                ex.remove();
+                return html;
+            });
+
+            undoStack.push({
+                historyEntries: popped,
+                exchangeHtml: removedEls,
+                fromIdx: idx,
+            });
+
+            updateUndoBar();
+        }
+
+        function undoLast() {
+            const lastExchange = storyDisplay.querySelector('.story-exchange:last-of-type');
+            if (lastExchange) undoExchange(lastExchange);
+        }
+
+        function redoLast() {
+            if (!undoStack.length) return;
+            const item = undoStack.pop();
+
+            // Restore conversation history
+            conversationHistory.push(...item.historyEntries);
+
+            // Restore DOM elements
+            item.exchangeHtml.forEach(html => {
+                const temp = document.createElement('div');
+                temp.innerHTML = html;
+                const restored = temp.firstElementChild;
+                // Reattach undo button handler
+                const btn = restored.querySelector('.undo-btn');
+                if (btn) btn.onclick = () => undoExchange(restored);
+                storyDisplay.appendChild(restored);
+            });
+
+            storyDisplay.scrollTop = storyDisplay.scrollHeight;
+            updateUndoBar();
+        }
+
+        function updateUndoBar() {
+            let bar = document.getElementById('undoBar');
+            const hasExchanges = storyDisplay.querySelector('.story-exchange');
+            const hasUndo = undoStack.length > 0;
+
+            if (!hasExchanges && !hasUndo) {
+                if (bar) bar.remove();
+                return;
+            }
+
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'undoBar';
+                bar.className = 'undo-bar';
+                // Insert just before the prompt area
+                const promptArea = storyDisplay.closest('.mac-window').querySelector('.prompt-tabs');
+                if (promptArea) promptArea.parentNode.insertBefore(bar, promptArea);
+            }
+
+            bar.innerHTML = '';
+            if (hasExchanges) {
+                const undoBtn = document.createElement('button');
+                undoBtn.textContent = '↩ Undo last';
+                undoBtn.onclick = undoLast;
+                bar.appendChild(undoBtn);
+            }
+            if (hasUndo) {
+                const redoBtn = document.createElement('button');
+                redoBtn.textContent = '↪ Redo';
+                redoBtn.onclick = redoLast;
+                bar.appendChild(redoBtn);
+            }
+        }
+
+        // Cmd/Ctrl+Z = undo last exchange, Cmd/Ctrl+Shift+Z = redo
+        document.addEventListener('keydown', (e) => {
+            // Don't intercept if focused on a textarea/input (let normal undo work there)
+            const tag = document.activeElement?.tagName;
+            if (tag === 'TEXTAREA' || tag === 'INPUT') return;
+
+            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undoLast();
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+                e.preventDefault();
+                redoLast();
+            }
+        });
+
+        // =========================================================
+        // META COMMENTS
+        // =========================================================
+        const metaComments = [];
+
+        function addMetaComment(text) {
+            metaComments.push(text);
+            const metaList = document.getElementById('metaList');
+            const metaEmpty = document.getElementById('metaEmpty');
+            if (metaEmpty) metaEmpty.remove();
+
+            const item = document.createElement('div');
+            item.className = 'meta-item';
+            item.textContent = text;
+            metaList.appendChild(item);
+
+            // Ensure section is open
+            document.getElementById('metaSection').classList.add('open');
+            metaList.scrollTop = metaList.scrollHeight;
+        }
+
+        // =========================================================
+        // DICE TABLE: PORTIONS
+        // =========================================================
+        function addPortion(name) {
+            tableEmptyMsg.style.display = 'none';
+            const portion = document.createElement('div');
+            portion.className = 'table-portion';
+
+            const header = document.createElement('div');
+            header.className = 'portion-header';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'portion-name';
+            nameSpan.textContent = name;
+            const delBtn = document.createElement('button');
+            delBtn.className = 'portion-delete';
+            delBtn.innerHTML = '&times;';
+            delBtn.title = 'Remove';
+            delBtn.onclick = () => {
+                portion.querySelectorAll('canvas').forEach(c => unregisterAnim(c));
+                portion.remove();
+                checkEmpty();
+            };
+            header.appendChild(nameSpan);
+            header.appendChild(delBtn);
+
+            const diceArea = document.createElement('div');
+            diceArea.className = 'portion-dice';
+            diceArea.addEventListener('dragover', e => {
+                e.preventDefault();
+                portion.classList.add('drag-over');
+            });
+            diceArea.addEventListener('dragleave', () => {
+                portion.classList.remove('drag-over');
+            });
+            diceArea.addEventListener('drop', e => {
+                e.preventDefault();
+                portion.classList.remove('drag-over');
+                const sides = e.dataTransfer.getData('text/plain');
+                if (sides) {
+                    addDiceChip(diceArea, parseInt(sides), null);
+                    updateRollButton();
+                }
+            });
+
+            portion.appendChild(header);
+            portion.appendChild(diceArea);
+            tableSurface.appendChild(portion);
+        }
+
+        const CAMPAIGN_NPCS = {
+            npcs:    ['Matt', 'Lars', 'Bess', 'Lord Delius'],
+            enemies: ['Goblin', 'Goblin Shaman', 'Bugbear', 'Skeleton'],
+        };
+
+        const NOTES_NAME_SKIP = new Set([
+            'The','A','An','In','On','At','To','Of','And','Or','But','Is','Are',
+            'Was','Were','It','He','She','They','We','You','I','This','That',
+            'These','Those','What','Who','How','When','Where','Why','If','For',
+            'With','From','By','As','Up','Out','About','Into','After','Before',
+            'So','Do','Have','Had','Will','Would','Could','Should','May','Might',
+        ]);
+
+        function parseNamesFromNotes() {
+            const text = document.getElementById('storyNotes').value;
+            if (!text.trim()) return [];
+            const tokens = text.split(/\s+/);
+            const names = [];
+            const seen = new Set();
+            const allCampaign = [...CAMPAIGN_NPCS.npcs, ...CAMPAIGN_NPCS.enemies];
+            const campaignLow = new Set(allCampaign.map(n => n.toLowerCase()));
+            let i = 0;
+            while (i < tokens.length) {
+                const word = tokens[i].replace(/[^a-zA-Z'\-]/g, '');
+                if (word.length > 1 && /^[A-Z]/.test(word) && !NOTES_NAME_SKIP.has(word)) {
+                    const parts = [word];
+                    let j = i + 1;
+                    while (j < tokens.length && parts.length < 3) {
+                        const nxt = tokens[j].replace(/[^a-zA-Z'\-]/g, '');
+                        if (nxt.length > 1 && /^[A-Z]/.test(nxt) && !NOTES_NAME_SKIP.has(nxt)) {
+                            parts.push(nxt); j++;
+                        } else break;
+                    }
+                    const name = parts.join(' ');
+                    const key = name.toLowerCase();
+                    if (!campaignLow.has(key) && !seen.has(key)) { seen.add(key); names.push(name); }
+                    i = j;
+                } else { i++; }
+            }
+            return names;
+        }
+
+        function closeNpcPicker() {
+            document.getElementById('npcPicker').classList.remove('open');
+            document.getElementById('npcPickerBackdrop').classList.remove('open');
+        }
+
+        function toggleNpcPicker() {
+            const picker = document.getElementById('npcPicker');
+            if (picker.classList.contains('open')) { closeNpcPicker(); return; }
+
+            const makeNameBtn = (name, col) => {
+                const btn = document.createElement('button');
+                btn.className = 'npc-picker-name';
+                btn.textContent = name;
+                btn.onclick = () => { addPortion(name); closeNpcPicker(); };
+                col.appendChild(btn);
+            };
+            const makeSec = (label, col) => {
+                const s = document.createElement('div');
+                s.className = 'npc-picker-section';
+                s.textContent = label;
+                col.appendChild(s);
+            };
+
+            const npcCol = document.getElementById('npcPickerNpcs');
+            const enemyCol = document.getElementById('npcPickerEnemies');
+            npcCol.innerHTML = '';
+            enemyCol.innerHTML = '';
+
+            CAMPAIGN_NPCS.npcs.forEach(n => makeNameBtn(n, npcCol));
+            CAMPAIGN_NPCS.enemies.forEach(n => makeNameBtn(n, enemyCol));
+
+            const noteNames = parseNamesFromNotes();
+            if (noteNames.length) {
+                makeSec('From Notes', npcCol);
+                noteNames.forEach(n => makeNameBtn(n, npcCol));
+            }
+
+            document.getElementById('npcPickerBackdrop').classList.add('open');
+            picker.classList.add('open');
+            const inp = document.getElementById('npcCustomInput');
+            inp.value = '';
+            inp.focus();
+        }
+
+        function addCustomNpc() {
+            const inp = document.getElementById('npcCustomInput');
+            const name = inp.value.trim();
+            if (name) { addPortion(name); closeNpcPicker(); }
+        }
+
+        function npcCustomKey(e) {
+            if (e.key === 'Enter') addCustomNpc();
+            if (e.key === 'Escape') closeNpcPicker();
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { closeNpcPicker(); closeSessionModal(); }
+        });
+
+        function addDiceChip(container, sides, result) {
+            const chip = document.createElement('div');
+            chip.className = 'dice-chip' + (result !== null ? ' rolled' : '');
+            chip.draggable = true;
+            chip.dataset.sides = sides;
+            chip.dataset.rolled = result !== null ? 'true' : 'false';
+            chip.dataset.value = result !== null ? result : '';
+
+            const c = document.createElement('canvas');
+            c.className = 'chip-pixel-die';
+            c.width = 32; c.height = 32;
+            c.style.width = '22px'; c.style.height = '22px';
+            chip.appendChild(c);
+
+            registerAnim(c, sides,
+                () => chip.dataset.rolled === 'true',
+                () => chip.dataset.value ? parseInt(chip.dataset.value) : null,
+                () => chip.dataset.rolled === 'true'
+            );
+
+            const sidesLabel = document.createElement('span');
+            sidesLabel.className = 'chip-sides';
+            sidesLabel.textContent = 'd' + sides;
+            chip.appendChild(sidesLabel);
+
+            const resultSpan = document.createElement('span');
+            resultSpan.className = 'chip-result';
+            resultSpan.textContent = result !== null ? result : 'd' + sides;
+            chip.appendChild(resultSpan);
+
+            const removeSpan = document.createElement('span');
+            removeSpan.className = 'chip-remove';
+            removeSpan.title = 'Remove';
+            removeSpan.innerHTML = '&times;';
+            removeSpan.onclick = (e) => {
+                e.stopPropagation();
+                unregisterAnim(c);
+                chip.remove();
+                updateRollButton();
+            };
+            chip.appendChild(removeSpan);
+
+            chip.addEventListener('dragstart', e => {
+                chip.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', String(sides));
+                setTimeout(() => {
+                    unregisterAnim(c);
+                    chip.remove();
+                    updateRollButton();
+                }, 0);
+            });
+            chip.addEventListener('dragend', () => {
+                chip.classList.remove('dragging');
+            });
+
+            container.appendChild(chip);
+        }
+
+        function getUnrolledChips() {
+            return tableSurface.querySelectorAll('.dice-chip[data-rolled="false"]');
+        }
+
+        function updateRollButton() {
+            document.getElementById('rollAllBtn').disabled = getUnrolledChips().length === 0;
+        }
+
+        function rollAll() {
+            const unrolled = getUnrolledChips();
+            if (unrolled.length === 0) return;
+            const duration = 600;
+            const tickRate = 1000 / FPS;
+            let elapsed = 0;
+            const interval = setInterval(() => {
+                elapsed += tickRate;
+                unrolled.forEach(chip => {
+                    const sides = parseInt(chip.dataset.sides);
+                    const tempVal = Math.floor(Math.random() * sides) + 1;
+                    chip.dataset.value = tempVal;
+                    chip.querySelector('.chip-result').textContent = tempVal;
+                });
+                if (elapsed >= duration) {
+                    clearInterval(interval);
+                    unrolled.forEach(chip => {
+                        const sides = parseInt(chip.dataset.sides);
+                        const result = Math.floor(Math.random() * sides) + 1;
+                        chip.dataset.rolled = 'true';
+                        chip.dataset.value = result;
+                        chip.classList.add('rolled');
+                        chip.querySelector('.chip-result').textContent = result;
+                    });
+                    updateRollButton();
+                }
+            }, tickRate);
+        }
+
+        function checkEmpty() {
+            const portions = tableSurface.querySelectorAll('.table-portion');
+            tableEmptyMsg.style.display = portions.length === 0 ? 'flex' : 'none';
+        }
+
+        // =========================================================
+        // MUSIC — Spotify Web Playback SDK
+        // =========================================================
+        const SPOTIFY_CLIENT_ID = '0ea5b2463294464f882a3b3c9798352e';
+        const SPOTIFY_REDIRECT_URI = 'http://127.0.0.1:5500/callback.html';
+        const SPOTIFY_SCOPES = 'streaming user-read-email user-read-private user-modify-playback-state playlist-read-private';
+
+        const MOOD_PLAYLISTS = {
+            tavern:   '4hc98N2WURWgeCLM3oyQh0',
+            battle:   '5itc0hInJaDGosUvmwVwxC',
+            suspense: '1BHuBw7Z9NjuviCLe5qtAp',
+            forest:   '1Ur6SjYinD2Zns1VmQmjlU',
+            feast:    '6XtharnXyMJVgmCx1ycyKL',
+            walking:  '6TS7188IVB9InS1Wz9yuJE',
+        };
+
+        let spotifyPlayer = null;
+        let spotifyDeviceId = null;
+        let spotifyToken = null;
+        let currentMoodBtn = null;
+
+        // ----- PKCE Auth helpers -----
+        function generateRandomString(len) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+            const arr = new Uint8Array(len);
+            crypto.getRandomValues(arr);
+            return Array.from(arr, b => chars[b % chars.length]).join('');
+        }
+
+        async function generateCodeChallenge(verifier) {
+            const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+            return btoa(String.fromCharCode(...new Uint8Array(digest)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        async function spotifyAuth() {
+            const verifier = generateRandomString(64);
+            const challenge = await generateCodeChallenge(verifier);
+            localStorage.setItem('spotify_code_verifier', verifier);
+
+            const params = new URLSearchParams({
+                client_id: SPOTIFY_CLIENT_ID,
+                response_type: 'code',
+                redirect_uri: SPOTIFY_REDIRECT_URI,
+                code_challenge_method: 'S256',
+                code_challenge: challenge,
+                scope: SPOTIFY_SCOPES,
+            });
+            window.location.href = 'https://accounts.spotify.com/authorize?' + params;
+        }
+
+        async function refreshSpotifyToken() {
+            const rt = localStorage.getItem('spotify_refresh_token');
+            if (!rt) return false;
+            try {
+                const res = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        client_id: SPOTIFY_CLIENT_ID,
+                        grant_type: 'refresh_token',
+                        refresh_token: rt,
+                    }),
+                });
+                const data = await res.json();
+                if (data.access_token) {
+                    localStorage.setItem('spotify_access_token', data.access_token);
+                    if (data.refresh_token) localStorage.setItem('spotify_refresh_token', data.refresh_token);
+                    localStorage.setItem('spotify_token_expiry', String(Date.now() + data.expires_in * 1000));
+                    spotifyToken = data.access_token;
+                    return true;
+                }
+            } catch {}
+            return false;
+        }
+
+        async function getValidToken() {
+            const expiry = parseInt(localStorage.getItem('spotify_token_expiry') || '0');
+            if (Date.now() > expiry - 60000) { // refresh 1 min early
+                await refreshSpotifyToken();
+            }
+            spotifyToken = localStorage.getItem('spotify_access_token');
+            return spotifyToken;
+        }
+
+        // ----- SDK Init -----
+        function initSpotify() {
+            spotifyToken = localStorage.getItem('spotify_access_token');
+            const connectEl = document.getElementById('spotifyConnect');
+
+            if (!spotifyToken) {
+                connectEl.classList.remove('hidden');
+                return;
+            }
+            connectEl.classList.add('hidden');
+
+            // Load Spotify Web Playback SDK
+            if (!document.getElementById('spotify-sdk-script')) {
+                const s = document.createElement('script');
+                s.id = 'spotify-sdk-script';
+                s.src = 'https://sdk.scdn.co/spotify-player.js';
+                document.body.appendChild(s);
+            }
+        }
+
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            spotifyPlayer = new Spotify.Player({
+                name: 'DnD Session Manager',
+                getOAuthToken: async cb => { cb(await getValidToken()); },
+                volume: 0.5,
+            });
+
+            spotifyPlayer.addListener('ready', ({ device_id }) => {
+                spotifyDeviceId = device_id;
+                document.getElementById('spotifyControls').style.display = 'flex';
+                document.getElementById('spotifyVolumeWrap').style.display = 'flex';
+                document.getElementById('musicNowPlaying').textContent = 'Connected — choose a mood';
+            });
+
+            spotifyPlayer.addListener('not_ready', () => {
+                spotifyDeviceId = null;
+                document.getElementById('musicNowPlaying').textContent = 'Device went offline';
+            });
+
+            spotifyPlayer.addListener('player_state_changed', state => {
+                if (!state) return;
+                const track = state.track_window.current_track;
+                if (track) {
+                    const artists = track.artists.map(a => a.name).join(', ');
+                    document.getElementById('musicNowPlaying').textContent = track.name + ' — ' + artists;
+                }
+                document.getElementById('spotifyPlayBtn').textContent = state.paused ? '▶' : '⏸';
+            });
+
+            spotifyPlayer.addListener('initialization_error', ({ message }) => {
+                document.getElementById('musicNowPlaying').textContent = 'Init error: ' + message;
+            });
+            spotifyPlayer.addListener('authentication_error', ({ message }) => {
+                document.getElementById('musicNowPlaying').textContent = 'Auth expired — reconnect';
+                document.getElementById('spotifyConnect').classList.remove('hidden');
+            });
+
+            spotifyPlayer.connect();
+        };
+
+        // ----- Playback controls -----
+        function spotifyToggle() { if (spotifyPlayer) spotifyPlayer.togglePlay(); }
+        function spotifyNext()   { if (spotifyPlayer) spotifyPlayer.nextTrack(); }
+        function spotifyPrev()   { if (spotifyPlayer) spotifyPlayer.previousTrack(); }
+        function spotifySetVolume(val) { if (spotifyPlayer) spotifyPlayer.setVolume(val / 100); }
+
+        // ----- Mood selection -----
+        async function playMood(btn) {
+            const mood = btn.dataset.mood;
+            const playlistId = MOOD_PLAYLISTS[mood];
+            const np = document.getElementById('musicNowPlaying');
+
+            if (!spotifyDeviceId) {
+                np.textContent = 'Connect Spotify first';
+                return;
+            }
+            if (!playlistId) {
+                np.textContent = mood + ' — no playlist linked';
+                return;
+            }
+
+            // Toggle off
+            if (currentMoodBtn === btn) {
+                btn.classList.remove('active');
+                currentMoodBtn = null;
+                spotifyPlayer.pause();
+                return;
+            }
+
+            if (currentMoodBtn) currentMoodBtn.classList.remove('active');
+            btn.classList.add('active');
+            currentMoodBtn = btn;
+            document.getElementById('musicSection').classList.add('open');
+            np.textContent = 'Loading ' + mood + '…';
+
+            const token = await getValidToken();
+
+            // Get track count for random offset
+            let trackCount = 30;
+            try {
+                const res = await fetch(
+                    `https://api.spotify.com/v1/playlists/${playlistId}?fields=tracks.total`,
+                    { headers: { 'Authorization': 'Bearer ' + token } }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    trackCount = data.tracks?.total || 30;
+                }
+            } catch {}
+
+            const randomOffset = Math.floor(Math.random() * trackCount);
+
+            try {
+                // Enable shuffle
+                await fetch(
+                    `https://api.spotify.com/v1/me/player/shuffle?state=true&device_id=${spotifyDeviceId}`,
+                    { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token } }
+                );
+
+                // Start playback at random position
+                await fetch(
+                    `https://api.spotify.com/v1/me/player/play?device_id=${spotifyDeviceId}`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            context_uri: `spotify:playlist:${playlistId}`,
+                            offset: { position: randomOffset },
+                        }),
+                    }
+                );
+            } catch (err) {
+                np.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        // Boot Spotify on page load
+        initSpotify();
+
+        // =========================================================
+        // TIMER
+        // =========================================================
+        let timerSeconds = 0;
+        let timerRemaining = 0;
+        let timerInterval = null;
+        let timerRunning = false;
+        const timerDisplay = document.getElementById('timerDisplay');
+        const timerStartBtn = document.getElementById('timerStartBtn');
+
+        function formatTime(secs) {
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            return m + ':' + String(s).padStart(2, '0');
+        }
+
+        function setTimer(secs) {
+            stopTimerInterval();
+            timerSeconds = secs;
+            timerRemaining = secs;
+            timerDisplay.textContent = formatTime(secs);
+            timerDisplay.classList.remove('warning', 'done');
+            timerStartBtn.textContent = 'Start';
+            timerStartBtn.classList.remove('running');
+            timerRunning = false;
+        }
+
+        function setCustomTimer() {
+            const raw = document.getElementById('timerCustom').value.trim();
+            let secs = 0;
+            if (raw.includes(':')) {
+                const parts = raw.split(':');
+                secs = parseInt(parts[0] || 0) * 60 + parseInt(parts[1] || 0);
+            } else {
+                secs = parseInt(raw) || 0;
+            }
+            if (secs > 0) setTimer(secs);
+        }
+
+        function toggleTimer() {
+            if (timerRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            if (timerRemaining <= 0 && timerSeconds > 0) {
+                timerRemaining = timerSeconds;
+            }
+            if (timerRemaining <= 0) return;
+
+            timerRunning = true;
+            timerStartBtn.textContent = 'Pause';
+            timerStartBtn.classList.add('running');
+            timerDisplay.classList.remove('done');
+
+            timerInterval = setInterval(() => {
+                timerRemaining--;
+                timerDisplay.textContent = formatTime(Math.max(0, timerRemaining));
+
+                // Warning at 10 seconds or less
+                if (timerRemaining <= 10 && timerRemaining > 0) {
+                    timerDisplay.classList.add('warning');
+                } else {
+                    timerDisplay.classList.remove('warning');
+                }
+
+                if (timerRemaining <= 0) {
+                    stopTimerInterval();
+                    timerDisplay.classList.remove('warning');
+                    timerDisplay.classList.add('done');
+                    timerStartBtn.textContent = 'Start';
+                    timerStartBtn.classList.remove('running');
+                    timerRunning = false;
+                    playWarHorn();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            stopTimerInterval();
+            timerStartBtn.textContent = 'Start';
+            timerStartBtn.classList.remove('running');
+            timerRunning = false;
+        }
+
+        function resetTimer() {
+            stopTimerInterval();
+            timerRemaining = timerSeconds;
+            timerDisplay.textContent = formatTime(timerSeconds);
+            timerDisplay.classList.remove('warning', 'done');
+            timerStartBtn.textContent = 'Start';
+            timerStartBtn.classList.remove('running');
+            timerRunning = false;
+        }
+
+        function stopTimerInterval() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        // Custom input: Enter to set
+        document.getElementById('timerCustom').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); setCustomTimer(); }
+        });
+
+        // =========================================================
+        // WAR HORN SOUND (synthesised via Web Audio API)
+        // =========================================================
+        function playWarHorn() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const duration = 2.5;
+            const now = ctx.currentTime;
+
+            // Layer 1: deep base tone with slow vibrato
+            function makeHornTone(freq, gain, start, end) {
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, now);
+                // Slight pitch bend up like a horn blast
+                osc.frequency.linearRampToValueAtTime(freq * 1.02, now + 0.3);
+                osc.frequency.setValueAtTime(freq * 1.02, now + end - 0.4);
+                osc.frequency.linearRampToValueAtTime(freq * 0.98, now + end);
+
+                // Vibrato
+                const lfo = ctx.createOscillator();
+                const lfoGain = ctx.createGain();
+                lfo.frequency.value = 4.5;
+                lfoGain.gain.value = freq * 0.015;
+                lfo.connect(lfoGain);
+                lfoGain.connect(osc.frequency);
+                lfo.start(now + start);
+                lfo.stop(now + end);
+
+                // Envelope: swell in, sustain, fade out
+                g.gain.setValueAtTime(0, now + start);
+                g.gain.linearRampToValueAtTime(gain, now + start + 0.4);
+                g.gain.setValueAtTime(gain, now + end - 0.6);
+                g.gain.linearRampToValueAtTime(0, now + end);
+
+                osc.connect(g);
+                g.connect(ctx.destination);
+                osc.start(now + start);
+                osc.stop(now + end);
+            }
+
+            // Layer 2: noise burst for breathy attack
+            function makeNoiseBurst() {
+                const bufferSize = ctx.sampleRate * 0.5;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+
+                const bandpass = ctx.createBiquadFilter();
+                bandpass.type = 'bandpass';
+                bandpass.frequency.value = 180;
+                bandpass.Q.value = 2;
+
+                const g = ctx.createGain();
+                g.gain.setValueAtTime(0, now);
+                g.gain.linearRampToValueAtTime(0.12, now + 0.05);
+                g.gain.linearRampToValueAtTime(0, now + 0.4);
+
+                source.connect(bandpass);
+                bandpass.connect(g);
+                g.connect(ctx.destination);
+                source.start(now);
+                source.stop(now + 0.5);
+            }
+
+            // Main horn blast: two overlapping tones for richness
+            makeHornTone(110, 0.25, 0, duration);        // fundamental
+            makeHornTone(165, 0.12, 0, duration);        // fifth above
+            makeHornTone(220, 0.06, 0.1, duration - 0.2); // octave (quieter)
+            makeNoiseBurst();
+
+            // Second shorter blast
+            setTimeout(() => {
+                makeHornTone(110, 0.20, 0, 1.5);
+                makeHornTone(165, 0.10, 0, 1.5);
+                makeNoiseBurst();
+            }, (duration + 0.3) * 1000);
+
+            // Close context after sounds finish
+            setTimeout(() => ctx.close(), (duration + 2.5) * 1000);
+        }
+    </script>
+    <div id="sessionEndBackdrop" onclick="closeSessionModal()"></div>
+    <div id="sessionEndModal">
+        <div class="session-modal-titlebar">
+            <span>End of Session</span>
+            <button class="session-modal-close" onclick="closeSessionModal()">&times;</button>
+        </div>
+        <div class="session-modal-body">
+            <div>
+                <div class="session-modal-label">Session Summary</div>
+                <textarea id="sessionSummaryText" placeholder="Generating summary…"></textarea>
+            </div>
+            <div>
+                <div class="session-modal-label">Your Additions</div>
+                <textarea id="sessionAdditions" placeholder="Add any notes, corrections, or details before saving…"></textarea>
+            </div>
+        </div>
+        <div class="session-modal-footer">
+            <button onclick="closeSessionModal()">Cancel</button>
+            <button class="btn-save" onclick="saveSession()">Save &amp; Close Session</button>
+        </div>
+    </div>
+
+    <div id="npcPickerBackdrop" onclick="closeNpcPicker()"></div>
+    <div id="npcPicker">
+        <div class="npc-picker-titlebar">
+            <span>NPCs &amp; Enemies</span>
+            <button class="npc-picker-close" onclick="closeNpcPicker()">&times;</button>
+        </div>
+        <div class="npc-picker-columns">
+            <div class="npc-picker-col">
+                <div class="npc-picker-col-header">NPCs</div>
+                <div class="npc-picker-col-list" id="npcPickerNpcs"></div>
+            </div>
+            <div class="npc-picker-col">
+                <div class="npc-picker-col-header">Enemies</div>
+                <div class="npc-picker-col-list" id="npcPickerEnemies"></div>
+            </div>
+        </div>
+        <div class="npc-picker-custom">
+            <input type="text" id="npcCustomInput" placeholder="Custom name..." onkeydown="npcCustomKey(event)">
+            <button onclick="addCustomNpc()">Add</button>
+        </div>
+    </div>
+</body>
+</html>
