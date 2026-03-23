@@ -1458,6 +1458,107 @@
             color: #0c0a08;
             opacity: 0.5;
         }
+
+        /* ========== DICE AUTOMATION STATES ========== */
+        .dice-chip .chip-label {
+            font-size: 8px;
+            color: #8a7e68;
+            max-width: 65px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .dice-chip.rolled .chip-label {
+            color: #0c0a08;
+            opacity: 0.6;
+        }
+
+        .dice-chip .chip-modifier {
+            font-size: 9px;
+            color: #c4a44e;
+            font-weight: bold;
+        }
+
+        .dice-chip.rolled .chip-modifier {
+            color: #0c0a08;
+        }
+
+        .dice-chip.conditional {
+            opacity: 0.35;
+            border-style: dashed;
+        }
+
+        .dice-chip.conditional.active {
+            opacity: 1;
+            border-style: solid;
+        }
+
+        .dice-chip.rolled.hit {
+            background: #4a8c3f;
+            border-color: #4a8c3f;
+            color: #e0ffe0;
+        }
+
+        .dice-chip.rolled.hit .chip-result,
+        .dice-chip.rolled.hit .chip-modifier,
+        .dice-chip.rolled.hit .chip-sides,
+        .dice-chip.rolled.hit .chip-label {
+            color: #e0ffe0;
+        }
+
+        .dice-chip.rolled.miss {
+            background: #8c3f3f;
+            border-color: #8c3f3f;
+            color: #ffe0e0;
+        }
+
+        .dice-chip.rolled.miss .chip-result,
+        .dice-chip.rolled.miss .chip-modifier,
+        .dice-chip.rolled.miss .chip-sides,
+        .dice-chip.rolled.miss .chip-label {
+            color: #ffe0e0;
+        }
+
+        .dice-chip.rolled.skipped {
+            opacity: 0.25;
+            text-decoration: line-through;
+        }
+
+        /* Result injection flash */
+        #promptInput.results-injected {
+            border-color: #c4a44e;
+            animation: flash-border 0.5s ease-in-out 3;
+        }
+
+        @keyframes flash-border {
+            50% { border-color: #e0d6c0; background: #2a2620; }
+        }
+
+        /* Dice confirm modal (reuses session modal styles) */
+        #diceConfirmBackdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 999;
+        }
+        #diceConfirmBackdrop.open { display: block; }
+
+        #diceConfirmModal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 420px; max-width: 90vw;
+            max-height: 70vh;
+            background: #1a1815;
+            border: 2px solid #3a3530;
+            box-shadow: 4px 4px 0 #000;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        #diceConfirmModal.open { display: flex; }
     </style>
 </head>
 <body>
@@ -1693,6 +1794,38 @@
         const API_MODEL = 'claude-opus-4-6';
         let conversationHistory = [];
         let dmPrompts = null;
+        let pendingDiceRequest = null;
+
+        // =========================================================
+        // CHARACTER & ENEMY STATS  (source of truth for modifiers)
+        // =========================================================
+        const CHARACTER_STATS = {
+            'Akwan': {
+                full: 'Akwan Akusian', ac: 15, hp: 21,
+                mods: { STR: -1, DEX: 3, CON: 1, INT: 1, WIS: 0, CHA: 3 },
+                proficiency: 2,
+                proficient_saves: ['DEX', 'CHA'],
+                spell_save_dc: 13, spell_attack: 5,
+            },
+            'Fiel': {
+                full: 'Fiel Amimso', ac: 13, hp: 24,
+                mods: { STR: -1, DEX: 3, CON: 2, INT: 0, WIS: 2, CHA: -1 },
+                proficiency: 2,
+                proficient_saves: ['DEX', 'INT'],
+                spell_save_dc: null, spell_attack: null,
+            },
+            'Flicker': {
+                full: 'Flicker', ac: 15, hp: 24,
+                mods: { STR: -1, DEX: 2, CON: 2, INT: 0, WIS: 0, CHA: 3 },
+                proficiency: 2,
+                proficient_saves: ['WIS', 'CHA'],
+                spell_save_dc: 13, spell_attack: 5,
+            },
+            'Goblin': { ac: 15, hp: 7, mods: { STR: -1, DEX: 2, CON: 0, INT: 0, WIS: -1, CHA: -1 }, proficiency: 2 },
+            'Goblin Shaman': { ac: 15, hp: 7, mods: { STR: -1, DEX: 2, CON: 0, INT: 0, WIS: 1, CHA: -1 }, proficiency: 2 },
+            'Bugbear': { ac: 16, hp: 27, mods: { STR: 2, DEX: 2, CON: 1, INT: -1, WIS: 0, CHA: -1 }, proficiency: 2 },
+            'Skeleton': { ac: 13, hp: 13, mods: { STR: 0, DEX: 2, CON: 2, INT: -2, WIS: -1, CHA: -3 }, proficiency: 2 },
+        };
 
         async function loadPrompts() {
             if (dmPrompts) return dmPrompts;
@@ -2231,7 +2364,19 @@
                 const reply = data.content?.[0]?.text || '(No response)';
                 conversationHistory.push({ role: 'assistant', content: reply });
                 loadingEl.remove();
-                addStoryEntry('assistant', 'Dungeon Master', reply, currentMode);
+
+                // Check for dice automation request
+                const diceRequest = parseDiceRequest(reply);
+                const cleanReply = stripDiceRequest(reply);
+                addStoryEntry('assistant', 'Dungeon Master', cleanReply, currentMode);
+
+                if (diceRequest) {
+                    if (diceRequest.confirmations && diceRequest.confirmations.length > 0) {
+                        showDiceConfirmation(diceRequest);
+                    } else {
+                        populateDiceTable(diceRequest);
+                    }
+                }
             } catch (err) {
                 loadingEl.remove();
                 addStoryEntry('assistant', 'Dungeon Master', `[Error: ${err.message}]`, currentMode);
@@ -2563,16 +2708,40 @@
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeNpcPicker(); closeSessionModal(); }
+            if (e.key === 'Escape') { closeNpcPicker(); closeSessionModal(); cancelDiceConfirmation(); }
         });
 
-        function addDiceChip(container, sides, result) {
+        function addDiceChip(container, sides, result, options) {
+            const opts = options || {};
             const chip = document.createElement('div');
             chip.className = 'dice-chip' + (result !== null ? ' rolled' : '');
+            if (opts.conditional) chip.classList.add('conditional');
             chip.draggable = true;
             chip.dataset.sides = sides;
             chip.dataset.rolled = result !== null ? 'true' : 'false';
             chip.dataset.value = result !== null ? result : '';
+
+            // Store automation metadata
+            if (opts.modifier !== undefined)      chip.dataset.modifier = opts.modifier;
+            if (opts.modifierBreakdown)            chip.dataset.modifierBreakdown = opts.modifierBreakdown;
+            if (opts.label)                        chip.dataset.label = opts.label;
+            if (opts.rollId)                       chip.dataset.rollId = opts.rollId;
+            if (opts.rollGroupId)                  chip.dataset.rollGroupId = opts.rollGroupId;
+            if (opts.targetValue !== undefined)    chip.dataset.targetValue = opts.targetValue;
+            if (opts.targetLabel)                  chip.dataset.targetLabel = opts.targetLabel;
+            if (opts.conditional)                  chip.dataset.conditional = opts.conditional;
+            if (opts.dependsOn)                    chip.dataset.dependsOn = opts.dependsOn;
+            if (opts.damageOnHit)                  chip.dataset.damageOnHit = opts.damageOnHit;
+            if (opts.damageType)                   chip.dataset.damageType = opts.damageType;
+
+            // Label row (e.g. "Rapier Atk")
+            if (opts.label) {
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'chip-label';
+                labelSpan.textContent = opts.label;
+                if (opts.modifierBreakdown) labelSpan.title = opts.modifierBreakdown;
+                chip.appendChild(labelSpan);
+            }
 
             const c = document.createElement('canvas');
             c.className = 'chip-pixel-die';
@@ -2590,6 +2759,15 @@
             sidesLabel.className = 'chip-sides';
             sidesLabel.textContent = 'd' + sides;
             chip.appendChild(sidesLabel);
+
+            // Modifier display (e.g. "+5")
+            if (opts.modifier !== undefined && opts.modifier !== 0) {
+                const modSpan = document.createElement('span');
+                modSpan.className = 'chip-modifier';
+                modSpan.textContent = (opts.modifier >= 0 ? '+' : '') + opts.modifier;
+                if (opts.modifierBreakdown) modSpan.title = opts.modifierBreakdown;
+                chip.appendChild(modSpan);
+            }
 
             const resultSpan = document.createElement('span');
             resultSpan.className = 'chip-result';
@@ -2654,9 +2832,20 @@
                         chip.dataset.rolled = 'true';
                         chip.dataset.value = result;
                         chip.classList.add('rolled');
-                        chip.querySelector('.chip-result').textContent = result;
+                        // Show total (value + modifier) if modifier exists
+                        const mod = parseInt(chip.dataset.modifier) || 0;
+                        const total = result + mod;
+                        chip.dataset.total = total;
+                        if (mod !== 0) {
+                            chip.querySelector('.chip-result').textContent = result + (mod >= 0 ? '+' : '') + mod + '=' + total;
+                        } else {
+                            chip.querySelector('.chip-result').textContent = result;
+                        }
                     });
                     updateRollButton();
+                    // If any chips have automation metadata, calculate results
+                    const hasAutomation = [...unrolled].some(c => c.dataset.rollId || c.dataset.rollGroupId);
+                    if (hasAutomation) calculateResults();
                 }
             }, tickRate);
         }
@@ -2664,6 +2853,221 @@
         function checkEmpty() {
             const portions = tableSurface.querySelectorAll('.table-portion');
             tableEmptyMsg.style.display = portions.length === 0 ? 'flex' : 'none';
+        }
+
+        // =========================================================
+        // DICE AUTOMATION — AI-driven dice loading & calculation
+        // =========================================================
+
+        function parseDiceRequest(responseText) {
+            const regex = /```dice_request\s*\n([\s\S]*?)\n```/;
+            const match = responseText.match(regex);
+            if (!match) return null;
+            try {
+                return JSON.parse(match[1]);
+            } catch (e) {
+                console.warn('Failed to parse dice_request JSON:', e);
+                return null;
+            }
+        }
+
+        function stripDiceRequest(responseText) {
+            return responseText.replace(/```dice_request\s*\n[\s\S]*?\n```/g, '').trim();
+        }
+
+        function populateDiceTable(diceRequest) {
+            // Clear existing table
+            tableSurface.querySelectorAll('.table-portion').forEach(p => {
+                p.querySelectorAll('canvas').forEach(c => unregisterAnim(c));
+                p.remove();
+            });
+            tableEmptyMsg.style.display = 'none';
+
+            diceRequest.participants.forEach(participant => {
+                addPortion(participant.name);
+                const portion = tableSurface.querySelector('.table-portion:last-child');
+                const diceArea = portion.querySelector('.portion-dice');
+
+                participant.rolls.forEach(roll => {
+                    const parts = roll.dice.split('d');
+                    const count = parseInt(parts[0]) || 1;
+                    const sides = parseInt(parts[1]);
+
+                    for (let i = 0; i < count; i++) {
+                        addDiceChip(diceArea, sides, null, {
+                            modifier: (i === 0) ? (roll.modifier || 0) : 0,
+                            modifierBreakdown: roll.modifier_breakdown || '',
+                            label: roll.label || '',
+                            rollId: roll.id + (count > 1 ? '_' + i : ''),
+                            rollGroupId: roll.id,
+                            targetValue: roll.target_value,
+                            targetLabel: roll.target_label || '',
+                            conditional: roll.conditional || '',
+                            dependsOn: roll.depends_on || '',
+                            damageOnHit: roll.damage_on_hit || '',
+                            damageType: roll.damage_type || '',
+                        });
+                    }
+                });
+            });
+
+            updateRollButton();
+            document.querySelector('.dice-table').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function calculateResults() {
+            const allChips = tableSurface.querySelectorAll('.dice-chip[data-rolled="true"]');
+            const groups = {};
+
+            // First pass: group chips by rollGroupId
+            allChips.forEach(chip => {
+                const groupId = chip.dataset.rollGroupId || chip.dataset.rollId;
+                if (!groupId) return;
+                if (!groups[groupId]) groups[groupId] = { chips: [], modifier: 0, meta: {} };
+                groups[groupId].chips.push(chip);
+                const mod = parseInt(chip.dataset.modifier) || 0;
+                if (mod !== 0 && groups[groupId].modifier === 0) groups[groupId].modifier = mod;
+                ['label','targetValue','targetLabel','conditional','dependsOn','damageOnHit','damageType']
+                    .forEach(k => { if (chip.dataset[k]) groups[groupId].meta[k] = chip.dataset[k]; });
+            });
+
+            // Second pass: calculate totals and hits
+            const rollValues = {};
+            for (const [groupId, group] of Object.entries(groups)) {
+                const rawSum = group.chips.reduce((sum, c) => sum + parseInt(c.dataset.value), 0);
+                const total = rawSum + group.modifier;
+                const target = parseInt(group.meta.targetValue) || null;
+                const hit = target ? total >= target : null;
+                rollValues[groupId] = { rawSum, modifier: group.modifier, total, hit, meta: group.meta, chips: group.chips };
+            }
+
+            // Third pass: resolve conditionals and apply CSS
+            for (const [groupId, rv] of Object.entries(rollValues)) {
+                if (rv.meta.conditional === 'on_hit' && rv.meta.dependsOn) {
+                    const parent = rollValues[rv.meta.dependsOn];
+                    if (parent && !parent.hit) {
+                        rv.skipped = true;
+                        rv.chips.forEach(c => c.classList.add('skipped'));
+                        continue;
+                    } else {
+                        rv.chips.forEach(c => { c.classList.remove('conditional'); c.classList.add('active'); });
+                    }
+                }
+                if (rv.hit === true)  rv.chips.forEach(c => c.classList.add('hit'));
+                if (rv.hit === false) rv.chips.forEach(c => c.classList.add('miss'));
+            }
+
+            // Format and inject
+            const resultText = formatDiceResults(rollValues);
+            if (resultText) injectResults(resultText);
+        }
+
+        function formatDiceResults(rollValues) {
+            // Group results by portion (participant)
+            const portions = tableSurface.querySelectorAll('.table-portion');
+            const lines = [];
+
+            portions.forEach(portion => {
+                const name = portion.querySelector('.portion-name').textContent;
+                const chips = portion.querySelectorAll('.dice-chip[data-rolled="true"]');
+                if (chips.length === 0) return;
+
+                // Collect results for this portion's roll groups
+                const seen = new Set();
+                const parts = [];
+
+                chips.forEach(chip => {
+                    const groupId = chip.dataset.rollGroupId || chip.dataset.rollId;
+                    if (!groupId || seen.has(groupId)) return;
+                    seen.add(groupId);
+
+                    const rv = rollValues[groupId];
+                    if (!rv) return;
+
+                    const label = rv.meta.label || 'Roll';
+                    const diceStr = rv.chips.length > 1
+                        ? rv.chips.map(c => c.dataset.value).join('+')
+                        : String(rv.rawSum);
+                    const modStr = rv.modifier !== 0
+                        ? (rv.modifier > 0 ? '+' + rv.modifier : String(rv.modifier))
+                        : '';
+
+                    if (rv.skipped) {
+                        parts.push(`${label}: [skipped — miss]`);
+                    } else if (rv.hit === true) {
+                        parts.push(`${label}: ${diceStr}${modStr}=${rv.total} (HIT vs ${rv.meta.targetLabel || 'AC ' + rv.meta.targetValue})`);
+                    } else if (rv.hit === false) {
+                        parts.push(`${label}: ${diceStr}${modStr}=${rv.total} (MISS vs ${rv.meta.targetLabel || 'AC ' + rv.meta.targetValue})`);
+                    } else {
+                        // No target (damage, healing, etc.)
+                        const typeStr = rv.meta.damageType ? ' ' + rv.meta.damageType : '';
+                        parts.push(`${label}: ${diceStr}${modStr}=${rv.total}${typeStr}`);
+                    }
+                });
+
+                if (parts.length > 0) {
+                    lines.push(`${name}: ${parts.join('. ')}.`);
+                }
+            });
+
+            return lines.join('\n');
+        }
+
+        function injectResults(resultText) {
+            promptInput.value = resultText;
+            promptInput.focus();
+            promptInput.classList.add('results-injected');
+            setTimeout(() => promptInput.classList.remove('results-injected'), 2000);
+        }
+
+        // Dice confirmation popup
+        function showDiceConfirmation(diceRequest) {
+            pendingDiceRequest = diceRequest;
+            const container = document.getElementById('diceConfirmQuestions');
+            container.innerHTML = '';
+
+            diceRequest.confirmations.forEach((q, i) => {
+                const div = document.createElement('div');
+                div.style.marginBottom = '8px';
+                div.innerHTML = '<div class="session-modal-label">' + escapeHtml(q) + '</div>' +
+                    '<input type="text" class="confirm-answer" data-index="' + i + '" ' +
+                    'placeholder="Your answer..." style="width:100%;background:#1e1c18;border:1.5px solid #4a4540;color:#d4c4a0;padding:4px 6px;font-family:inherit;font-size:11px;">';
+                container.appendChild(div);
+            });
+
+            document.getElementById('diceConfirmBackdrop').classList.add('open');
+            document.getElementById('diceConfirmModal').classList.add('open');
+            const first = container.querySelector('.confirm-answer');
+            if (first) first.focus();
+        }
+
+        function submitDiceConfirmation() {
+            const answers = [];
+            document.querySelectorAll('.confirm-answer').forEach(input => {
+                answers.push(input.value.trim());
+            });
+
+            const answerText = pendingDiceRequest.confirmations
+                .map((q, i) => 'Q: ' + q + '\nA: ' + (answers[i] || '(no answer)'))
+                .join('\n');
+
+            closeDiceConfirmation();
+            promptInput.value = '[DM Clarification]\n' + answerText + '\n\nPlease revise the dice request with these answers.';
+            sendPrompt();
+        }
+
+        function closeDiceConfirmation() {
+            document.getElementById('diceConfirmModal').classList.remove('open');
+            document.getElementById('diceConfirmBackdrop').classList.remove('open');
+        }
+
+        function cancelDiceConfirmation() {
+            closeDiceConfirmation();
+            // Still populate the table with what we have
+            if (pendingDiceRequest) {
+                populateDiceTable(pendingDiceRequest);
+                pendingDiceRequest = null;
+            }
         }
 
         // =========================================================
@@ -3128,6 +3532,21 @@
         <div class="npc-picker-custom">
             <input type="text" id="npcCustomInput" placeholder="Custom name..." onkeydown="npcCustomKey(event)">
             <button onclick="addCustomNpc()">Add</button>
+        </div>
+    </div>
+
+    <div id="diceConfirmBackdrop" onclick="cancelDiceConfirmation()"></div>
+    <div id="diceConfirmModal">
+        <div class="session-modal-titlebar">
+            <span>DM Confirmation Needed</span>
+            <button class="session-modal-close" onclick="cancelDiceConfirmation()">&times;</button>
+        </div>
+        <div class="session-modal-body">
+            <div id="diceConfirmQuestions"></div>
+        </div>
+        <div class="session-modal-footer">
+            <button onclick="cancelDiceConfirmation()">Skip &amp; Load Anyway</button>
+            <button class="btn-save" onclick="submitDiceConfirmation()">Confirm &amp; Load Dice</button>
         </div>
     </div>
 </body>

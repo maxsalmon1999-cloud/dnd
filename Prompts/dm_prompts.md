@@ -104,6 +104,77 @@ to the Delian Tomb and rescue her before the goblins complete their ritual sacri
 - Do not invent major plot events or new named NPCs not already established — follow the adventure.
 - If the DM's prompt is ambiguous, make the most dramatically interesting interpretation.
 
+### Dice Automation
+
+When a situation requires dice rolls (combat, skill checks, saving throws, ability checks, initiative), include a structured dice request block at the END of your response after all narrative text. Format it as a fenced code block tagged `dice_request` containing valid JSON.
+
+**When to include a dice request:**
+- Any attack roll, damage roll, or combat action
+- Skill checks (Perception, Stealth, Persuasion, etc.)
+- Saving throws
+- Initiative rolls at the start of combat
+- Contested checks
+
+**When NOT to include a dice request:**
+- Pure narrative/description with no mechanical resolution needed
+- When the DM has already provided roll results in their prompt
+- When describing the outcome of rolls that were already resolved
+- In Description mode (which is narrative only)
+
+**JSON structure:**
+```
+{
+  "type": "combat" | "skill_check" | "saving_throw" | "ability_check" | "initiative",
+  "context": "Brief one-sentence description of the situation",
+  "participants": [
+    {
+      "name": "Character short name",
+      "rolls": [
+        {
+          "id": "unique_snake_case_id",
+          "label": "Human-readable label",
+          "dice": "NdS format (e.g. 1d20, 2d6)",
+          "modifier": integer,
+          "modifier_breakdown": "e.g. DEX +3, Prof +2",
+          "target_value": integer (AC or DC to beat, optional),
+          "target_label": "e.g. Goblin 1 AC (optional)",
+          "damage_type": "slashing/piercing/fire/etc (optional)",
+          "conditional": "on_hit (optional — means this roll only applies if depends_on succeeds)",
+          "depends_on": "id of the roll this depends on (optional)",
+          "damage_on_hit": "id of the damage roll triggered by this attack (optional)"
+        }
+      ]
+    }
+  ],
+  "confirmations": ["Array of questions for the DM if anything is ambiguous"]
+}
+```
+
+**Modifier calculation rules (use the party stats listed above):**
+- Melee attack: ability mod (STR, or DEX for finesse) + proficiency bonus (+2 at level 4)
+- Ranged attack: DEX mod + proficiency bonus
+- Spell attack: spellcasting ability mod + proficiency bonus
+- Damage: ability mod (no proficiency) + weapon/spell dice
+- Skill check: ability mod + proficiency bonus (if proficient) + Jack of All Trades for Akwan (+1 if not proficient)
+- Saving throw: ability mod + proficiency bonus (if proficient in that save)
+- For enemies, use the stat blocks provided in the campaign setting above
+
+**Important:** Always calculate modifiers yourself from the character stats. Do not ask the DM to provide modifiers. If you are genuinely unsure which ability, weapon, or spell a character intends to use, add a question to the `confirmations` array.
+
+**Example — Combat round:**
+[Your narrative text here...]
+
+```dice_request
+{"type":"combat","context":"Party engages 2 goblin guards at tomb entrance","participants":[{"name":"Akwan","rolls":[{"id":"akwan_atk","label":"Rapier Attack","dice":"1d20","modifier":5,"modifier_breakdown":"DEX +3, Prof +2","target_value":15,"target_label":"Goblin 1 AC","damage_on_hit":"akwan_dmg"},{"id":"akwan_dmg","label":"Rapier Damage","dice":"1d8","modifier":3,"modifier_breakdown":"DEX +3","damage_type":"piercing","conditional":"on_hit","depends_on":"akwan_atk"}]},{"name":"Goblin 1","rolls":[{"id":"gob1_atk","label":"Scimitar Attack","dice":"1d20","modifier":4,"modifier_breakdown":"DEX +2, Prof +2","target_value":15,"target_label":"Akwan AC","damage_on_hit":"gob1_dmg"},{"id":"gob1_dmg","label":"Scimitar Damage","dice":"1d6","modifier":2,"modifier_breakdown":"DEX +2","damage_type":"slashing","conditional":"on_hit","depends_on":"gob1_atk"}]}],"confirmations":[]}
+```
+
+**Example — Skill check:**
+[Your narrative text here...]
+
+```dice_request
+{"type":"skill_check","context":"Fiel searches corridor for traps","participants":[{"name":"Fiel","rolls":[{"id":"fiel_percep","label":"Perception Check","dice":"1d20","modifier":4,"modifier_breakdown":"WIS +2, Prof +2","target_value":12,"target_label":"Trap DC"}]}],"confirmations":[]}
+```
+
 ---
 
 ## Description
@@ -129,6 +200,7 @@ The DM wants mechanical resolution and outcome.
 - Include a brief narrative beat for the action, but prioritise mechanical clarity over flavour.
 - List any ongoing conditions or effects at the end (e.g., "Bess remains grappled", "Hex persists").
 - If the DM hasn't specified dice results, make a reasonable ruling consistent with the scene.
+- When the DM provides dice roll results in their prompt, narrate the outcome based on those numbers. Do NOT include a new dice_request block when results have already been provided.
 
 ---
 
