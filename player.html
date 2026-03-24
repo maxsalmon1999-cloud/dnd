@@ -1342,10 +1342,10 @@ floorMesh.position.y = -0.5;
 scene.add(floorMesh);
 
 // ── Physics world ────────────────────────────────────────────
-const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -40, 0) });
+const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -20, 0) });
 world.allowSleep = true;
-world.defaultContactMaterial.restitution = 0.28;
-world.defaultContactMaterial.friction    = 0.5;
+world.defaultContactMaterial.restitution = 0.5;
+world.defaultContactMaterial.friction    = 0.4;
 
 const floorBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane() });
 floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2);
@@ -1473,18 +1473,21 @@ function makePolyMesh(sides) {
 // ── Result label sprite ──────────────────────────────────────
 function makeResultSprite(text, isCrit, isFail) {
     const c = document.createElement('canvas');
-    c.width = 128; c.height = 128;
+    c.width = 256; c.height = 256;
     const ctx = c.getContext('2d');
-    ctx.clearRect(0,0,128,128);
-    ctx.font = 'bold 72px sans-serif';
+    ctx.clearRect(0, 0, 256, 256);
+    // Dark background circle so number is readable over any die colour
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.beginPath(); ctx.arc(128, 128, 110, 0, Math.PI*2); ctx.fill();
+    ctx.font = 'bold 130px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = isCrit ? '#4aff4a' : isFail ? '#e04040' : '#1a1410';
-    ctx.fillText(text, 64, 64);
+    ctx.fillStyle = isCrit ? '#4aff4a' : isFail ? '#e04040' : '#ffffff';
+    ctx.fillText(text, 128, 128);
     const tex = new THREE.CanvasTexture(c);
-    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false });
+    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
     const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(1.2, 1.2, 1);
+    sprite.scale.set(3.5, 3.5, 1);
     return sprite;
 }
 
@@ -1512,7 +1515,7 @@ function startRender() {
             d.mesh.position.copy(d.body.position);
             d.mesh.quaternion.copy(d.body.quaternion);
             if (d.sprite) {
-                d.sprite.position.set(d.body.position.x, d.body.position.y + 1.1, d.body.position.z);
+                d.sprite.position.set(d.body.position.x, d.body.position.y + 2.2, d.body.position.z);
             }
         });
         renderer.render(scene, camera);
@@ -1539,8 +1542,8 @@ function engineAddDie(sides) {
             ? new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5))
             : new CANNON.Sphere(bodyRadius * 0.9),
         sleepTimeLimit: 0.15,
-        linearDamping:  0.1,
-        angularDamping: 0.1,
+        linearDamping:  0.04,
+        angularDamping: 0.04,
     });
     body.position.set(999, 999, 999);
     body.allowSleep = true;
@@ -1583,21 +1586,27 @@ function engineThrowAll(rolls, onSettled) {
         d.body.velocity.setZero();
         d.body.angularVelocity.setZero();
 
-        // Launch from right edge, staggered
-        const startX  =  7 + Math.random() * 1;
-        const startZ  = -2 + i * 1.4 - (total * 0.7);
-        d.body.position.set(startX, 3 + Math.random(), startZ);
+        // Drop from above, scattered across the table
+        const startX = (Math.random() - 0.5) * 10;
+        const startZ = (Math.random() - 0.5) *  7;
+        d.body.position.set(startX, 7 + i * 0.6, startZ);
         d.mesh.position.copy(d.body.position);
 
-        // Random initial spin
-        d.mesh.rotation.set(Math.random()*Math.PI*2, 0, Math.random()*Math.PI*2);
+        // Random initial orientation
+        d.mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
         d.body.quaternion.copy(d.mesh.quaternion);
 
-        // Impulse toward centre-left
-        const force = 5 + Math.random() * 4;
+        // Strong tumbling angular velocity so dice spin a lot on the way down
+        d.body.angularVelocity.set(
+            (Math.random()-0.5)*25,
+            (Math.random()-0.5)*25,
+            (Math.random()-0.5)*25
+        );
+
+        // Small horizontal nudge so dice drift a little
         d.body.applyImpulse(
-            new CANNON.Vec3(-force, force * 0.7, (Math.random()-0.5)*3),
-            new CANNON.Vec3(0, 0, 0.3)
+            new CANNON.Vec3((Math.random()-0.5)*3, 0, (Math.random()-0.5)*3),
+            new CANNON.Vec3(0, 0, 0)
         );
         d.body.allowSleep = true;
 
@@ -1610,7 +1619,7 @@ function engineThrowAll(rolls, onSettled) {
             const isCrit = d.sides === 20 && d.result === 20;
             const isFail = d.sides === 20 && d.result === 1;
             const sprite = makeResultSprite(String(d.result), isCrit, isFail);
-            sprite.position.set(d.body.position.x, d.body.position.y + 1.1, d.body.position.z);
+            sprite.position.set(d.body.position.x, d.body.position.y + 2.2, d.body.position.z);
             scene.add(sprite);
             d.sprite = sprite;
 
