@@ -1859,7 +1859,7 @@
                         <div class="ability-section">
                             <div class="ability-section-label">Abilities</div>
                             <div class="ability-grid">
-                                <button class="ability-btn" data-char="akwan" data-rest="long" data-max="3" data-used="0" onclick="useAbility(this)">Bardic Inspiration <span class="ability-count">3/3</span></button>
+                                <button class="ability-btn" data-char="akwan" data-rest="long" data-max="3" data-used="0" data-ability="bardic_inspiration" onclick="useAbility(this)">Bardic Inspiration <span class="ability-count">3/3</span></button>
                             </div>
                         </div>
                     </div>
@@ -1922,7 +1922,7 @@
                         <div class="ability-section">
                             <div class="ability-section-label">Abilities</div>
                             <div class="ability-grid">
-                                <button class="ability-btn" data-char="flicker" data-rest="short" data-max="1" data-used="0" onclick="useAbility(this)">Fey Presence <span class="ability-count">1/1</span></button>
+                                <button class="ability-btn" data-char="flicker" data-rest="short" data-max="1" data-used="0" data-ability="fey_presence" onclick="useAbility(this)">Fey Presence <span class="ability-count">1/1</span></button>
                             </div>
                         </div>
                     </div>
@@ -2139,6 +2139,51 @@
                     if (seenRollKeys.has(snap.key)) return;
                     seenRollKeys.add(snap.key);
                     appendPlayerRoll(snap.val());
+                });
+            });
+
+            syncCharacterState();
+        }
+
+        function syncCharacterState() {
+            // Default slot/ability state per character
+            const defaults = {
+                'characters/akwan/slots':     { '1_0': false, '1_1': false, '1_2': false, '1_3': false, '2_0': false, '2_1': false },
+                'characters/akwan/abilities': { bardic_inspiration: 0 },
+                'characters/flicker/slots':   { 'w_0': false, 'w_1': false },
+                'characters/flicker/abilities': { fey_presence: 0 },
+            };
+            Object.entries(defaults).forEach(([path, defaultVal]) => {
+                firebaseDb.ref(path).once('value', snap => {
+                    if (!snap.val()) firebaseDb.ref(path).set(defaultVal);
+                });
+            });
+
+            // Listen for slot changes and update DM character cards
+            ['akwan', 'flicker'].forEach(char => {
+                firebaseDb.ref('characters/' + char + '/slots').on('value', snap => {
+                    const slots = snap.val() || {};
+                    Object.entries(slots).forEach(([key, spent]) => {
+                        const parts = key.split('_');
+                        const slotNum = parts[0];
+                        const idx     = parts[1];
+                        const pip = document.querySelector(
+                            '.spell-slot-pip[data-char="' + char + '"][data-slot="' + slotNum + '"][data-idx="' + idx + '"]'
+                        );
+                        if (pip) pip.classList.toggle('spent', spent);
+                    });
+                });
+
+                firebaseDb.ref('characters/' + char + '/abilities').on('value', snap => {
+                    const abilities = snap.val() || {};
+                    Object.entries(abilities).forEach(([key, used]) => {
+                        const btn = document.querySelector('.ability-btn[data-char="' + char + '"][data-ability="' + key + '"]');
+                        if (!btn) return;
+                        const max = parseInt(btn.dataset.max);
+                        btn.dataset.used = String(used);
+                        btn.querySelector('.ability-count').textContent = (max - used) + '/' + max;
+                        btn.classList.toggle('used', used >= max);
+                    });
                 });
             });
         }
@@ -2723,6 +2768,8 @@
         // =========================================================
         function toggleSlot(pip) {
             pip.classList.toggle('spent');
+            firebaseDb.ref('characters/' + pip.dataset.char + '/slots/' + pip.dataset.slot + '_' + pip.dataset.idx)
+                .set(pip.classList.contains('spent'));
         }
 
         function useAbility(btn) {
@@ -2732,6 +2779,9 @@
             btn.dataset.used = used;
             btn.querySelector('.ability-count').textContent = (max - used) + '/' + max;
             if (used >= max) btn.classList.add('used');
+            if (btn.dataset.char && btn.dataset.ability) {
+                firebaseDb.ref('characters/' + btn.dataset.char + '/abilities/' + btn.dataset.ability).set(used);
+            }
         }
 
         function doRest(type) {
@@ -2753,6 +2803,22 @@
                     btn.querySelector('.ability-count').textContent = max + '/' + max;
                 });
             }
+            // Sync rest to Firebase so player screens update
+            const updates = {
+                'characters/flicker/slots/w_0': false,
+                'characters/flicker/slots/w_1': false,
+                'characters/flicker/abilities/fey_presence': 0,
+            };
+            if (type === 'long') {
+                updates['characters/akwan/slots/1_0'] = false;
+                updates['characters/akwan/slots/1_1'] = false;
+                updates['characters/akwan/slots/1_2'] = false;
+                updates['characters/akwan/slots/1_3'] = false;
+                updates['characters/akwan/slots/2_0'] = false;
+                updates['characters/akwan/slots/2_1'] = false;
+                updates['characters/akwan/abilities/bardic_inspiration'] = 0;
+            }
+            firebaseDb.ref().update(updates);
         }
 
         function handleKey(e) {

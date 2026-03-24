@@ -641,9 +641,12 @@
             maxHp: 21, ac: 15, proficiency: 2,
             spellSaveDC: 13, spellAttack: '+5',
             stats: { STR: -1, DEX: 3, CON: 1, INT: 1, WIS: 0, CHA: 3 },
-            spellSlots: { '1st Level': 4, '2nd Level': 2 },
+            spellSlots: [
+                { label: '1st Level', count: 4, key: '1' },
+                { label: '2nd Level', count: 2, key: '2' }
+            ],
             abilities: [
-                { name: 'Bardic Inspiration', max: 3, rest: 'Long', passive: false }
+                { name: 'Bardic Inspiration', key: 'bardic_inspiration', max: 3, rest: 'Long', passive: false }
             ]
         },
         fiel: {
@@ -652,7 +655,7 @@
             maxHp: 24, ac: 13, proficiency: 2,
             spellSaveDC: null, spellAttack: null,
             stats: { STR: -1, DEX: 3, CON: 2, INT: 0, WIS: 2, CHA: -1 },
-            spellSlots: {},
+            spellSlots: [],
             abilities: [
                 { name: 'Sneak Attack 2d6', passive: true, desc: 'Once per turn, +2d6 with advantage or adjacent ally' },
                 { name: 'Cunning Action', passive: true, desc: 'Bonus action: Dash, Disengage, or Hide' },
@@ -666,9 +669,11 @@
             maxHp: 24, ac: 15, proficiency: 2,
             spellSaveDC: 13, spellAttack: '+5',
             stats: { STR: -1, DEX: 2, CON: 2, INT: 0, WIS: 0, CHA: 3 },
-            spellSlots: { '2nd (Short Rest)': 2 },
+            spellSlots: [
+                { label: '2nd (Short Rest)', count: 2, key: 'w' }
+            ],
             abilities: [
-                { name: 'Fey Presence', max: 1, rest: 'Short', passive: false }
+                { name: 'Fey Presence', key: 'fey_presence', max: 1, rest: 'Short', passive: false }
             ]
         }
     };
@@ -681,6 +686,7 @@
     let currentHp = null;
     let rollHistory = [];
     let rollAnimTimer = null;
+    // spellSlotState and abilityState are now managed by Firebase
 
     // =========================================================
     // INIT
@@ -769,7 +775,7 @@
 
     function buildSpecial() {
         const body = document.getElementById('specialBody');
-        const hasSlots = Object.keys(char.spellSlots).length > 0;
+        const hasSlots = char.spellSlots.length > 0;
         const activeAbils = char.abilities.filter(a => !a.passive);
         const passiveAbils = char.abilities.filter(a => a.passive);
 
@@ -780,17 +786,22 @@
             slotLabel.textContent = 'Spell Slots';
             body.appendChild(slotLabel);
 
-            Object.entries(char.spellSlots).forEach(([level, count]) => {
+            char.spellSlots.forEach(slot => {
                 const row = document.createElement('div');
                 row.className = 'slot-row';
                 const lbl = document.createElement('span');
                 lbl.className = 'slot-level-label';
-                lbl.textContent = level;
+                lbl.textContent = slot.label;
                 row.appendChild(lbl);
-                for (let i = 0; i < count; i++) {
+                for (let i = 0; i < slot.count; i++) {
                     const pip = document.createElement('div');
                     pip.className = 'slot-pip';
-                    pip.onclick = () => pip.classList.toggle('spent');
+                    pip.dataset.slotKey = slot.key + '_' + i;
+                    pip.onclick = () => {
+                        const spent = !pip.classList.contains('spent');
+                        pip.classList.toggle('spent', spent);
+                        db.ref('characters/' + charKey + '/slots/' + pip.dataset.slotKey).set(spent);
+                    };
                     row.appendChild(pip);
                 }
                 body.appendChild(row);
@@ -813,9 +824,10 @@
             const chips = document.createElement('div');
             chips.className = 'ability-chips';
             activeAbils.forEach(a => {
-                let used = 0;
                 const btn = document.createElement('button');
                 btn.className = 'ability-chip';
+                btn.dataset.abilityKey = a.key;
+                btn.dataset.abilityMax = a.max;
                 const countSpan = document.createElement('span');
                 countSpan.className = 'chip-count';
                 countSpan.textContent = a.max + '/' + a.max;
@@ -823,10 +835,8 @@
                 btn.appendChild(countSpan);
                 btn.onclick = () => {
                     if (btn.classList.contains('used')) return;
-                    used++;
-                    const remaining = a.max - used;
-                    countSpan.textContent = remaining + '/' + a.max;
-                    if (remaining <= 0) btn.classList.add('used');
+                    const currentUsed = parseInt(btn.dataset.currentUsed || '0') + 1;
+                    db.ref('characters/' + charKey + '/abilities/' + a.key).set(currentUsed);
                 };
                 chips.appendChild(btn);
             });
@@ -889,7 +899,7 @@
             }
         });
 
-        // Live HP updates (from DM or other sources)
+        // Live HP updates
         charRef.child('hp').on('value', snap => {
             const hp = snap.val();
             if (hp !== null) updateHpDisplay(hp);
@@ -898,6 +908,53 @@
         // Live inventory updates
         charRef.child('inventory').on('value', snap => {
             renderInventory(snap.val() || {});
+        });
+
+        // Initialise spell slots in Firebase if not set
+        if (char.spellSlots.length > 0) {
+            charRef.child('slots').once('value', snap => {
+                if (!snap.val()) {
+                    const defaults = {};
+                    char.spellSlots.forEach(s => {
+                        for (let i = 0; i < s.count; i++) defaults[s.key + '_' + i] = false;
+                    });
+                    charRef.child('slots').set(defaults);
+                }
+            });
+        }
+
+        // Initialise abilities in Firebase if not set
+        const activeAbils = char.abilities.filter(a => !a.passive && a.key);
+        if (activeAbils.length > 0) {
+            charRef.child('abilities').once('value', snap => {
+                if (!snap.val()) {
+                    const defaults = {};
+                    activeAbils.forEach(a => { defaults[a.key] = 0; });
+                    charRef.child('abilities').set(defaults);
+                }
+            });
+        }
+
+        // Live slot updates (DM or rest changes sync here)
+        charRef.child('slots').on('value', snap => {
+            const slots = snap.val() || {};
+            Object.entries(slots).forEach(([key, spent]) => {
+                const pip = document.querySelector('[data-slot-key="' + key + '"]');
+                if (pip) pip.classList.toggle('spent', spent);
+            });
+        });
+
+        // Live ability updates
+        charRef.child('abilities').on('value', snap => {
+            const abilities = snap.val() || {};
+            Object.entries(abilities).forEach(([key, used]) => {
+                const btn = document.querySelector('[data-ability-key="' + key + '"]');
+                if (!btn) return;
+                const max = parseInt(btn.dataset.abilityMax);
+                btn.dataset.currentUsed = String(used);
+                btn.querySelector('.chip-count').textContent = (max - used) + '/' + max;
+                btn.classList.toggle('used', used >= max);
+            });
         });
     }
 
