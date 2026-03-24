@@ -423,68 +423,208 @@
         .inv-add-btn:active { background: #c4a44e; color: #0c0a08; }
 
         /* ===================== DICE ===================== */
-        .dice-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 5px;
-            margin-bottom: 8px;
-        }
 
-        .die-btn {
-            background: #2a2620;
-            border: 1.5px solid #4a4540;
-            color: #c4a44e;
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: bold;
-            padding: 13px 4px;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .die-btn:active {
-            background: #c4a44e;
-            color: #0c0a08;
-            border-color: #c4a44e;
-        }
-
-        .roll-display {
-            text-align: center;
-            min-height: 72px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        /* Die pool — where queued dice sit before rolling */
+        .dice-pool {
+            min-height: 110px;
             background: #0c0a08;
             border: 1.5px solid #2a2620;
-            margin-bottom: 6px;
+            border-radius: 3px;
             padding: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .roll-die-label { font-size: 10px; color: #8a7e68; }
+        .dice-pool-empty {
+            color: #3a3530;
+            font-size: 11px;
+            font-style: italic;
+            user-select: none;
+            pointer-events: none;
+        }
 
-        .roll-number {
-            font-size: 52px;
+        /* Individual die in the pool */
+        .pool-die {
+            width: 62px;
+            height: 62px;
+            position: relative;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .pool-die svg { width: 100%; height: 100%; display: block; }
+
+        .die-face-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 13px;
+            font-weight: bold;
+            color: #c4a44e;
+            pointer-events: none;
+            user-select: none;
+            text-shadow: 0 0 6px #000;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .pool-die.landed .die-face-label {
+            font-size: 20px;
+            color: #e0d6c0;
+        }
+
+        .pool-die.landed.crit .die-face-label { color: #4aff4a; }
+        .pool-die.landed.fail .die-face-label { color: #e04040; }
+
+        .pool-die.landed.crit svg polygon,
+        .pool-die.landed.crit svg rect,
+        .pool-die.landed.crit svg circle { stroke: #4aff4a; filter: drop-shadow(0 0 4px #4aff4a88); }
+
+        .pool-die.landed.fail svg polygon,
+        .pool-die.landed.fail svg rect,
+        .pool-die.landed.fail svg circle { stroke: #e04040; filter: drop-shadow(0 0 4px #e0404088); }
+
+        .die-remove {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 15px;
+            height: 15px;
+            background: #2a2620;
+            border: 1px solid #5a5040;
+            color: #8a7e68;
+            font-size: 10px;
+            line-height: 13px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .die-remove:active { background: #5a3030; color: #e04040; }
+
+        /* Tumble animation */
+        @keyframes die-tumble {
+            0%   { transform: translate(0,0) rotate(0deg) scale(1); }
+            18%  { transform: translate(var(--dx), var(--dy)) rotate(var(--r1)) scale(1.35); opacity: 0.85; }
+            55%  { transform: translate(calc(var(--dx)*0.1), calc(var(--dy)*0.1)) rotate(var(--r2)) scale(0.93); opacity: 1; }
+            72%  { transform: translate(calc(var(--dx)*-0.04), calc(var(--dy)*-0.04)) rotate(var(--r3)) scale(1.04); }
+            87%  { transform: translate(1px,-1px) rotate(var(--r4)) scale(0.99); }
+            100% { transform: translate(0,0) rotate(0deg) scale(1); }
+        }
+
+        .pool-die.rolling {
+            animation: die-tumble var(--dur,1.1s) cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        /* Result bar */
+        .dice-result-bar {
+            background: #161412;
+            border: 1.5px solid #2a2620;
+            padding: 7px 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dice-result-total {
+            font-size: 30px;
             font-weight: bold;
             color: #c4a44e;
             line-height: 1;
+            flex-shrink: 0;
         }
 
-        .roll-number.rolling { opacity: 0.4; }
-        .roll-number.crit    { color: #4aff4a; }
-        .roll-number.fail    { color: #e04040; }
+        .dice-result-total.crit { color: #4aff4a; }
+        .dice-result-total.fail { color: #e04040; }
 
-        .roll-suffix {
-            font-size: 10px;
-            margin-top: 2px;
+        .dice-result-breakdown {
+            font-size: 9px;
+            color: #5a5040;
+            line-height: 1.7;
         }
 
-        .roll-suffix.crit { color: #4aff4a; }
-        .roll-suffix.fail { color: #e04040; }
+        /* Roll / Clear buttons */
+        .dice-actions {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .roll-all-btn {
+            flex: 1;
+            background: #c4a44e;
+            border: none;
+            color: #0c0a08;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 11px 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .roll-all-btn:disabled { background: #2a2620; color: #4a4540; cursor: default; }
+        .roll-all-btn:not(:disabled):active { background: #dbb85a; }
+
+        .clear-btn {
+            background: #1e1c18;
+            border: 1.5px solid #3a3530;
+            color: #5a5040;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 11px 13px;
+            cursor: pointer;
+        }
+
+        .clear-btn:active { background: #2a2620; }
+
+        /* Die picker at the bottom */
+        .die-picker {
+            border-top: 1.5px solid #2a2620;
+            padding-top: 8px;
+        }
+
+        .die-picker-label {
+            font-size: 9px;
+            color: #4a4540;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 6px;
+        }
+
+        .die-picker-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .add-die-btn {
+            background: #1e1c18;
+            border: 1.5px solid #3a3530;
+            color: #8a7e68;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 7px 0;
+            cursor: pointer;
+            flex: 1;
+            min-width: 34px;
+            text-align: center;
+        }
+
+        .add-die-btn:active { background: #2a2620; color: #c4a44e; border-color: #5a5040; }
 
         /* Roll history */
-        .roll-history { }
-
         .roll-history-row {
             display: flex;
             justify-content: space-between;
@@ -492,7 +632,7 @@
             padding: 3px 0;
             border-bottom: 1px dotted #2a2620;
             font-size: 10px;
-            color: #8a7e68;
+            color: #5a5040;
         }
 
         .roll-history-val { font-weight: bold; color: #c4a44e; }
@@ -602,13 +742,31 @@
         <!-- DICE TAB -->
         <div class="tab-panel" id="tab-dice">
             <div class="win-body">
-                <div class="dice-grid" id="diceGrid"></div>
-                <div class="roll-display">
-                    <div class="roll-die-label" id="rollDieLabel">Tap a die to roll</div>
-                    <div class="roll-number" id="rollNumber" style="display:none"></div>
-                    <div class="roll-suffix" id="rollSuffix"></div>
+                <!-- Queued dice -->
+                <div class="dice-pool" id="dicePool">
+                    <div class="dice-pool-empty" id="dicePoolEmpty">Add dice from the menu below</div>
                 </div>
-                <div class="roll-history" id="rollHistory"></div>
+
+                <!-- Roll / Clear -->
+                <div class="dice-actions">
+                    <button class="roll-all-btn" id="rollAllBtn" onclick="rollAll()" disabled>Roll</button>
+                    <button class="clear-btn" onclick="clearDice()">Clear</button>
+                </div>
+
+                <!-- Result -->
+                <div class="dice-result-bar" id="diceResultBar" style="display:none">
+                    <div class="dice-result-total" id="diceResultTotal"></div>
+                    <div class="dice-result-breakdown" id="diceResultBreakdown"></div>
+                </div>
+
+                <!-- History -->
+                <div id="rollHistory"></div>
+
+                <!-- Picker -->
+                <div class="die-picker">
+                    <div class="die-picker-label">Add a die</div>
+                    <div class="die-picker-row" id="diePickerRow"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -684,8 +842,9 @@
     let charKey = null;
     let char = null;
     let currentHp = null;
-    let rollHistory = [];
-    let rollAnimTimer = null;
+    let rollHistory  = [];
+    let dicePoolItems = []; // [{sides, el}]
+    let isRolling    = false;
     // spellSlotState and abilityState are now managed by Firebase
 
     // =========================================================
@@ -738,7 +897,7 @@
         buildCoreStats();
         buildAbilityScores();
         buildSpecial();
-        buildDiceGrid();
+        buildDicePicker();
         startFirebaseSync();
     }
 
@@ -875,14 +1034,174 @@
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
     }
 
-    function buildDiceGrid() {
-        const container = document.getElementById('diceGrid');
+    // =========================================================
+    // DIE SHAPES  (SVG inner content per die type)
+    // =========================================================
+    function getDieShape(sides) {
+        const s = '#5a5040', f = '#1e1c18', w = 'stroke-width="2.5" stroke-linejoin="round"';
+        const shapes = {
+            4:   `<polygon points="50,10 91,83 9,83" fill="${f}" stroke="${s}" ${w}/>`,
+            6:   `<rect x="9" y="9" width="82" height="82" rx="11" fill="${f}" stroke="${s}" stroke-width="2.5"/>`,
+            8:   `<polygon points="50,8 91,50 50,92 9,50" fill="${f}" stroke="${s}" ${w}/>`,
+            10:  `<polygon points="50,7 89,40 76,88 24,88 11,40" fill="${f}" stroke="${s}" ${w}/>`,
+            12:  `<polygon points="50,7 88,33 76,80 24,80 12,33" fill="${f}" stroke="${s}" ${w}/>`,
+            20:  `<polygon points="50,7 92,80 8,80" fill="${f}" stroke="${s}" ${w}/>
+                  <line x1="50" y1="7"  x2="30" y2="80" stroke="#383228" stroke-width="1.5"/>
+                  <line x1="50" y1="7"  x2="70" y2="80" stroke="#383228" stroke-width="1.5"/>
+                  <line x1="8"  y1="80" x2="92" y2="80" stroke="#383228" stroke-width="1.5"/>`,
+            100: `<circle cx="50" cy="50" r="42" fill="${f}" stroke="${s}" stroke-width="2.5"/>
+                  <text x="50" y="62" text-anchor="middle" font-size="22" fill="#3a3530" font-family="serif" font-weight="bold">%</text>`,
+        };
+        return shapes[sides] || shapes[6];
+    }
+
+    // =========================================================
+    // DICE POOL
+    // =========================================================
+    function buildDicePicker() {
+        const row = document.getElementById('diePickerRow');
         [4, 6, 8, 10, 12, 20, 100].forEach(sides => {
             const btn = document.createElement('button');
-            btn.className = 'die-btn';
+            btn.className = 'add-die-btn';
             btn.textContent = 'd' + sides;
-            btn.onclick = () => rollDie(sides);
-            container.appendChild(btn);
+            btn.onclick = () => addDie(sides);
+            row.appendChild(btn);
+        });
+    }
+
+    function addDie(sides) {
+        if (isRolling) return;
+        const empty = document.getElementById('dicePoolEmpty');
+        if (empty) empty.remove();
+
+        const el = document.createElement('div');
+        el.className = 'pool-die';
+        el.dataset.sides = sides;
+        el.innerHTML =
+            `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${getDieShape(sides)}</svg>` +
+            `<div class="die-face-label">d${sides}</div>` +
+            `<div class="die-remove" onclick="removeDie(this.parentElement)">×</div>`;
+
+        document.getElementById('dicePool').appendChild(el);
+        dicePoolItems.push({ sides, el });
+        document.getElementById('rollAllBtn').disabled = false;
+    }
+
+    function removeDie(el) {
+        if (isRolling) return;
+        dicePoolItems = dicePoolItems.filter(d => d.el !== el);
+        el.remove();
+        if (dicePoolItems.length === 0) resetPool();
+    }
+
+    function clearDice() {
+        if (isRolling) return;
+        dicePoolItems = [];
+        resetPool();
+        document.getElementById('diceResultBar').style.display = 'none';
+    }
+
+    function resetPool() {
+        const pool = document.getElementById('dicePool');
+        pool.innerHTML = '<div class="dice-pool-empty" id="dicePoolEmpty">Add dice from the menu below</div>';
+        document.getElementById('rollAllBtn').disabled = true;
+    }
+
+    // =========================================================
+    // ROLLING
+    // =========================================================
+    function rollAll() {
+        if (isRolling || dicePoolItems.length === 0) return;
+        isRolling = true;
+
+        // Pre-compute results and durations so timing is consistent
+        const rolls = dicePoolItems.map((d, i) => ({
+            sides:  d.sides,
+            el:     d.el,
+            result: Math.floor(Math.random() * d.sides) + 1,
+            dur:    900 + Math.random() * 350 + i * 75,   // ms
+            delay:  i * 35,                                // ms stagger
+        }));
+
+        document.getElementById('rollAllBtn').disabled = true;
+        document.getElementById('diceResultBar').style.display = 'none';
+
+        rolls.forEach(r => {
+            const el       = r.el;
+            const labelEl  = el.querySelector('.die-face-label');
+            el.classList.remove('landed', 'crit', 'fail', 'rolling');
+
+            // Random trajectory
+            const dx = (Math.random() - 0.5) * 180;
+            const dy = (Math.random() - 0.5) * 120;
+            el.style.setProperty('--dx',  dx + 'px');
+            el.style.setProperty('--dy',  dy + 'px');
+            el.style.setProperty('--r1', (Math.random() * 600 - 300) + 'deg');
+            el.style.setProperty('--r2', (Math.random() * 200 - 100) + 'deg');
+            el.style.setProperty('--r3', (Math.random() *  60 -  30) + 'deg');
+            el.style.setProperty('--r4', (Math.random() *  15 -   8) + 'deg');
+            el.style.setProperty('--dur', (r.dur / 1000).toFixed(3) + 's');
+
+            // Number scramble during flight
+            const scramble = setInterval(() => {
+                labelEl.textContent = Math.floor(Math.random() * r.sides) + 1;
+            }, 55);
+
+            setTimeout(() => {
+                el.classList.add('rolling');
+            }, r.delay);
+
+            const landAt = r.delay + r.dur;
+            setTimeout(() => {
+                clearInterval(scramble);
+                el.classList.remove('rolling');
+                el.classList.add('landed');
+                const isCrit = r.sides === 20 && r.result === 20;
+                const isFail = r.sides === 20 && r.result === 1;
+                if (isCrit) el.classList.add('crit');
+                if (isFail) el.classList.add('fail');
+                labelEl.textContent = r.result;
+            }, landAt);
+        });
+
+        // Show results after all dice have landed
+        const settleDur = Math.max(...rolls.map(r => r.delay + r.dur)) + 120;
+        setTimeout(() => {
+            showResults(rolls);
+            isRolling = false;
+            document.getElementById('rollAllBtn').disabled = false;
+        }, settleDur);
+    }
+
+    function showResults(rolls) {
+        const total = rolls.reduce((s, r) => s + r.result, 0);
+        const isTotalCrit = rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
+        const isTotalFail = rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 1;
+
+        const totalEl = document.getElementById('diceResultTotal');
+        totalEl.textContent = total;
+        totalEl.className = 'dice-result-total' + (isTotalCrit ? ' crit' : isTotalFail ? ' fail' : '');
+
+        const breakdown = rolls.map(r => `d${r.sides}:${r.result}`).join('  ');
+        document.getElementById('diceResultBreakdown').textContent =
+            rolls.length > 1 ? breakdown + '  =  ' + total : (isTotalCrit ? 'Critical Hit!' : isTotalFail ? 'Critical Fail' : breakdown);
+
+        document.getElementById('diceResultBar').style.display = 'flex';
+
+        // History entry
+        const historyLabel = rolls.map(r => `d${r.sides}`).join('+');
+        const suffix = isTotalCrit ? ' CRIT!' : isTotalFail ? ' FAIL' : '';
+        rollHistory.unshift({ label: historyLabel, total, isTotalCrit, isTotalFail, suffix });
+        if (rollHistory.length > 6) rollHistory.pop();
+        renderRollHistory();
+
+        // Push to Firebase — one entry summarising the roll
+        db.ref('diceLog').push({
+            character: char.name,
+            charKey,
+            dice:      historyLabel,
+            result:    total,
+            timestamp: Date.now(),
         });
     }
 
@@ -1026,73 +1345,18 @@
     });
 
     // =========================================================
-    // DICE ROLLER
+    // ROLL HISTORY
     // =========================================================
-    function rollDie(sides) {
-        if (rollAnimTimer) clearInterval(rollAnimTimer);
-
-        const dieLabel = document.getElementById('rollDieLabel');
-        const numEl    = document.getElementById('rollNumber');
-        const suffix   = document.getElementById('rollSuffix');
-
-        dieLabel.textContent = 'Rolling d' + sides + '…';
-        numEl.style.display = 'block';
-        numEl.className = 'roll-number rolling';
-        numEl.textContent = '?';
-        suffix.textContent = '';
-
-        let ticks = 0;
-        rollAnimTimer = setInterval(() => {
-            numEl.textContent = Math.floor(Math.random() * sides) + 1;
-            ticks++;
-            if (ticks >= 10) {
-                clearInterval(rollAnimTimer);
-                rollAnimTimer = null;
-                const result = Math.floor(Math.random() * sides) + 1;
-                resolveRoll(sides, result);
-            }
-        }, 55);
-    }
-
-    function resolveRoll(sides, result) {
-        const dieLabel = document.getElementById('rollDieLabel');
-        const numEl    = document.getElementById('rollNumber');
-        const suffixEl = document.getElementById('rollSuffix');
-        const isCrit   = sides === 20 && result === 20;
-        const isFail   = sides === 20 && result === 1;
-
-        dieLabel.textContent = 'd' + sides;
-        numEl.textContent = result;
-        numEl.className = 'roll-number' + (isCrit ? ' crit' : isFail ? ' fail' : '');
-        suffixEl.textContent = isCrit ? 'Critical Hit!' : isFail ? 'Critical Fail' : '';
-        suffixEl.className = 'roll-suffix' + (isCrit ? ' crit' : isFail ? ' fail' : '');
-
-        // Add to local history
-        rollHistory.unshift({ sides, result, isCrit, isFail });
-        if (rollHistory.length > 5) rollHistory.pop();
-        renderRollHistory();
-
-        // Push to Firebase so DM sees it
-        db.ref('diceLog').push({
-            character: char.name,
-            charKey:   charKey,
-            dice:      'd' + sides,
-            result:    result,
-            timestamp: Date.now()
-        });
-    }
-
     function renderRollHistory() {
         const container = document.getElementById('rollHistory');
         container.innerHTML = '';
         rollHistory.forEach(entry => {
             const row = document.createElement('div');
             row.className = 'roll-history-row';
-            const valCls = entry.isCrit ? ' crit' : entry.isFail ? ' fail' : '';
-            const suffix = entry.isCrit ? ' CRIT!' : entry.isFail ? ' FAIL' : '';
+            const valCls = entry.isTotalCrit ? ' crit' : entry.isTotalFail ? ' fail' : '';
             row.innerHTML =
-                '<span>d' + entry.sides + '</span>' +
-                '<span class="roll-history-val' + valCls + '">' + entry.result + suffix + '</span>';
+                '<span>' + entry.label + '</span>' +
+                '<span class="roll-history-val' + valCls + '">' + entry.total + entry.suffix + '</span>';
             container.appendChild(row);
         });
     }
