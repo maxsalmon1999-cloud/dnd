@@ -498,6 +498,39 @@
         .roll-history-val { font-weight: bold; color: #c4a44e; }
         .roll-history-val.crit { color: #4aff4a; }
         .roll-history-val.fail { color: #e04040; }
+
+        /* ===================== TABS ===================== */
+        .tab-bar {
+            display: flex;
+            border-bottom: 2px solid #3a3530;
+            background: #201e1a;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 8px 4px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            background: #201e1a;
+            border: none;
+            border-right: 1px solid #3a3530;
+            color: #8a7e68;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .tab:last-child { border-right: none; }
+        .tab:active { background: #2a2620; }
+
+        .tab.active {
+            background: #161412;
+            color: #c4a44e;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
     </style>
 </head>
 <body>
@@ -533,54 +566,50 @@
             <div class="hp-bar-wrap">
                 <div class="hp-bar" id="hpBar" style="width:100%"></div>
             </div>
-            <div class="core-stats" id="coreStats"></div>
-            <div class="ability-grid" id="abilityScores"></div>
         </div>
     </div>
 
-    <!-- Abilities & spell slots -->
-    <div class="win" id="specialWin">
-        <div class="win-title">
-            <div class="win-stripes"></div>
-            <span class="win-label" id="specialWinLabel">Abilities</span>
-            <div class="win-stripes"></div>
-        </div>
-        <div class="win-body" id="specialBody"></div>
-    </div>
-
-    <!-- Inventory -->
+    <!-- Tabbed content -->
     <div class="win">
-        <div class="win-title">
-            <div class="win-stripes"></div>
-            <span class="win-label">Inventory</span>
-            <div class="win-stripes"></div>
+        <div class="tab-bar">
+            <button class="tab active" data-tab="sheet" onclick="setTab('sheet')">Character</button>
+            <button class="tab" data-tab="inventory" onclick="setTab('inventory')">Inventory</button>
+            <button class="tab" data-tab="dice" onclick="setTab('dice')">Dice</button>
         </div>
-        <div class="win-body">
-            <div class="inv-list" id="invList">
-                <div class="inv-empty">No items yet</div>
-            </div>
-            <div class="inv-add">
-                <input type="text" class="inv-input" id="invInput" placeholder="Add an item..." maxlength="60">
-                <button class="inv-add-btn" onclick="addItem()">Add</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Dice roller -->
-    <div class="win">
-        <div class="win-title">
-            <div class="win-stripes"></div>
-            <span class="win-label">Dice</span>
-            <div class="win-stripes"></div>
-        </div>
-        <div class="win-body">
-            <div class="dice-grid" id="diceGrid"></div>
-            <div class="roll-display">
-                <div class="roll-die-label" id="rollDieLabel">Tap a die to roll</div>
-                <div class="roll-number" id="rollNumber" style="display:none"></div>
-                <div class="roll-suffix" id="rollSuffix"></div>
+        <!-- CHARACTER TAB: stats + abilities -->
+        <div class="tab-panel active" id="tab-sheet">
+            <div class="win-body">
+                <div class="core-stats" id="coreStats" style="margin-bottom:6px"></div>
+                <div class="ability-grid" id="abilityScores" style="margin-bottom:8px"></div>
+                <div id="specialBody"></div>
             </div>
-            <div class="roll-history" id="rollHistory"></div>
+        </div>
+
+        <!-- INVENTORY TAB -->
+        <div class="tab-panel" id="tab-inventory">
+            <div class="win-body">
+                <div class="inv-list" id="invList">
+                    <div class="inv-empty">No items yet</div>
+                </div>
+                <div class="inv-add">
+                    <input type="text" class="inv-input" id="invInput" placeholder="Add an item..." maxlength="60">
+                    <button class="inv-add-btn" onclick="addItem()">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DICE TAB -->
+        <div class="tab-panel" id="tab-dice">
+            <div class="win-body">
+                <div class="dice-grid" id="diceGrid"></div>
+                <div class="roll-display">
+                    <div class="roll-die-label" id="rollDieLabel">Tap a die to roll</div>
+                    <div class="roll-number" id="rollNumber" style="display:none"></div>
+                    <div class="roll-suffix" id="rollSuffix"></div>
+                </div>
+                <div class="roll-history" id="rollHistory"></div>
+            </div>
         </div>
     </div>
 
@@ -829,6 +858,11 @@
             });
             body.appendChild(chips);
         }
+    }
+
+    function setTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
     }
 
     function buildDiceGrid() {
