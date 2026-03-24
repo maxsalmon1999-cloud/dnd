@@ -2131,10 +2131,15 @@
                 });
             });
 
-            // Listen for player dice rolls made after this page loaded
-            const loadTime = Date.now();
-            firebaseDb.ref('diceLog').orderByChild('timestamp').startAt(loadTime).on('child_added', snap => {
-                appendPlayerRoll(snap.val());
+            // Listen for player dice rolls — mark existing entries as seen, then show only new ones
+            const seenRollKeys = new Set();
+            firebaseDb.ref('diceLog').limitToLast(100).once('value', snapshot => {
+                snapshot.forEach(child => seenRollKeys.add(child.key));
+                firebaseDb.ref('diceLog').on('child_added', snap => {
+                    if (seenRollKeys.has(snap.key)) return;
+                    seenRollKeys.add(snap.key);
+                    appendPlayerRoll(snap.val());
+                });
             });
         }
 
