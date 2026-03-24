@@ -1,4 +1,5 @@
 FLICKER
+changeling warlock
 
 ⚔️ Core Stats
 AC: 15 (studded leather)
@@ -8,7 +9,7 @@ Initiative: +2
 Proficiency: +2
 Spell Save DC: 13
 Spell Attack: +5
-XP: 1,100 / 2,700 (Level 4)
+XP: 1,100 / 2,700 (Level 3)
 
 📊 Ability Mods
 STR -1

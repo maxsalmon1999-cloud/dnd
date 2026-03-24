@@ -211,6 +211,111 @@
             color: #8a7e68;
         }
 
+        /* ========== ABILITY BUTTONS ========== */
+        .ability-section {
+            padding: 4px 6px;
+            border-top: 1px solid #3a3530;
+        }
+
+        .ability-section-label {
+            font-size: 8px;
+            font-weight: bold;
+            color: #5a5040;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ability-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+
+        .ability-btn {
+            font-size: 9px;
+            font-family: inherit;
+            padding: 2px 5px;
+            background: #2a2620;
+            border: 1px solid #4a4540;
+            color: #e0d6c0;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .ability-btn:hover {
+            background: #3a3530;
+            border-color: #c4a44e;
+        }
+
+        .ability-btn.used {
+            background: #1a1815;
+            color: #5a5040;
+            border-color: #3a3530;
+            text-decoration: line-through;
+            cursor: default;
+        }
+
+        .ability-btn .ability-count {
+            font-size: 8px;
+            opacity: 0.7;
+            margin-left: 2px;
+        }
+
+        .spell-slot-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 2px;
+        }
+
+        .spell-slot-label {
+            font-size: 9px;
+            color: #8a7e68;
+            min-width: 28px;
+        }
+
+        .spell-slot-pip {
+            width: 10px;
+            height: 10px;
+            border: 1px solid #4a4540;
+            background: #c4a44e;
+            cursor: pointer;
+        }
+
+        .spell-slot-pip.spent {
+            background: #1a1815;
+        }
+
+        .spell-slot-pip:hover {
+            border-color: #e0d6c0;
+        }
+
+        /* ========== REST BUTTONS ========== */
+        .rest-buttons {
+            display: flex;
+            gap: 4px;
+            padding: 6px;
+        }
+
+        .rest-btn {
+            flex: 1;
+            font-size: 10px;
+            font-family: inherit;
+            font-weight: bold;
+            padding: 4px 6px;
+            background: #2a2620;
+            border: 1.5px solid #4a4540;
+            color: #c4a44e;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .rest-btn:hover {
+            background: #3a3530;
+            border-color: #c4a44e;
+        }
+
         /* ========== MUSIC BAR ========== */
         .music-section {
             border-top: 2px solid #3a3530;
@@ -1388,6 +1493,98 @@
 
         .menu-end-session:hover { background: #c4a44e; color: #0c0a08; }
 
+        .menu-reset-session {
+            background: none;
+            border: 1px solid #5a3030;
+            padding: 1px 6px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #a04040;
+        }
+
+        .menu-reset-session:hover { background: #a04040; color: #0c0a08; }
+
+        #resetBackdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        #resetBackdrop.open { display: block; }
+
+        #resetModal {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 320px;
+            background: #1a1815;
+            border: 2px solid #a04040;
+            z-index: 1000;
+            font-size: 11px;
+        }
+        #resetModal.open { display: block; }
+
+        .reset-modal-body {
+            padding: 12px;
+            text-align: center;
+            color: #e0d6c0;
+        }
+
+        .reset-modal-body p {
+            margin: 0 0 8px;
+        }
+
+        .reset-modal-body .reset-warning {
+            color: #a04040;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .reset-modal-body input {
+            background: #1e1c18;
+            border: 1.5px solid #4a4540;
+            color: #e0d6c0;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 4px 8px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .reset-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 4px;
+            padding: 8px 12px;
+            border-top: 1px solid #3a3530;
+        }
+
+        .reset-modal-footer button {
+            font-family: inherit;
+            font-size: 10px;
+            padding: 3px 10px;
+            border: 1px solid #5a5040;
+            background: #2a2620;
+            color: #e0d6c0;
+            cursor: pointer;
+        }
+
+        .reset-modal-footer .btn-reset {
+            background: #a04040;
+            border-color: #a04040;
+            color: #fff;
+        }
+
+        .reset-modal-footer .btn-reset:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
         /* ========== DICE STRIP ========== */
         .dice-strip {
             display: flex;
@@ -1446,6 +1643,51 @@
 
         .die-sym.dragging {
             opacity: 0.4;
+        }
+
+        .portion-manual {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 4px;
+            border-top: 1px dashed #3a3530;
+            background: #161412;
+        }
+
+        .portion-manual .manual-die-select {
+            background: #1e1c18;
+            color: #e0d6c0;
+            border: 1.5px solid #4a4540;
+            font-size: 9px;
+            font-family: inherit;
+            padding: 1px 2px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .portion-manual .manual-die-value {
+            background: #1e1c18;
+            color: #e0d6c0;
+            border: 1.5px solid #4a4540;
+            font-size: 9px;
+            font-family: inherit;
+            padding: 1px 3px;
+            width: 28px;
+            height: 20px;
+            text-align: center;
+            -moz-appearance: textfield;
+        }
+
+        .portion-manual .manual-die-value::-webkit-inner-spin-button,
+        .portion-manual .manual-die-value::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .portion-manual .manual-add-btn {
+            font-size: 9px;
+            padding: 1px 5px;
+            margin-left: auto;
         }
 
         .dice-chip .chip-sides {
@@ -1560,13 +1802,16 @@
         }
         #diceConfirmModal.open { display: flex; }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
     <!-- Classic Mac Menu Bar -->
     <div class="menu-bar">
-        <span class="apple">&#63743;</span>
+        <span class="apple"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:middle"><circle cx="8" cy="8" r="4" stroke="#c4a44e" stroke-width="1.5" fill="none"/><line x1="8" y1="0" x2="8" y2="3" stroke="#c4a44e" stroke-width="1.2"/><line x1="8" y1="13" x2="8" y2="16" stroke="#c4a44e" stroke-width="1.2"/><line x1="0" y1="8" x2="3" y2="8" stroke="#c4a44e" stroke-width="1.2"/><line x1="13" y1="8" x2="16" y2="8" stroke="#c4a44e" stroke-width="1.2"/><line x1="2.3" y1="2.3" x2="4.4" y2="4.4" stroke="#c4a44e" stroke-width="1.2"/><line x1="11.6" y1="11.6" x2="13.7" y2="13.7" stroke="#c4a44e" stroke-width="1.2"/><line x1="2.3" y1="13.7" x2="4.4" y2="11.6" stroke="#c4a44e" stroke-width="1.2"/><line x1="11.6" y1="4.4" x2="13.7" y2="2.3" stroke="#c4a44e" stroke-width="1.2"/><line x1="5" y1="14" x2="11" y2="2" stroke="#c4a44e" stroke-width="1.5"/><line x1="7" y1="1.5" x2="11" y2="2" stroke="#c4a44e" stroke-width="1"/><line x1="11" y1="2" x2="10" y2="5.5" stroke="#c4a44e" stroke-width="1"/></svg></span>
         <span class="menu-campaign">The Delian Tomb</span>
         <button class="menu-end-session" onclick="endSession()">End Session</button>
+        <button class="menu-reset-session" onclick="showResetModal()">&#10005;</button>
     </div>
 
     <div class="main-area">
@@ -1583,7 +1828,7 @@
                     <div class="character-header" onclick="toggleCharacter(this)">
                         <div>
                             <div class="character-name">Akwan Akusian <span class="character-hp">21 / 21 HP</span></div>
-                            <div class="character-class">Bard — Lvl 4</div>
+                            <div class="character-class">Bard — Lvl 3</div>
                         </div>
                         <span class="character-arrow">&#9654;</span>
                     </div>
@@ -1596,6 +1841,27 @@
                         <div class="stat-row"><span class="stat-label">INT</span><span>+1</span></div>
                         <div class="stat-row"><span class="stat-label">WIS</span><span>+0</span></div>
                         <div class="stat-row"><span class="stat-label">CHA</span><span>+3</span></div>
+                        <div class="ability-section">
+                            <div class="ability-section-label">Spell Slots</div>
+                            <div class="spell-slot-row">
+                                <span class="spell-slot-label">1st</span>
+                                <div class="spell-slot-pip" data-char="akwan" data-slot="1" data-idx="0" onclick="toggleSlot(this)"></div>
+                                <div class="spell-slot-pip" data-char="akwan" data-slot="1" data-idx="1" onclick="toggleSlot(this)"></div>
+                                <div class="spell-slot-pip" data-char="akwan" data-slot="1" data-idx="2" onclick="toggleSlot(this)"></div>
+                                <div class="spell-slot-pip" data-char="akwan" data-slot="1" data-idx="3" onclick="toggleSlot(this)"></div>
+                            </div>
+                            <div class="spell-slot-row">
+                                <span class="spell-slot-label">2nd</span>
+                                <div class="spell-slot-pip" data-char="akwan" data-slot="2" data-idx="0" onclick="toggleSlot(this)"></div>
+                                <div class="spell-slot-pip" data-char="akwan" data-slot="2" data-idx="1" onclick="toggleSlot(this)"></div>
+                            </div>
+                        </div>
+                        <div class="ability-section">
+                            <div class="ability-section-label">Abilities</div>
+                            <div class="ability-grid">
+                                <button class="ability-btn" data-char="akwan" data-rest="long" data-max="3" data-used="0" onclick="useAbility(this)">Bardic Inspiration <span class="ability-count">3/3</span></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1603,7 +1869,7 @@
                     <div class="character-header" onclick="toggleCharacter(this)">
                         <div>
                             <div class="character-name">Fiel Amimso <span class="character-hp">24 / 24 HP</span></div>
-                            <div class="character-class">Halfling Rogue — Lvl 4</div>
+                            <div class="character-class">Halfling Rogue — Lvl 3</div>
                         </div>
                         <span class="character-arrow">&#9654;</span>
                     </div>
@@ -1616,6 +1882,15 @@
                         <div class="stat-row"><span class="stat-label">INT</span><span>+0</span></div>
                         <div class="stat-row"><span class="stat-label">WIS</span><span>+2</span></div>
                         <div class="stat-row"><span class="stat-label">CHA</span><span>-1</span></div>
+                        <div class="ability-section">
+                            <div class="ability-section-label">Passive Features</div>
+                            <div class="ability-grid">
+                                <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Once per turn, +2d6 with advantage or ally adjacent">Sneak Atk 2d6</button>
+                                <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Bonus action: Dash, Disengage, or Hide">Cunning Action</button>
+                                <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Bonus action: Use Object">Fast Hands</button>
+                                <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Reroll natural 1s">Lucky</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1623,7 +1898,7 @@
                     <div class="character-header" onclick="toggleCharacter(this)">
                         <div>
                             <div class="character-name">Flicker <span class="character-hp">24 / 24 HP</span></div>
-                            <div class="character-class">Changeling Warlock — Lvl 4</div>
+                            <div class="character-class">Changeling Warlock — Lvl 3</div>
                         </div>
                         <span class="character-arrow">&#9654;</span>
                     </div>
@@ -1636,7 +1911,27 @@
                         <div class="stat-row"><span class="stat-label">INT</span><span>+0</span></div>
                         <div class="stat-row"><span class="stat-label">WIS</span><span>+0</span></div>
                         <div class="stat-row"><span class="stat-label">CHA</span><span>+3</span></div>
+                        <div class="ability-section">
+                            <div class="ability-section-label">Warlock Slots (Short Rest)</div>
+                            <div class="spell-slot-row">
+                                <span class="spell-slot-label">2nd</span>
+                                <div class="spell-slot-pip" data-char="flicker" data-slot="w" data-idx="0" onclick="toggleSlot(this)"></div>
+                                <div class="spell-slot-pip" data-char="flicker" data-slot="w" data-idx="1" onclick="toggleSlot(this)"></div>
+                            </div>
+                        </div>
+                        <div class="ability-section">
+                            <div class="ability-section-label">Abilities</div>
+                            <div class="ability-grid">
+                                <button class="ability-btn" data-char="flicker" data-rest="short" data-max="1" data-used="0" onclick="useAbility(this)">Fey Presence <span class="ability-count">1/1</span></button>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Rest Buttons -->
+                <div class="rest-buttons">
+                    <button class="rest-btn" onclick="doRest('short')">Short Rest</button>
+                    <button class="rest-btn" onclick="doRest('long')">Long Rest</button>
                 </div>
 
                 <!-- Music -->
@@ -1711,6 +2006,7 @@
                 <button class="prompt-tab" data-mode="action" onclick="setMode(this)">Action</button>
                 <button class="prompt-tab" data-mode="both" onclick="setMode(this)">Both</button>
                 <button class="prompt-tab" data-mode="meta" onclick="setMode(this)">Meta</button>
+                <button class="prompt-tab" data-mode="rules" onclick="setMode(this)">Rules</button>
             </div>
             <div class="prompt-area">
                 <textarea id="promptInput" placeholder="Describe what happens next..." onkeydown="handleKey(event)"></textarea>
@@ -1727,7 +2023,7 @@
                 <div class="stripes-right"></div>
             </div>
             <div class="window-content">
-                <div class="meta-section open" id="metaSection">
+                <div class="meta-section" id="metaSection">
                     <div class="meta-header" onclick="this.parentElement.classList.toggle('open')">
                         <span>Meta Comments</span>
                         <span class="character-arrow">&#9654;</span>
@@ -1736,7 +2032,18 @@
                         <div class="meta-empty" id="metaEmpty">No meta comments yet</div>
                     </div>
                 </div>
-                <div class="notes-section open" id="notesSection">
+                <!-- Player Dice Log -->
+                <div class="meta-section" id="diceLogSection">
+                    <div class="meta-header" onclick="this.parentElement.classList.toggle('open')">
+                        <span>Player Dice Log</span>
+                        <span class="character-arrow">&#9654;</span>
+                    </div>
+                    <div class="meta-list" id="diceLogList">
+                        <div class="meta-empty">No player rolls yet</div>
+                    </div>
+                </div>
+
+                <div class="notes-section" id="notesSection">
                     <div class="notes-header" onclick="this.parentElement.classList.toggle('open')">
                         <span>Story Notes</span>
                         <span class="character-arrow">&#9654;</span>
@@ -1795,6 +2102,70 @@
         let conversationHistory = [];
         let dmPrompts = null;
         let pendingDiceRequest = null;
+
+        // =========================================================
+        // FIREBASE — Real-time player screen sync
+        // =========================================================
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDdZfJ1J0VL9j0UMW5GujimRJISFaun8ls",
+            authDomain: "dnd-host.firebaseapp.com",
+            databaseURL: "https://dnd-host-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "dnd-host",
+            storageBucket: "dnd-host.firebasestorage.app",
+            messagingSenderId: "89992538920",
+            appId: "1:89992538920:web:06e9233db2021981f1fe1d"
+        };
+        firebase.initializeApp(FIREBASE_CONFIG);
+        const firebaseDb = firebase.database();
+
+        function initFirebaseSync() {
+            // Initialise HP for each character if not yet in Firebase
+            const charMap = { akwan: 'Akwan', fiel: 'Fiel', flicker: 'Flicker' };
+            Object.entries(charMap).forEach(([key, name]) => {
+                const stats = CHARACTER_STATS[name];
+                if (!stats) return;
+                firebaseDb.ref('characters/' + key + '/hp').once('value', snap => {
+                    if (snap.val() === null) {
+                        firebaseDb.ref('characters/' + key).update({ hp: stats.hp, maxHp: stats.hp });
+                    }
+                });
+            });
+
+            // Listen for player dice rolls made after this page loaded
+            const loadTime = Date.now();
+            firebaseDb.ref('diceLog').orderByChild('timestamp').startAt(loadTime).on('child_added', snap => {
+                appendPlayerRoll(snap.val());
+            });
+        }
+
+        function appendPlayerRoll(entry) {
+            if (!entry) return;
+            const section = document.getElementById('diceLogSection');
+            const list    = document.getElementById('diceLogList');
+            const empty   = list.querySelector('.meta-empty');
+            if (empty) empty.remove();
+
+            const isCrit = entry.dice === 'd20' && entry.result === 20;
+            const isFail = entry.dice === 'd20' && entry.result === 1;
+            const resultColor = isCrit ? '#4aff4a' : isFail ? '#e04040' : '#c4a44e';
+            const suffix = isCrit ? ' CRIT!' : isFail ? ' FAIL' : '';
+
+            const time = new Date(entry.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            const item = document.createElement('div');
+            item.className = 'meta-item';
+            item.innerHTML =
+                '<span style="color:#5a5040">' + time + '</span> ' +
+                '<b style="color:#e0d6c0">' + escapeHtml(String(entry.character)) + '</b> ' +
+                escapeHtml(String(entry.dice)) + ': ' +
+                '<span style="color:' + resultColor + ';font-weight:bold">' + entry.result + '</span>' +
+                '<span style="color:' + resultColor + ';font-size:9px">' + suffix + '</span>';
+
+            list.insertBefore(item, list.firstChild);
+            while (list.children.length > 20) list.removeChild(list.lastChild);
+            section.classList.add('open');
+        }
+
+        window.addEventListener('load', initFirebaseSync);
 
         // =========================================================
         // CHARACTER & ENEMY STATS  (source of truth for modifiers)
@@ -2216,6 +2587,51 @@
             document.getElementById('sessionEndBackdrop').classList.remove('open');
         }
 
+        function showResetModal() {
+            document.getElementById('resetConfirmInput').value = '';
+            document.getElementById('resetConfirmBtn').disabled = true;
+            document.getElementById('resetBackdrop').classList.add('open');
+            document.getElementById('resetModal').classList.add('open');
+            document.getElementById('resetConfirmInput').focus();
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetBackdrop').classList.remove('open');
+            document.getElementById('resetModal').classList.remove('open');
+        }
+
+        function checkResetInput() {
+            const val = document.getElementById('resetConfirmInput').value.trim().toLowerCase();
+            document.getElementById('resetConfirmBtn').disabled = (val !== 'reset');
+        }
+
+        function executeReset() {
+            // Clear conversation history
+            conversationHistory = [];
+            // Clear story display
+            storyDisplay.innerHTML = '<div class="welcome-message"><h2>Welcome, Dungeon Master</h2><p>Type a prompt below to begin your session.</p></div>';
+            // Clear dice table
+            tableSurface.querySelectorAll('.table-portion').forEach(p => {
+                p.querySelectorAll('canvas').forEach(c => unregisterAnim(c));
+                p.remove();
+            });
+            checkEmpty();
+            // Clear meta comments
+            document.getElementById('metaList').innerHTML = '<div class="meta-empty" id="metaEmpty">No meta comments yet</div>';
+            // Clear story notes
+            document.getElementById('storyNotes').value = '';
+            // Reset all spell slots and abilities
+            doRest('long');
+            // Clear prompt input
+            promptInput.value = '';
+            // Reset mode
+            document.querySelectorAll('.prompt-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.prompt-tab[data-mode="description"]').classList.add('active');
+            currentMode = 'description';
+            promptInput.placeholder = modePlaceholders.description;
+            closeResetModal();
+        }
+
         function saveSession() {
             const summary   = document.getElementById('sessionSummaryText').value.trim();
             const additions = document.getElementById('sessionAdditions').value.trim();
@@ -2275,6 +2691,7 @@
             action: 'Describe an action or encounter (stats only)...',
             both: 'Describe an action with narrative context...',
             meta: 'Add a comment about the game or system...',
+            rules: 'Ask about a D&D rule, spell, ability, or mechanic...',
         };
 
         const modeLabels = {
@@ -2282,6 +2699,7 @@
             action: 'ACT',
             both: 'BOTH',
             meta: 'META',
+            rules: 'RULES',
         };
 
         function setMode(tabEl) {
@@ -2293,6 +2711,43 @@
 
         function toggleCharacter(header) {
             header.closest('.character-card').classList.toggle('open');
+        }
+
+        // =========================================================
+        // ABILITY / SPELL SLOT TRACKING
+        // =========================================================
+        function toggleSlot(pip) {
+            pip.classList.toggle('spent');
+        }
+
+        function useAbility(btn) {
+            if (btn.classList.contains('used')) return;
+            let used = parseInt(btn.dataset.used) + 1;
+            const max = parseInt(btn.dataset.max);
+            btn.dataset.used = used;
+            btn.querySelector('.ability-count').textContent = (max - used) + '/' + max;
+            if (used >= max) btn.classList.add('used');
+        }
+
+        function doRest(type) {
+            // Short rest: restore warlock slots + short-rest abilities only
+            document.querySelectorAll('.spell-slot-pip[data-char="flicker"]').forEach(p => p.classList.remove('spent'));
+            document.querySelectorAll('.ability-btn[data-rest="short"]').forEach(btn => {
+                btn.classList.remove('used');
+                btn.dataset.used = '0';
+                const max = parseInt(btn.dataset.max);
+                btn.querySelector('.ability-count').textContent = max + '/' + max;
+            });
+            if (type === 'long') {
+                // Long rest: also restore all other spell slots + long-rest abilities
+                document.querySelectorAll('.spell-slot-pip.spent').forEach(p => p.classList.remove('spent'));
+                document.querySelectorAll('.ability-btn[data-rest="long"]').forEach(btn => {
+                    btn.classList.remove('used');
+                    btn.dataset.used = '0';
+                    const max = parseInt(btn.dataset.max);
+                    btn.querySelector('.ability-count').textContent = max + '/' + max;
+                });
+            }
         }
 
         function handleKey(e) {
@@ -2605,8 +3060,40 @@
                 }
             });
 
+            // Manual dice input row
+            const manualRow = document.createElement('div');
+            manualRow.className = 'portion-manual';
+            manualRow.innerHTML = `
+                <select class="manual-die-select" title="Die type">
+                    <option value="4">d4</option><option value="6">d6</option>
+                    <option value="8">d8</option><option value="10">d10</option>
+                    <option value="12">d12</option><option value="20" selected>d20</option>
+                    <option value="100">d100</option>
+                </select>
+                <input type="number" class="manual-die-value" placeholder="#" min="1" title="Physical roll result">
+                <button class="mac-btn manual-add-btn" title="Add physical dice result">+</button>
+            `;
+            const manualBtn = manualRow.querySelector('.manual-add-btn');
+            const manualInput = manualRow.querySelector('.manual-die-value');
+            const manualSelect = manualRow.querySelector('.manual-die-select');
+            const doManualAdd = () => {
+                const sides = parseInt(manualSelect.value);
+                const value = parseInt(manualInput.value);
+                if (!value || value < 1 || value > sides) {
+                    manualInput.style.borderColor = '#a04040';
+                    setTimeout(() => manualInput.style.borderColor = '#4a4540', 800);
+                    return;
+                }
+                addDiceChip(diceArea, sides, value, { label: 'Manual' });
+                updateRollButton();
+                manualInput.value = '';
+            };
+            manualBtn.onclick = doManualAdd;
+            manualInput.onkeydown = (e) => { if (e.key === 'Enter') doManualAdd(); };
+
             portion.appendChild(header);
             portion.appendChild(diceArea);
+            portion.appendChild(manualRow);
             tableSurface.appendChild(portion);
         }
 
@@ -2680,6 +3167,11 @@
             npcCol.innerHTML = '';
             enemyCol.innerHTML = '';
 
+            // DM option at the top
+            makeSec('DM', npcCol);
+            makeNameBtn('Dungeon Master', npcCol);
+
+            makeSec('Campaign', npcCol);
             CAMPAIGN_NPCS.npcs.forEach(n => makeNameBtn(n, npcCol));
             CAMPAIGN_NPCS.enemies.forEach(n => makeNameBtn(n, enemyCol));
 
@@ -2708,7 +3200,7 @@
         }
 
         document.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { closeNpcPicker(); closeSessionModal(); cancelDiceConfirmation(); }
+            if (e.key === 'Escape') { closeNpcPicker(); closeSessionModal(); cancelDiceConfirmation(); closeResetModal(); }
         });
 
         function addDiceChip(container, sides, result, options) {
@@ -3490,6 +3982,154 @@
             // Close context after sounds finish
             setTimeout(() => ctx.close(), (duration + 2.5) * 1000);
         }
+
+        // =========================================================
+        // CLICKY BUTTON SOUND SYSTEM
+        // =========================================================
+        (function() {
+            let _clickCtx = null;
+            function getClickCtx() {
+                if (!_clickCtx || _clickCtx.state === 'closed') {
+                    _clickCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (_clickCtx.state === 'suspended') _clickCtx.resume();
+                return _clickCtx;
+            }
+
+            function playClick(type) {
+                // type: 'clunk' (heavy button), 'tick' (light/slider), 'toggle' (header collapse)
+                const ctx = getClickCtx();
+                const now = ctx.currentTime;
+
+                if (type === 'tick') {
+                    // Light tick for sliders and draggable items
+                    const osc = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(1800, now);
+                    osc.frequency.exponentialRampToValueAtTime(900, now + 0.012);
+                    g.gain.setValueAtTime(0.04, now);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+                    osc.connect(g); g.connect(ctx.destination);
+                    osc.start(now); osc.stop(now + 0.02);
+                    return;
+                }
+
+                // --- Thump: low-frequency body of the click ---
+                const thumpOsc = ctx.createOscillator();
+                const thumpGain = ctx.createGain();
+                thumpOsc.type = 'sine';
+                const baseFreq = type === 'toggle' ? 120 : 80 + Math.random() * 25;
+                thumpOsc.frequency.setValueAtTime(baseFreq, now);
+                thumpOsc.frequency.exponentialRampToValueAtTime(baseFreq * 0.45, now + 0.055);
+                const thumpVol = type === 'toggle' ? 0.28 : 0.45;
+                thumpGain.gain.setValueAtTime(thumpVol, now);
+                thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+                thumpOsc.connect(thumpGain); thumpGain.connect(ctx.destination);
+                thumpOsc.start(now); thumpOsc.stop(now + 0.07);
+
+                // --- Snap: mid-freq transient crackle ---
+                const snapBufSize = Math.floor(ctx.sampleRate * 0.06);
+                const snapBuf = ctx.createBuffer(1, snapBufSize, ctx.sampleRate);
+                const snapData = snapBuf.getChannelData(0);
+                for (let i = 0; i < snapBufSize; i++) snapData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (snapBufSize * 0.12));
+                const snapSrc = ctx.createBufferSource();
+                snapSrc.buffer = snapBuf;
+
+                const bp = ctx.createBiquadFilter();
+                bp.type = 'bandpass';
+                bp.frequency.value = type === 'toggle' ? 700 : 500;
+                bp.Q.value = 1.2;
+
+                const snapGain = ctx.createGain();
+                const snapVol = type === 'toggle' ? 0.18 : 0.28;
+                snapGain.gain.setValueAtTime(snapVol, now);
+                snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                snapSrc.connect(bp); bp.connect(snapGain); snapGain.connect(ctx.destination);
+                snapSrc.start(now); snapSrc.stop(now + 0.06);
+
+                // --- Click transient: ultra-short hi-freq snap ---
+                const clickOsc = ctx.createOscillator();
+                const clickGain = ctx.createGain();
+                clickOsc.type = 'square';
+                clickOsc.frequency.value = type === 'toggle' ? 900 : 1100 + Math.random() * 200;
+                clickGain.gain.setValueAtTime(0.07, now);
+                clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
+                clickOsc.connect(clickGain); clickGain.connect(ctx.destination);
+                clickOsc.start(now); clickOsc.stop(now + 0.015);
+            }
+
+            // Selectors that get the heavy "clunk"
+            const CLUNK_SEL = [
+                'button',
+                'input[type="button"]',
+                'input[type="submit"]',
+                '.mac-btn',
+                '.music-btn',
+                '.timer-preset',
+                '.timer-ctrl-btn',
+                '.add-char-btn',
+                '.add-npc',
+                '.btn-save',
+                '.undo-btn',
+                '.dice-confirm-btn',
+                '[onclick*="rollAll"]',
+                '[onclick*="spotifyToggle"]',
+                '[onclick*="spotifyPrev"]',
+                '[onclick*="spotifyNext"]',
+                '[onclick*="spotifyAuth"]',
+                '[onclick*="sendPrompt"]',
+                '[onclick*="endSession"]',
+                '[onclick*="closeSessionModal"]',
+                '[onclick*="closeNpcPicker"]',
+                '[onclick*="addCustomNpc"]',
+                '[onclick*="submitDiceConfirmation"]',
+                '[onclick*="cancelDiceConfirmation"]',
+                '.chip-remove',
+                '.portion-delete',
+                '.npc-item',
+                '.rest-btn',
+                '.ability-btn',
+                '.spell-slot-pip',
+                '.menu-reset-session',
+                '.btn-reset',
+            ].join(',');
+
+            // Selectors that get the lighter "toggle" clunk (collapsible headers)
+            const TOGGLE_SEL = [
+                '.character-header',
+                '.music-header',
+                '.meta-header',
+                '.notes-header',
+                '.prompt-tab',
+            ].join(',');
+
+            // Selectors for light tick (sliders, dice drags)
+            const TICK_SEL = 'input[type="range"]';
+
+            // Use capture phase so we fire before onclick handlers
+            document.addEventListener('click', function(e) {
+                const tag = e.target.tagName.toLowerCase();
+                // Skip text inputs and textareas
+                if (tag === 'textarea' || (tag === 'input' && (e.target.type === 'text' || e.target.type === 'number'))) return;
+
+                if (e.target.closest(TOGGLE_SEL) && !e.target.closest('button')) {
+                    playClick('toggle');
+                } else if (e.target.closest(CLUNK_SEL)) {
+                    playClick('clunk');
+                }
+            }, true);
+
+            // Slider ticks
+            document.addEventListener('input', function(e) {
+                if (e.target.matches(TICK_SEL)) playClick('tick');
+            }, true);
+
+            // Dice drag sound
+            document.addEventListener('dragstart', function(e) {
+                if (e.target.dataset && e.target.dataset.sides) playClick('tick');
+            }, true);
+        })();
     </script>
     <div id="sessionEndBackdrop" onclick="closeSessionModal()"></div>
     <div id="sessionEndModal">
@@ -3547,6 +4187,23 @@
         <div class="session-modal-footer">
             <button onclick="cancelDiceConfirmation()">Skip &amp; Load Anyway</button>
             <button class="btn-save" onclick="submitDiceConfirmation()">Confirm &amp; Load Dice</button>
+        </div>
+    </div>
+
+    <div id="resetBackdrop" onclick="closeResetModal()"></div>
+    <div id="resetModal">
+        <div class="session-modal-titlebar">
+            <span>Hard Reset</span>
+            <button class="session-modal-close" onclick="closeResetModal()">&times;</button>
+        </div>
+        <div class="reset-modal-body">
+            <p class="reset-warning">This will delete all session data permanently.</p>
+            <p>Type <b>reset</b> to confirm:</p>
+            <input type="text" id="resetConfirmInput" placeholder="Type reset..." oninput="checkResetInput()">
+        </div>
+        <div class="reset-modal-footer">
+            <button onclick="closeResetModal()">Cancel</button>
+            <button class="btn-reset" id="resetConfirmBtn" onclick="executeReset()" disabled>Reset</button>
         </div>
     </div>
 </body>

@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>D&D Player Screen</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Geneva', 'Chicago', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            background: #0c0a08;
+            color: #d4c4a0;
+            min-height: 100vh;
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: unset;
+        }
+
+        /* ===================== SELECT SCREEN ===================== */
+        .select-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px 16px;
+            gap: 16px;
+        }
+
+        .select-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #c4a44e;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-align: center;
+            border-bottom: 1px solid #3a3530;
+            padding-bottom: 12px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .select-subtitle {
+            font-size: 10px;
+            color: #5a5040;
+            text-align: center;
+            margin-top: -8px;
+        }
+
+        .select-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .select-card {
+            background: #1e1c18;
+            border: 1.5px solid #3a3530;
+            padding: 12px 14px;
+            cursor: pointer;
+            text-align: left;
+            font-family: inherit;
+            color: #d4c4a0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .select-card:hover, .select-card:active {
+            background: #c4a44e;
+            color: #0c0a08;
+            border-color: #c4a44e;
+        }
+
+        .select-card:hover .select-class,
+        .select-card:active .select-class,
+        .select-card:hover .select-arrow,
+        .select-card:active .select-arrow {
+            color: #0c0a08;
+        }
+
+        .select-name { font-weight: bold; font-size: 13px; }
+        .select-class { font-size: 10px; color: #8a7e68; margin-top: 2px; }
+        .select-arrow { font-size: 11px; color: #5a5040; }
+
+        /* ===================== PLAYER SCREEN ===================== */
+        .player-screen {
+            display: flex;
+            flex-direction: column;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 6px;
+            gap: 5px;
+        }
+
+        /* Window chrome */
+        .win {
+            background: #1a1815;
+            border: 2px solid #3a3530;
+            box-shadow: 2px 2px 0 #000;
+        }
+
+        .win-title {
+            background: #2a2620;
+            border-bottom: 2px solid #3a3530;
+            padding: 2px 6px;
+            display: flex;
+            align-items: center;
+            height: 22px;
+        }
+
+        .close-box {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid #5a5040;
+            background: #2a2620;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .close-box:active { background: #c4a44e; }
+
+        .win-stripes {
+            flex: 1;
+            height: 12px;
+            background: repeating-linear-gradient(
+                transparent 0px, transparent 1px,
+                #3a3530 1px, #3a3530 2px,
+                transparent 2px, transparent 3px
+            );
+            margin: 0 6px;
+        }
+
+        .win-label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #c4a44e;
+            flex-shrink: 0;
+        }
+
+        .win-body {
+            padding: 8px;
+            background: #161412;
+        }
+
+        /* Section label */
+        .section-label {
+            font-size: 9px;
+            font-weight: bold;
+            color: #5a5040;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 5px;
+        }
+
+        /* ===================== HP ===================== */
+        .hp-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .hp-btn {
+            width: 48px;
+            height: 48px;
+            background: #2a2620;
+            border: 1.5px solid #4a4540;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 26px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            user-select: none;
+        }
+
+        .hp-btn:active { background: #c4a44e; color: #0c0a08; }
+
+        .hp-display {
+            flex: 1;
+            text-align: center;
+        }
+
+        .hp-current {
+            font-size: 40px;
+            font-weight: bold;
+            color: #c4a44e;
+            line-height: 1;
+            transition: color 0.3s;
+        }
+
+        .hp-current.low  { color: #e04040; }
+        .hp-current.mid  { color: #e07040; }
+
+        .hp-max-label {
+            font-size: 10px;
+            color: #8a7e68;
+            margin-top: 2px;
+        }
+
+        .char-class-label {
+            font-size: 10px;
+            color: #8a7e68;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .hp-bar-wrap {
+            height: 5px;
+            background: #2a2620;
+            border: 1px solid #3a3530;
+            margin-bottom: 8px;
+        }
+
+        .hp-bar {
+            height: 100%;
+            background: #c4a44e;
+            transition: width 0.3s, background 0.3s;
+        }
+
+        .hp-bar.low  { background: #e04040; }
+        .hp-bar.mid  { background: #e07040; }
+
+        /* ===================== STATS ===================== */
+        .core-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            margin-bottom: 6px;
+        }
+
+        .stat-box {
+            background: #2a2620;
+            border: 1px solid #3a3530;
+            padding: 5px 4px;
+            text-align: center;
+        }
+
+        .stat-box-label {
+            font-size: 9px;
+            color: #8a7e68;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-box-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #e0d6c0;
+            margin-top: 1px;
+        }
+
+        .ability-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3px;
+        }
+
+        .ability-box {
+            background: #1e1c18;
+            border: 1px solid #2a2620;
+            padding: 4px 2px;
+            text-align: center;
+        }
+
+        .ability-label {
+            font-size: 9px;
+            color: #8a7e68;
+            text-transform: uppercase;
+        }
+
+        .ability-mod {
+            font-size: 15px;
+            font-weight: bold;
+            color: #d4c4a0;
+            margin-top: 1px;
+        }
+
+        /* ===================== SPELL SLOTS ===================== */
+        .slot-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+
+        .slot-level-label {
+            font-size: 10px;
+            color: #8a7e68;
+            min-width: 50px;
+        }
+
+        .slot-pip {
+            width: 16px;
+            height: 16px;
+            border: 1.5px solid #4a4540;
+            background: #c4a44e;
+            cursor: pointer;
+        }
+
+        .slot-pip.spent { background: #1a1815; }
+        .slot-pip:active { border-color: #e0d6c0; }
+
+        /* ===================== ABILITIES ===================== */
+        .ability-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .ability-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #2a2620;
+            border: 1px solid #4a4540;
+            padding: 5px 9px;
+            font-family: inherit;
+            font-size: 10px;
+            color: #e0d6c0;
+            cursor: pointer;
+        }
+
+        .ability-chip.used {
+            background: #1a1815;
+            color: #5a5040;
+            text-decoration: line-through;
+            cursor: default;
+        }
+
+        .ability-chip.passive {
+            opacity: 0.65;
+            cursor: default;
+        }
+
+        .ability-chip:not(.used):not(.passive):active {
+            background: #c4a44e;
+            color: #0c0a08;
+        }
+
+        .chip-count {
+            font-size: 9px;
+            opacity: 0.7;
+        }
+
+        /* ===================== INVENTORY ===================== */
+        .inv-list {
+            min-height: 20px;
+            margin-bottom: 6px;
+        }
+
+        .inv-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 4px;
+            border-bottom: 1px dotted #2a2620;
+            font-size: 11px;
+        }
+
+        .inv-empty {
+            font-size: 10px;
+            color: #5a5040;
+            font-style: italic;
+            padding: 6px 0;
+            text-align: center;
+        }
+
+        .inv-remove {
+            background: none;
+            border: none;
+            color: #5a5040;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+            font-family: inherit;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .inv-remove:active { color: #e04040; }
+
+        .inv-add {
+            display: flex;
+            gap: 4px;
+        }
+
+        .inv-input {
+            flex: 1;
+            background: #0c0a08;
+            border: 1.5px solid #3a3530;
+            color: #d4c4a0;
+            padding: 6px 7px;
+            font-family: inherit;
+            font-size: 11px;
+            outline: none;
+        }
+
+        .inv-input:focus { border-color: #c4a44e; }
+        .inv-input::placeholder { color: #5a5040; }
+
+        .inv-add-btn {
+            background: #2a2620;
+            border: 1.5px solid #4a4540;
+            color: #c4a44e;
+            padding: 6px 12px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .inv-add-btn:active { background: #c4a44e; color: #0c0a08; }
+
+        /* ===================== DICE ===================== */
+        .dice-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .die-btn {
+            background: #2a2620;
+            border: 1.5px solid #4a4540;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 13px 4px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .die-btn:active {
+            background: #c4a44e;
+            color: #0c0a08;
+            border-color: #c4a44e;
+        }
+
+        .roll-display {
+            text-align: center;
+            min-height: 72px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0c0a08;
+            border: 1.5px solid #2a2620;
+            margin-bottom: 6px;
+            padding: 8px;
+        }
+
+        .roll-die-label { font-size: 10px; color: #8a7e68; }
+
+        .roll-number {
+            font-size: 52px;
+            font-weight: bold;
+            color: #c4a44e;
+            line-height: 1;
+        }
+
+        .roll-number.rolling { opacity: 0.4; }
+        .roll-number.crit    { color: #4aff4a; }
+        .roll-number.fail    { color: #e04040; }
+
+        .roll-suffix {
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .roll-suffix.crit { color: #4aff4a; }
+        .roll-suffix.fail { color: #e04040; }
+
+        /* Roll history */
+        .roll-history { }
+
+        .roll-history-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 0;
+            border-bottom: 1px dotted #2a2620;
+            font-size: 10px;
+            color: #8a7e68;
+        }
+
+        .roll-history-val { font-weight: bold; color: #c4a44e; }
+        .roll-history-val.crit { color: #4aff4a; }
+        .roll-history-val.fail { color: #e04040; }
+    </style>
+</head>
+<body>
+
+<!-- CHARACTER SELECT SCREEN -->
+<div id="selectScreen" class="select-screen" style="display:none">
+    <div class="select-title">D&D — Choose Your Character</div>
+    <p class="select-subtitle">Tap your character to open your screen</p>
+    <div class="select-cards" id="selectCards"></div>
+</div>
+
+<!-- PLAYER SCREEN -->
+<div id="playerScreen" class="player-screen" style="display:none">
+
+    <!-- Character header + HP + stats -->
+    <div class="win">
+        <div class="win-title">
+            <div class="close-box" onclick="goBack()" title="Back to character select"></div>
+            <div class="win-stripes"></div>
+            <span class="win-label" id="charTitle">—</span>
+            <div class="win-stripes"></div>
+        </div>
+        <div class="win-body">
+            <div class="char-class-label" id="charClassLabel"></div>
+            <div class="hp-row">
+                <button class="hp-btn" onclick="changeHp(-1)" title="Take damage">−</button>
+                <div class="hp-display">
+                    <div class="hp-current" id="hpCurrent">—</div>
+                    <div class="hp-max-label" id="hpMaxLabel"></div>
+                </div>
+                <button class="hp-btn" onclick="changeHp(+1)" title="Heal">+</button>
+            </div>
+            <div class="hp-bar-wrap">
+                <div class="hp-bar" id="hpBar" style="width:100%"></div>
+            </div>
+            <div class="core-stats" id="coreStats"></div>
+            <div class="ability-grid" id="abilityScores"></div>
+        </div>
+    </div>
+
+    <!-- Abilities & spell slots -->
+    <div class="win" id="specialWin">
+        <div class="win-title">
+            <div class="win-stripes"></div>
+            <span class="win-label" id="specialWinLabel">Abilities</span>
+            <div class="win-stripes"></div>
+        </div>
+        <div class="win-body" id="specialBody"></div>
+    </div>
+
+    <!-- Inventory -->
+    <div class="win">
+        <div class="win-title">
+            <div class="win-stripes"></div>
+            <span class="win-label">Inventory</span>
+            <div class="win-stripes"></div>
+        </div>
+        <div class="win-body">
+            <div class="inv-list" id="invList">
+                <div class="inv-empty">No items yet</div>
+            </div>
+            <div class="inv-add">
+                <input type="text" class="inv-input" id="invInput" placeholder="Add an item..." maxlength="60">
+                <button class="inv-add-btn" onclick="addItem()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dice roller -->
+    <div class="win">
+        <div class="win-title">
+            <div class="win-stripes"></div>
+            <span class="win-label">Dice</span>
+            <div class="win-stripes"></div>
+        </div>
+        <div class="win-body">
+            <div class="dice-grid" id="diceGrid"></div>
+            <div class="roll-display">
+                <div class="roll-die-label" id="rollDieLabel">Tap a die to roll</div>
+                <div class="roll-number" id="rollNumber" style="display:none"></div>
+                <div class="roll-suffix" id="rollSuffix"></div>
+            </div>
+            <div class="roll-history" id="rollHistory"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // =========================================================
+    // FIREBASE
+    // =========================================================
+    const firebaseConfig = {
+        apiKey: "AIzaSyDdZfJ1J0VL9j0UMW5GujimRJISFaun8ls",
+        authDomain: "dnd-host.firebaseapp.com",
+        databaseURL: "https://dnd-host-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "dnd-host",
+        storageBucket: "dnd-host.firebasestorage.app",
+        messagingSenderId: "89992538920",
+        appId: "1:89992538920:web:06e9233db2021981f1fe1d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // =========================================================
+    // CHARACTER DATA
+    // =========================================================
+    const CHARS = {
+        akwan: {
+            name: 'Akwan Akusian',
+            cls: 'Bard — Level 3',
+            maxHp: 21, ac: 15, proficiency: 2,
+            spellSaveDC: 13, spellAttack: '+5',
+            stats: { STR: -1, DEX: 3, CON: 1, INT: 1, WIS: 0, CHA: 3 },
+            spellSlots: { '1st Level': 4, '2nd Level': 2 },
+            abilities: [
+                { name: 'Bardic Inspiration', max: 3, rest: 'Long', passive: false }
+            ]
+        },
+        fiel: {
+            name: 'Fiel Amimso',
+            cls: 'Halfling Rogue — Level 3',
+            maxHp: 24, ac: 13, proficiency: 2,
+            spellSaveDC: null, spellAttack: null,
+            stats: { STR: -1, DEX: 3, CON: 2, INT: 0, WIS: 2, CHA: -1 },
+            spellSlots: {},
+            abilities: [
+                { name: 'Sneak Attack 2d6', passive: true, desc: 'Once per turn, +2d6 with advantage or adjacent ally' },
+                { name: 'Cunning Action', passive: true, desc: 'Bonus action: Dash, Disengage, or Hide' },
+                { name: 'Fast Hands', passive: true, desc: 'Bonus action: Use Object' },
+                { name: 'Lucky', passive: true, desc: 'Reroll natural 1s on attack, ability, or saving throw' }
+            ]
+        },
+        flicker: {
+            name: 'Flicker',
+            cls: 'Changeling Warlock — Level 3',
+            maxHp: 24, ac: 15, proficiency: 2,
+            spellSaveDC: 13, spellAttack: '+5',
+            stats: { STR: -1, DEX: 2, CON: 2, INT: 0, WIS: 0, CHA: 3 },
+            spellSlots: { '2nd (Short Rest)': 2 },
+            abilities: [
+                { name: 'Fey Presence', max: 1, rest: 'Short', passive: false }
+            ]
+        }
+    };
+
+    // =========================================================
+    // APP STATE
+    // =========================================================
+    let charKey = null;
+    let char = null;
+    let currentHp = null;
+    let rollHistory = [];
+    let rollAnimTimer = null;
+
+    // =========================================================
+    // INIT
+    // =========================================================
+    function init() {
+        const params = new URLSearchParams(window.location.search);
+        charKey = (params.get('char') || '').toLowerCase();
+        char = CHARS[charKey];
+
+        if (!char) {
+            buildSelectScreen();
+            document.getElementById('selectScreen').style.display = 'flex';
+        } else {
+            buildPlayerScreen();
+            document.getElementById('playerScreen').style.display = 'flex';
+        }
+    }
+
+    // =========================================================
+    // SELECT SCREEN
+    // =========================================================
+    function buildSelectScreen() {
+        document.title = 'D&D — Choose Character';
+        const container = document.getElementById('selectCards');
+        Object.entries(CHARS).forEach(([key, c]) => {
+            const btn = document.createElement('button');
+            btn.className = 'select-card';
+            btn.innerHTML =
+                '<div><div class="select-name">' + c.name + '</div>' +
+                '<div class="select-class">' + c.cls + '</div></div>' +
+                '<span class="select-arrow">&#9654;</span>';
+            btn.onclick = () => { window.location.search = '?char=' + key; };
+            container.appendChild(btn);
+        });
+    }
+
+    function goBack() {
+        window.location.search = '';
+    }
+
+    // =========================================================
+    // PLAYER SCREEN — BUILD
+    // =========================================================
+    function buildPlayerScreen() {
+        document.title = char.name + ' — D&D';
+        document.getElementById('charTitle').textContent = char.name;
+        document.getElementById('charClassLabel').textContent = char.cls;
+
+        buildCoreStats();
+        buildAbilityScores();
+        buildSpecial();
+        buildDiceGrid();
+        startFirebaseSync();
+    }
+
+    function buildCoreStats() {
+        const container = document.getElementById('coreStats');
+        const items = [
+            { label: 'AC', value: char.ac },
+            { label: 'Proficiency', value: '+' + char.proficiency },
+            char.spellSaveDC
+                ? { label: 'Spell Save DC', value: char.spellSaveDC }
+                : { label: 'Initiative', value: fmtMod(char.stats.DEX) }
+        ];
+        items.forEach(item => {
+            const box = document.createElement('div');
+            box.className = 'stat-box';
+            box.innerHTML =
+                '<div class="stat-box-label">' + item.label + '</div>' +
+                '<div class="stat-box-value">' + item.value + '</div>';
+            container.appendChild(box);
+        });
+    }
+
+    function buildAbilityScores() {
+        const container = document.getElementById('abilityScores');
+        Object.entries(char.stats).forEach(([stat, mod]) => {
+            const box = document.createElement('div');
+            box.className = 'ability-box';
+            box.innerHTML =
+                '<div class="ability-label">' + stat + '</div>' +
+                '<div class="ability-mod">' + fmtMod(mod) + '</div>';
+            container.appendChild(box);
+        });
+    }
+
+    function buildSpecial() {
+        const body = document.getElementById('specialBody');
+        const hasSlots = Object.keys(char.spellSlots).length > 0;
+        const activeAbils = char.abilities.filter(a => !a.passive);
+        const passiveAbils = char.abilities.filter(a => a.passive);
+
+        // Spell slots section
+        if (hasSlots) {
+            const slotLabel = document.createElement('div');
+            slotLabel.className = 'section-label';
+            slotLabel.textContent = 'Spell Slots';
+            body.appendChild(slotLabel);
+
+            Object.entries(char.spellSlots).forEach(([level, count]) => {
+                const row = document.createElement('div');
+                row.className = 'slot-row';
+                const lbl = document.createElement('span');
+                lbl.className = 'slot-level-label';
+                lbl.textContent = level;
+                row.appendChild(lbl);
+                for (let i = 0; i < count; i++) {
+                    const pip = document.createElement('div');
+                    pip.className = 'slot-pip';
+                    pip.onclick = () => pip.classList.toggle('spent');
+                    row.appendChild(pip);
+                }
+                body.appendChild(row);
+            });
+
+            if (activeAbils.length > 0) {
+                const divider = document.createElement('div');
+                divider.style.cssText = 'border-top:1px solid #3a3530;margin:6px 0 6px';
+                body.appendChild(divider);
+            }
+        }
+
+        // Active abilities
+        if (activeAbils.length > 0) {
+            const abilLabel = document.createElement('div');
+            abilLabel.className = 'section-label';
+            abilLabel.textContent = 'Abilities';
+            body.appendChild(abilLabel);
+
+            const chips = document.createElement('div');
+            chips.className = 'ability-chips';
+            activeAbils.forEach(a => {
+                let used = 0;
+                const btn = document.createElement('button');
+                btn.className = 'ability-chip';
+                const countSpan = document.createElement('span');
+                countSpan.className = 'chip-count';
+                countSpan.textContent = a.max + '/' + a.max;
+                btn.textContent = a.name + ' ';
+                btn.appendChild(countSpan);
+                btn.onclick = () => {
+                    if (btn.classList.contains('used')) return;
+                    used++;
+                    const remaining = a.max - used;
+                    countSpan.textContent = remaining + '/' + a.max;
+                    if (remaining <= 0) btn.classList.add('used');
+                };
+                chips.appendChild(btn);
+            });
+            body.appendChild(chips);
+
+            if (passiveAbils.length > 0) {
+                const divider = document.createElement('div');
+                divider.style.cssText = 'border-top:1px solid #3a3530;margin:6px 0 6px';
+                body.appendChild(divider);
+            }
+        }
+
+        // Passive abilities
+        if (passiveAbils.length > 0) {
+            const passLabel = document.createElement('div');
+            passLabel.className = 'section-label';
+            passLabel.textContent = 'Passive Features';
+            body.appendChild(passLabel);
+
+            const chips = document.createElement('div');
+            chips.className = 'ability-chips';
+            passiveAbils.forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = 'ability-chip passive';
+                btn.textContent = a.name;
+                btn.title = a.desc || '';
+                btn.disabled = true;
+                chips.appendChild(btn);
+            });
+            body.appendChild(chips);
+        }
+    }
+
+    function buildDiceGrid() {
+        const container = document.getElementById('diceGrid');
+        [4, 6, 8, 10, 12, 20, 100].forEach(sides => {
+            const btn = document.createElement('button');
+            btn.className = 'die-btn';
+            btn.textContent = 'd' + sides;
+            btn.onclick = () => rollDie(sides);
+            container.appendChild(btn);
+        });
+    }
+
+    // =========================================================
+    // FIREBASE SYNC
+    // =========================================================
+    function startFirebaseSync() {
+        const charRef = db.ref('characters/' + charKey);
+
+        // Initialise HP if this character has never connected before
+        charRef.child('hp').once('value', snap => {
+            if (snap.val() === null) {
+                charRef.update({ hp: char.maxHp, maxHp: char.maxHp });
+            }
+        });
+
+        // Live HP updates (from DM or other sources)
+        charRef.child('hp').on('value', snap => {
+            const hp = snap.val();
+            if (hp !== null) updateHpDisplay(hp);
+        });
+
+        // Live inventory updates
+        charRef.child('inventory').on('value', snap => {
+            renderInventory(snap.val() || {});
+        });
+    }
+
+    // =========================================================
+    // HP
+    // =========================================================
+    function updateHpDisplay(hp) {
+        currentHp = hp;
+        const pct = Math.max(0, hp / char.maxHp);
+        const hpEl   = document.getElementById('hpCurrent');
+        const barEl  = document.getElementById('hpBar');
+        const suffix = pct <= 0.25 ? ' low' : pct <= 0.5 ? ' mid' : '';
+
+        hpEl.textContent = hp;
+        hpEl.className = 'hp-current' + suffix;
+        document.getElementById('hpMaxLabel').textContent = '/ ' + char.maxHp + ' HP';
+        barEl.style.width = (pct * 100) + '%';
+        barEl.className = 'hp-bar' + suffix;
+    }
+
+    function changeHp(delta) {
+        if (currentHp === null) return;
+        db.ref('characters/' + charKey + '/hp').transaction(hp => {
+            const cur = hp !== null ? hp : char.maxHp;
+            return Math.max(0, Math.min(char.maxHp, cur + delta));
+        });
+    }
+
+    // =========================================================
+    // INVENTORY
+    // =========================================================
+    function renderInventory(items) {
+        const list = document.getElementById('invList');
+        list.innerHTML = '';
+        const keys = Object.keys(items);
+        if (keys.length === 0) {
+            list.innerHTML = '<div class="inv-empty">No items yet</div>';
+            return;
+        }
+        keys.forEach(key => {
+            const row = document.createElement('div');
+            row.className = 'inv-item';
+            const name = document.createElement('span');
+            name.textContent = items[key];
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'inv-remove';
+            removeBtn.textContent = '×';
+            removeBtn.title = 'Remove item';
+            removeBtn.onclick = () => {
+                db.ref('characters/' + charKey + '/inventory/' + key).remove();
+            };
+            row.appendChild(name);
+            row.appendChild(removeBtn);
+            list.appendChild(row);
+        });
+    }
+
+    function addItem() {
+        const input = document.getElementById('invInput');
+        const val = input.value.trim();
+        if (!val) return;
+        db.ref('characters/' + charKey + '/inventory').push(val);
+        input.value = '';
+        input.focus();
+    }
+
+    document.getElementById('invInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') addItem();
+    });
+
+    // =========================================================
+    // DICE ROLLER
+    // =========================================================
+    function rollDie(sides) {
+        if (rollAnimTimer) clearInterval(rollAnimTimer);
+
+        const dieLabel = document.getElementById('rollDieLabel');
+        const numEl    = document.getElementById('rollNumber');
+        const suffix   = document.getElementById('rollSuffix');
+
+        dieLabel.textContent = 'Rolling d' + sides + '…';
+        numEl.style.display = 'block';
+        numEl.className = 'roll-number rolling';
+        numEl.textContent = '?';
+        suffix.textContent = '';
+
+        let ticks = 0;
+        rollAnimTimer = setInterval(() => {
+            numEl.textContent = Math.floor(Math.random() * sides) + 1;
+            ticks++;
+            if (ticks >= 10) {
+                clearInterval(rollAnimTimer);
+                rollAnimTimer = null;
+                const result = Math.floor(Math.random() * sides) + 1;
+                resolveRoll(sides, result);
+            }
+        }, 55);
+    }
+
+    function resolveRoll(sides, result) {
+        const dieLabel = document.getElementById('rollDieLabel');
+        const numEl    = document.getElementById('rollNumber');
+        const suffixEl = document.getElementById('rollSuffix');
+        const isCrit   = sides === 20 && result === 20;
+        const isFail   = sides === 20 && result === 1;
+
+        dieLabel.textContent = 'd' + sides;
+        numEl.textContent = result;
+        numEl.className = 'roll-number' + (isCrit ? ' crit' : isFail ? ' fail' : '');
+        suffixEl.textContent = isCrit ? 'Critical Hit!' : isFail ? 'Critical Fail' : '';
+        suffixEl.className = 'roll-suffix' + (isCrit ? ' crit' : isFail ? ' fail' : '');
+
+        // Add to local history
+        rollHistory.unshift({ sides, result, isCrit, isFail });
+        if (rollHistory.length > 5) rollHistory.pop();
+        renderRollHistory();
+
+        // Push to Firebase so DM sees it
+        db.ref('diceLog').push({
+            character: char.name,
+            charKey:   charKey,
+            dice:      'd' + sides,
+            result:    result,
+            timestamp: Date.now()
+        });
+    }
+
+    function renderRollHistory() {
+        const container = document.getElementById('rollHistory');
+        container.innerHTML = '';
+        rollHistory.forEach(entry => {
+            const row = document.createElement('div');
+            row.className = 'roll-history-row';
+            const valCls = entry.isCrit ? ' crit' : entry.isFail ? ' fail' : '';
+            const suffix = entry.isCrit ? ' CRIT!' : entry.isFail ? ' FAIL' : '';
+            row.innerHTML =
+                '<span>d' + entry.sides + '</span>' +
+                '<span class="roll-history-val' + valCls + '">' + entry.result + suffix + '</span>';
+            container.appendChild(row);
+        });
+    }
+
+    // =========================================================
+    // HELPERS
+    // =========================================================
+    function fmtMod(mod) {
+        return mod >= 0 ? '+' + mod : String(mod);
+    }
+
+    // =========================================================
+    // START
+    // =========================================================
+    init();
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 FIEL AMIMSO
+Halfling rogue thief
 
 ⚔️ Core Stats
 AC: 13
@@ -6,7 +7,7 @@ HP: 24
 Speed: 25 ft
 Initiative: +3
 Proficiency: +2
-XP: 1,100 / 2,700 (Level 4)
+XP: 1,100 / 2,700 (Level 3)
 
 📊 Ability Mods
 STR -1
