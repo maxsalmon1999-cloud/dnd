@@ -1827,13 +1827,13 @@
                 <div class="character-card">
                     <div class="character-header" onclick="toggleCharacter(this)">
                         <div>
-                            <div class="character-name">Akwan Akusian <span class="character-hp">21 / 21 HP</span></div>
+                            <div class="character-name">Akwan Akusian <span class="character-hp" id="dm-hp-header-akwan">21 / 21 HP</span></div>
                             <div class="character-class">Bard — Lvl 3</div>
                         </div>
                         <span class="character-arrow">&#9654;</span>
                     </div>
                     <div class="character-details">
-                        <div class="stat-row"><span class="stat-label">HP</span><span>21 / 21</span></div>
+                        <div class="stat-row"><span class="stat-label">HP</span><span><button onclick="dmChangeHp('akwan',-1)" style="background:#2a2620;border:1px solid #5a5040;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-right:2px">−</button><span id="dm-hp-stat-akwan">21 / 21</span><button onclick="dmChangeHp('akwan',1)" style="background:#2a2620;border:1px solid #5a5040;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-left:2px">+</button></span></div>
                         <div class="stat-row"><span class="stat-label">AC</span><span>15</span></div>
                         <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
                         <div class="stat-row"><span class="stat-label">DEX</span><span>+3</span></div>
@@ -1862,19 +1862,23 @@
                                 <button class="ability-btn" data-char="akwan" data-rest="long" data-max="3" data-used="0" data-ability="bardic_inspiration" onclick="useAbility(this)">Bardic Inspiration <span class="ability-count">3/3</span></button>
                             </div>
                         </div>
+                        <div class="ability-section">
+                            <div class="ability-section-label">Inventory</div>
+                            <div id="dm-inv-akwan" style="font-size:10px;color:#8a7e68;font-style:italic;padding:2px 0">(empty)</div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="character-card">
                     <div class="character-header" onclick="toggleCharacter(this)">
                         <div>
-                            <div class="character-name">Fiel Amimso <span class="character-hp">24 / 24 HP</span></div>
+                            <div class="character-name">Fiel Amimso <span class="character-hp" id="dm-hp-header-fiel">24 / 24 HP</span></div>
                             <div class="character-class">Halfling Rogue — Lvl 3</div>
                         </div>
                         <span class="character-arrow">&#9654;</span>
                     </div>
                     <div class="character-details">
-                        <div class="stat-row"><span class="stat-label">HP</span><span>24 / 24</span></div>
+                        <div class="stat-row"><span class="stat-label">HP</span><span><button onclick="dmChangeHp('fiel',-1)" style="background:#2a2620;border:1px solid #5a5040;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-right:2px">−</button><span id="dm-hp-stat-fiel">24 / 24</span><button onclick="dmChangeHp('fiel',1)" style="background:#2a2620;border:1px solid #5a5040;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-left:2px">+</button></span></div>
                         <div class="stat-row"><span class="stat-label">AC</span><span>13</span></div>
                         <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
                         <div class="stat-row"><span class="stat-label">DEX</span><span>+3</span></div>
@@ -1891,19 +1895,23 @@
                                 <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Reroll natural 1s">Lucky</button>
                             </div>
                         </div>
+                        <div class="ability-section">
+                            <div class="ability-section-label">Inventory</div>
+                            <div id="dm-inv-fiel" style="font-size:10px;color:#8a7e68;font-style:italic;padding:2px 0">(empty)</div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="character-card">
                     <div class="character-header" onclick="toggleCharacter(this)">
                         <div>
-                            <div class="character-name">Flicker <span class="character-hp">24 / 24 HP</span></div>
+                            <div class="character-name">Flicker <span class="character-hp" id="dm-hp-header-flicker">24 / 24 HP</span></div>
                             <div class="character-class">Changeling Warlock — Lvl 3</div>
                         </div>
                         <span class="character-arrow">&#9654;</span>
                     </div>
                     <div class="character-details">
-                        <div class="stat-row"><span class="stat-label">HP</span><span>24 / 24</span></div>
+                        <div class="stat-row"><span class="stat-label">HP</span><span><button onclick="dmChangeHp('flicker',-1)" style="background:#2a2620;border:1px solid #5a5040;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-right:2px">−</button><span id="dm-hp-stat-flicker">24 / 24</span><button onclick="dmChangeHp('flicker',1)" style="background:#2a2620;border:1px solid #5a5040;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-left:2px">+</button></span></div>
                         <div class="stat-row"><span class="stat-label">AC</span><span>15</span></div>
                         <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
                         <div class="stat-row"><span class="stat-label">DEX</span><span>+2</span></div>
@@ -1924,6 +1932,10 @@
                             <div class="ability-grid">
                                 <button class="ability-btn" data-char="flicker" data-rest="short" data-max="1" data-used="0" data-ability="fey_presence" onclick="useAbility(this)">Fey Presence <span class="ability-count">1/1</span></button>
                             </div>
+                        </div>
+                        <div class="ability-section">
+                            <div class="ability-section-label">Inventory</div>
+                            <div id="dm-inv-flicker" style="font-size:10px;color:#8a7e68;font-style:italic;padding:2px 0">(empty)</div>
                         </div>
                     </div>
                 </div>
@@ -2146,11 +2158,17 @@
         }
 
         function syncCharacterState() {
-            // Default slot/ability state per character
+            // SYNC MAP — all fields shared between DM and player screens:
+            //   HP:        characters/{char}/hp              — DM ±buttons, player ±buttons
+            //   Inventory: characters/{char}/inventory       — DM read-only display, player read/write
+            //   Slots:     characters/{char}/slots/{key}     — DM toggle pip, player toggle pip
+            //   Abilities: characters/{char}/abilities/{key} — DM/player use; reset on rest
+
+            // Initialise slot/ability defaults if not yet written
             const defaults = {
-                'characters/akwan/slots':     { '1_0': false, '1_1': false, '1_2': false, '1_3': false, '2_0': false, '2_1': false },
-                'characters/akwan/abilities': { bardic_inspiration: 0 },
-                'characters/flicker/slots':   { 'w_0': false, 'w_1': false },
+                'characters/akwan/slots':       { '1_0': false, '1_1': false, '1_2': false, '1_3': false, '2_0': false, '2_1': false },
+                'characters/akwan/abilities':   { bardic_inspiration: 0 },
+                'characters/flicker/slots':     { 'w_0': false, 'w_1': false },
                 'characters/flicker/abilities': { fey_presence: 0 },
             };
             Object.entries(defaults).forEach(([path, defaultVal]) => {
@@ -2159,7 +2177,31 @@
                 });
             });
 
-            // Listen for slot changes and update DM character cards
+            // HP and inventory listeners for all three characters
+            const charMap = { akwan: 'Akwan', fiel: 'Fiel', flicker: 'Flicker' };
+            Object.entries(charMap).forEach(([key, name]) => {
+                const maxHp = CHARACTER_STATS[name].hp;
+
+                firebaseDb.ref('characters/' + key + '/hp').on('value', snap => {
+                    const hp = snap.val();
+                    if (hp === null) return;
+                    const headerEl = document.getElementById('dm-hp-header-' + key);
+                    const statEl   = document.getElementById('dm-hp-stat-' + key);
+                    if (headerEl) headerEl.textContent = hp + ' / ' + maxHp + ' HP';
+                    if (statEl)   statEl.textContent   = hp + ' / ' + maxHp;
+                });
+
+                firebaseDb.ref('characters/' + key + '/inventory').on('value', snap => {
+                    const inv = snap.val() || {};
+                    const el  = document.getElementById('dm-inv-' + key);
+                    if (!el) return;
+                    const items = Object.values(inv).filter(Boolean);
+                    el.textContent   = items.length > 0 ? items.join(' · ') : '(empty)';
+                    el.style.fontStyle = items.length > 0 ? 'normal' : 'italic';
+                });
+            });
+
+            // Slot and ability listeners for characters that have them
             ['akwan', 'flicker'].forEach(char => {
                 firebaseDb.ref('characters/' + char + '/slots').on('value', snap => {
                     const slots = snap.val() || {};
@@ -2185,6 +2227,14 @@
                         btn.classList.toggle('used', used >= max);
                     });
                 });
+            });
+        }
+
+        function dmChangeHp(char, delta) {
+            const nameMap = { akwan: 'Akwan', fiel: 'Fiel', flicker: 'Flicker' };
+            const maxHp = CHARACTER_STATS[nameMap[char]].hp;
+            firebaseDb.ref('characters/' + char + '/hp').transaction(hp => {
+                return Math.max(0, Math.min(maxHp, (hp === null ? maxHp : hp) + delta));
             });
         }
 
