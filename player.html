@@ -866,6 +866,28 @@
         .roll-history-val.crit { color: #4aff4a; }
         .roll-history-val.fail { color: #e04040; }
 
+        .roll-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+
+        .roll-history-clear {
+            background: none;
+            border: 1px solid #1a1610;
+            color: #3a3028;
+            font-family: inherit;
+            font-size: 8px;
+            padding: 1px 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .roll-history-clear:hover { color: #c4a44e; border-color: #2a2218; }
+        .roll-history-clear:active { color: #e04040; }
+
         /* ===================== TABS ===================== */
         .tab-bar {
             display: flex;
@@ -1547,6 +1569,15 @@
     function renderRollHistory() {
         const container = document.getElementById('rollHistory');
         container.innerHTML = '';
+        if (rollHistory.length === 0) return;
+
+        const header = document.createElement('div');
+        header.className = 'roll-history-header';
+        header.innerHTML =
+            '<span class="die-picker-label" style="margin:0">\u2726 History</span>' +
+            '<button class="roll-history-clear" onclick="clearRollHistory()">clear</button>';
+        container.appendChild(header);
+
         rollHistory.forEach(entry => {
             const row = document.createElement('div');
             row.className = 'roll-history-row';
@@ -1556,6 +1587,11 @@
                 '<span class="roll-history-val' + valCls + '">' + entry.total + entry.suffix + '</span>';
             container.appendChild(row);
         });
+    }
+
+    function clearRollHistory() {
+        rollHistory = [];
+        renderRollHistory();
     }
 
     // =========================================================
