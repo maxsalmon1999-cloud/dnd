@@ -21,8 +21,8 @@
         body {
             font-family: 'Geneva', 'Chicago', 'Monaco', 'Courier New', monospace;
             font-size: 13px;
-            background: #0c0a08;
-            color: #d4c4a0;
+            background: #090c10;
+            color: #ccc8d8;
             min-height: 100vh;
             -webkit-font-smoothing: none;
             -moz-osx-font-smoothing: unset;
@@ -46,7 +46,7 @@
             text-transform: uppercase;
             letter-spacing: 0.1em;
             text-align: center;
-            border-bottom: 1px solid #3a3530;
+            border-bottom: 1px solid #2a2e42;
             padding-bottom: 12px;
             width: 100%;
             max-width: 320px;
@@ -54,7 +54,7 @@
 
         .select-subtitle {
             font-size: 10px;
-            color: #5a5040;
+            color: #4a4e62;
             text-align: center;
             margin-top: -8px;
         }
@@ -68,13 +68,13 @@
         }
 
         .select-card {
-            background: #1e1c18;
-            border: 1.5px solid #3a3530;
+            background: #171920;
+            border: 1.5px solid #2a2e42;
             padding: 12px 14px;
             cursor: pointer;
             text-align: left;
             font-family: inherit;
-            color: #d4c4a0;
+            color: #ccc8d8;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -83,7 +83,7 @@
 
         .select-card:hover, .select-card:active {
             background: #c4a44e;
-            color: #0c0a08;
+            color: #090c10;
             border-color: #c4a44e;
         }
 
@@ -91,12 +91,12 @@
         .select-card:active .select-class,
         .select-card:hover .select-arrow,
         .select-card:active .select-arrow {
-            color: #0c0a08;
+            color: #090c10;
         }
 
         .select-name { font-weight: bold; font-size: 13px; }
-        .select-class { font-size: 10px; color: #8a7e68; margin-top: 2px; }
-        .select-arrow { font-size: 11px; color: #5a5040; }
+        .select-class { font-size: 10px; color: #7a7c8e; margin-top: 2px; }
+        .select-arrow { font-size: 11px; color: #4a4e62; }
 
         /* ===================== PLAYER SCREEN ===================== */
         .player-screen {
@@ -110,14 +110,14 @@
 
         /* Window chrome */
         .win {
-            background: #1a1815;
-            border: 2px solid #3a3530;
+            background: #13161e;
+            border: 2px solid #2a2e42;
             box-shadow: 2px 2px 0 #000;
         }
 
         .win-title {
-            background: #2a2620;
-            border-bottom: 2px solid #3a3530;
+            background: #1e2230;
+            border-bottom: 2px solid #2a2e42;
             padding: 2px 6px;
             display: flex;
             align-items: center;
@@ -127,8 +127,8 @@
         .close-box {
             width: 14px;
             height: 14px;
-            border: 1.5px solid #5a5040;
-            background: #2a2620;
+            border: 1.5px solid #4a4e62;
+            background: #1e2230;
             flex-shrink: 0;
             cursor: pointer;
         }
@@ -140,7 +140,7 @@
             height: 12px;
             background: repeating-linear-gradient(
                 transparent 0px, transparent 1px,
-                #3a3530 1px, #3a3530 2px,
+                #2a2e42 1px, #2a2e42 2px,
                 transparent 2px, transparent 3px
             );
             margin: 0 6px;
@@ -155,14 +155,14 @@
 
         .win-body {
             padding: 8px;
-            background: #161412;
+            background: #101318;
         }
 
         /* Section label */
         .section-label {
             font-size: 9px;
             font-weight: bold;
-            color: #5a5040;
+            color: #4a4e62;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-bottom: 5px;
@@ -179,8 +179,8 @@
         .hp-btn {
             width: 48px;
             height: 48px;
-            background: #2a2620;
-            border: 1.5px solid #4a4540;
+            background: #1e2230;
+            border: 1.5px solid #3a3e52;
             color: #c4a44e;
             font-family: inherit;
             font-size: 26px;
@@ -193,7 +193,7 @@
             user-select: none;
         }
 
-        .hp-btn:active { background: #c4a44e; color: #0c0a08; }
+        .hp-btn:active { background: #c4a44e; color: #090c10; }
 
         .hp-display {
             flex: 1;
@@ -213,32 +213,32 @@
 
         .hp-max-label {
             font-size: 10px;
-            color: #8a7e68;
+            color: #7a7c8e;
             margin-top: 2px;
         }
 
         .char-class-label {
             font-size: 10px;
-            color: #8a7e68;
+            color: #7a7c8e;
             text-align: center;
             margin-bottom: 6px;
         }
 
         .hp-bar-wrap {
             height: 5px;
-            background: #2a2620;
-            border: 1px solid #3a3530;
+            background: #1e2230;
+            border: 1px solid #2a2e42;
             margin-bottom: 8px;
         }
 
         .hp-bar {
             height: 100%;
-            background: #c4a44e;
+            background: #2a8c40;
             transition: width 0.3s, background 0.3s;
         }
 
-        .hp-bar.low  { background: #e04040; }
-        .hp-bar.mid  { background: #e07040; }
+        .hp-bar.low  { background: #cc2020; }
+        .hp-bar.mid  { background: #c05018; }
 
         /* ===================== STATS ===================== */
         .core-stats {
@@ -249,15 +249,15 @@
         }
 
         .stat-box {
-            background: #2a2620;
-            border: 1px solid #3a3530;
+            background: #1e2230;
+            border: 1px solid #2a2e42;
             padding: 5px 4px;
             text-align: center;
         }
 
         .stat-box-label {
             font-size: 9px;
-            color: #8a7e68;
+            color: #7a7c8e;
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
@@ -265,7 +265,7 @@
         .stat-box-value {
             font-size: 16px;
             font-weight: bold;
-            color: #e0d6c0;
+            color: #d8d4e8;
             margin-top: 1px;
         }
 
@@ -276,22 +276,22 @@
         }
 
         .ability-box {
-            background: #1e1c18;
-            border: 1px solid #2a2620;
+            background: #171920;
+            border: 1px solid #1e2230;
             padding: 4px 2px;
             text-align: center;
         }
 
         .ability-label {
             font-size: 9px;
-            color: #8a7e68;
+            color: #7a7c8e;
             text-transform: uppercase;
         }
 
         .ability-mod {
             font-size: 15px;
             font-weight: bold;
-            color: #d4c4a0;
+            color: #ccc8d8;
             margin-top: 1px;
         }
 
@@ -305,20 +305,20 @@
 
         .slot-level-label {
             font-size: 10px;
-            color: #8a7e68;
+            color: #7a7c8e;
             min-width: 50px;
         }
 
         .slot-pip {
             width: 16px;
             height: 16px;
-            border: 1.5px solid #4a4540;
+            border: 1.5px solid #3a3e52;
             background: #c4a44e;
             cursor: pointer;
         }
 
-        .slot-pip.spent { background: #1a1815; }
-        .slot-pip:active { border-color: #e0d6c0; }
+        .slot-pip.spent { background: #13161e; }
+        .slot-pip:active { border-color: #d8d4e8; }
 
         /* ===================== ABILITIES ===================== */
         .ability-chips {
@@ -331,18 +331,18 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: #2a2620;
-            border: 1px solid #4a4540;
+            background: #1e2230;
+            border: 1px solid #3a3e52;
             padding: 5px 9px;
             font-family: inherit;
             font-size: 10px;
-            color: #e0d6c0;
+            color: #d8d4e8;
             cursor: pointer;
         }
 
         .ability-chip.used {
-            background: #1a1815;
-            color: #5a5040;
+            background: #13161e;
+            color: #4a4e62;
             text-decoration: line-through;
             cursor: default;
         }
@@ -354,7 +354,7 @@
 
         .ability-chip:not(.used):not(.passive):active {
             background: #c4a44e;
-            color: #0c0a08;
+            color: #090c10;
         }
 
         .chip-count {
@@ -373,13 +373,13 @@
             justify-content: space-between;
             align-items: center;
             padding: 5px 4px;
-            border-bottom: 1px dotted #2a2620;
+            border-bottom: 1px dotted #1e2230;
             font-size: 11px;
         }
 
         .inv-empty {
             font-size: 10px;
-            color: #5a5040;
+            color: #4a4e62;
             font-style: italic;
             padding: 6px 0;
             text-align: center;
@@ -388,7 +388,7 @@
         .inv-remove {
             background: none;
             border: none;
-            color: #5a5040;
+            color: #4a4e62;
             cursor: pointer;
             font-size: 16px;
             padding: 0 4px;
@@ -406,9 +406,9 @@
 
         .inv-input {
             flex: 1;
-            background: #0c0a08;
-            border: 1.5px solid #3a3530;
-            color: #d4c4a0;
+            background: #090c10;
+            border: 1.5px solid #2a2e42;
+            color: #ccc8d8;
             padding: 6px 7px;
             font-family: inherit;
             font-size: 11px;
@@ -416,11 +416,11 @@
         }
 
         .inv-input:focus { border-color: #c4a44e; }
-        .inv-input::placeholder { color: #5a5040; }
+        .inv-input::placeholder { color: #4a4e62; }
 
         .inv-add-btn {
-            background: #2a2620;
-            border: 1.5px solid #4a4540;
+            background: #1e2230;
+            border: 1.5px solid #3a3e52;
             color: #c4a44e;
             padding: 6px 12px;
             font-family: inherit;
@@ -429,7 +429,7 @@
             cursor: pointer;
         }
 
-        .inv-add-btn:active { background: #c4a44e; color: #0c0a08; }
+        .inv-add-btn:active { background: #c4a44e; color: #090c10; }
 
         /* ===================== DICE ===================== */
 
@@ -438,8 +438,8 @@
             position: relative;
             width: 100%;
             height: 260px;
-            background: #0c0a08;
-            border: 1.5px solid #2a2620;
+            background: #090c10;
+            border: 1.5px solid #1e2230;
             border-radius: 3px;
             margin-bottom: 8px;
             overflow: hidden;
@@ -471,15 +471,15 @@
             flex-wrap: wrap;
             padding: 4px 0 6px;
             font-size: 10px;
-            color: #5a5040;
+            color: #4a4e62;
         }
 
         .pool-type-chip {
             display: flex;
             align-items: center;
             gap: 3px;
-            background: #1e1c18;
-            border: 1px solid #3a3530;
+            background: #171920;
+            border: 1px solid #2a2e42;
             padding: 2px 6px;
             color: #c4a44e;
             font-weight: bold;
@@ -488,7 +488,7 @@
         .pool-type-minus {
             background: none;
             border: none;
-            color: #5a5040;
+            color: #4a4e62;
             cursor: pointer;
             font-size: 13px;
             line-height: 1;
@@ -499,8 +499,8 @@
 
         /* Result bar */
         .dice-result-bar {
-            background: #161412;
-            border: 1.5px solid #2a2620;
+            background: #101318;
+            border: 1.5px solid #1e2230;
             padding: 7px 10px;
             margin-bottom: 8px;
             display: flex;
@@ -521,7 +521,7 @@
 
         .dice-result-breakdown {
             font-size: 9px;
-            color: #5a5040;
+            color: #4a4e62;
             line-height: 1.7;
         }
 
@@ -536,7 +536,7 @@
             flex: 1;
             background: #c4a44e;
             border: none;
-            color: #0c0a08;
+            color: #090c10;
             font-family: inherit;
             font-size: 14px;
             font-weight: bold;
@@ -546,30 +546,30 @@
             letter-spacing: 0.1em;
         }
 
-        .roll-all-btn:disabled { background: #2a2620; color: #4a4540; cursor: default; }
+        .roll-all-btn:disabled { background: #1e2230; color: #3a3e52; cursor: default; }
         .roll-all-btn:not(:disabled):active { background: #dbb85a; }
 
         .clear-btn {
-            background: #1e1c18;
-            border: 1.5px solid #3a3530;
-            color: #5a5040;
+            background: #171920;
+            border: 1.5px solid #2a2e42;
+            color: #4a4e62;
             font-family: inherit;
             font-size: 11px;
             padding: 11px 13px;
             cursor: pointer;
         }
 
-        .clear-btn:active { background: #2a2620; }
+        .clear-btn:active { background: #1e2230; }
 
         /* Die picker at the bottom */
         .die-picker {
-            border-top: 1.5px solid #2a2620;
+            border-top: 1.5px solid #1e2230;
             padding-top: 8px;
         }
 
         .die-picker-label {
             font-size: 9px;
-            color: #4a4540;
+            color: #3a3e52;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             margin-bottom: 6px;
@@ -582,9 +582,9 @@
         }
 
         .add-die-btn {
-            background: #1e1c18;
-            border: 1.5px solid #3a3530;
-            color: #8a7e68;
+            background: #171920;
+            border: 1.5px solid #2a2e42;
+            color: #7a7c8e;
             font-family: inherit;
             font-size: 11px;
             font-weight: bold;
@@ -595,7 +595,7 @@
             text-align: center;
         }
 
-        .add-die-btn:active { background: #2a2620; color: #c4a44e; border-color: #5a5040; }
+        .add-die-btn:active { background: #1e2230; color: #c4a44e; border-color: #4a4e62; }
 
         /* Roll history */
         .roll-history-row {
@@ -603,9 +603,9 @@
             justify-content: space-between;
             align-items: center;
             padding: 3px 0;
-            border-bottom: 1px dotted #2a2620;
+            border-bottom: 1px dotted #1e2230;
             font-size: 10px;
-            color: #5a5040;
+            color: #4a4e62;
         }
 
         .roll-history-val { font-weight: bold; color: #c4a44e; }
@@ -615,8 +615,8 @@
         /* ===================== TABS ===================== */
         .tab-bar {
             display: flex;
-            border-bottom: 2px solid #3a3530;
-            background: #201e1a;
+            border-bottom: 2px solid #2a2e42;
+            background: #191b22;
         }
 
         .tab {
@@ -625,20 +625,20 @@
             font-family: inherit;
             font-size: 11px;
             font-weight: bold;
-            background: #201e1a;
+            background: #191b22;
             border: none;
-            border-right: 1px solid #3a3530;
-            color: #8a7e68;
+            border-right: 1px solid #2a2e42;
+            color: #7a7c8e;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 0.06em;
         }
 
         .tab:last-child { border-right: none; }
-        .tab:active { background: #2a2620; }
+        .tab:active { background: #1e2230; }
 
         .tab.active {
-            background: #161412;
+            background: #101318;
             color: #c4a44e;
         }
 
@@ -723,7 +723,7 @@
 
                 <!-- Pool bar: shows queued dice with − per type -->
                 <div class="dice-pool-bar" id="dicePoolBar" style="display:none">
-                    <span style="color:#4a4540">Rolling:</span>
+                    <span style="color:#3a3e52">Rolling:</span>
                     <span id="dicePoolChips"></span>
                 </div>
 
@@ -948,7 +948,7 @@
 
             if (activeAbils.length > 0) {
                 const divider = document.createElement('div');
-                divider.style.cssText = 'border-top:1px solid #3a3530;margin:6px 0 6px';
+                divider.style.cssText = 'border-top:1px solid #2a2e42;margin:6px 0 6px';
                 body.appendChild(divider);
             }
         }
@@ -983,7 +983,7 @@
 
             if (passiveAbils.length > 0) {
                 const divider = document.createElement('div');
-                divider.style.cssText = 'border-top:1px solid #3a3530;margin:6px 0 6px';
+                divider.style.cssText = 'border-top:1px solid #2a2e42;margin:6px 0 6px';
                 body.appendChild(divider);
             }
         }
