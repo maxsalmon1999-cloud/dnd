@@ -773,7 +773,7 @@
         }
 
         .prompt-tab {
-            padding: 2px 8px;
+            padding: 1px 6px;
             font-family: inherit;
             font-size: 9px;
             font-weight: bold;
@@ -797,7 +797,7 @@
 
         /* ========== PROMPT AREA ========== */
         .prompt-area {
-            padding: 3px;
+            padding: 2px 3px;
             display: flex;
             gap: 3px;
             background: #060504;
@@ -809,11 +809,11 @@
             background: #060504;
             border: 1.5px solid #2a2218;
             color: #b8a880;
-            padding: 3px 6px;
+            padding: 2px 6px;
             font-family: inherit;
             font-size: 11px;
             resize: none;
-            height: 26px;
+            height: 20px;
             outline: none;
             -webkit-font-smoothing: none;
         }
@@ -1821,15 +1821,222 @@
             z-index: 1000;
         }
         #diceConfirmModal.open { display: flex; }
+
+        /* ========== GAME SETUP MODAL ========== */
+        .menu-setup-btn {
+            background: none;
+            border: 1px solid #3a3028;
+            padding: 1px 8px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #c4a44e;
+        }
+        .menu-setup-btn:hover { background: #c4a44e; color: #000; }
+
+        #gameSetupBackdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1001;
+        }
+        #gameSetupBackdrop.open { display: block; }
+
+        #gameSetupPanel {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            flex-direction: column;
+            width: 560px;
+            max-width: 94vw;
+            max-height: 85vh;
+            background: #0a0a08;
+            border: 3px solid #2a2218;
+            box-shadow: inset 0 0 0 1px #1a1610, 4px 4px 0 #000;
+            z-index: 1002;
+        }
+        #gameSetupPanel.open { display: flex; }
+
+        .setup-titlebar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 6px;
+            background: #12100c;
+            border-bottom: 2px solid #2a2218;
+            flex-shrink: 0;
+        }
+        .setup-titlebar span {
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #c4a44e;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .setup-close {
+            background: #0d0b08;
+            border: 1.5px solid #3a3028;
+            width: 14px; height: 14px;
+            cursor: pointer;
+            font-size: 10px;
+            line-height: 12px;
+            text-align: center;
+            padding: 0;
+            font-family: inherit;
+            color: #5a5040;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .setup-close:hover { background: #c4a44e; color: #000; }
+
+        .setup-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .setup-section {
+            border: 2px solid #1a1610;
+            background: #060504;
+        }
+        .setup-section-header {
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #c4a44e;
+            padding: 4px 8px;
+            background: #12100c;
+            border-bottom: 1px solid #1a1610;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .setup-section-body { padding: 8px; }
+
+        .setup-current {
+            font-size: 10px;
+            color: #b8a880;
+            margin-bottom: 6px;
+        }
+        .setup-current strong {
+            color: #c4a44e;
+        }
+        .setup-none {
+            font-size: 10px;
+            color: #4a4030;
+            font-style: italic;
+        }
+
+        .setup-file-row {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            margin-top: 6px;
+        }
+        .setup-file-input {
+            flex: 1;
+            font-family: inherit;
+            font-size: 10px;
+            color: #b8a880;
+            background: #0d0b08;
+            border: 1.5px solid #2a2218;
+            padding: 4px 6px;
+        }
+        .setup-file-input::file-selector-button {
+            background: #12100c;
+            border: 1px solid #3a3028;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 9px;
+            padding: 2px 8px;
+            cursor: pointer;
+            margin-right: 6px;
+        }
+        .setup-btn {
+            background: #12100c;
+            border: 1.5px solid #3a3028;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 4px 10px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .setup-btn:hover { background: #2a2218; }
+        .setup-btn:disabled { color: #2a2218; cursor: default; }
+        .setup-btn.danger { color: #a04040; border-color: #5a3030; }
+        .setup-btn.danger:hover { background: #a04040; color: #000; }
+
+        .setup-status {
+            font-size: 9px;
+            color: #5a5040;
+            font-style: italic;
+            margin-top: 4px;
+            min-height: 14px;
+        }
+
+        .setup-char-list {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            margin-bottom: 6px;
+        }
+        .setup-char-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 6px;
+            background: #0d0b08;
+            border: 1px solid #1a1610;
+            font-size: 10px;
+            color: #b8a880;
+        }
+        .setup-char-row .char-info { flex: 1; }
+        .setup-char-row .char-info strong { color: #c4a44e; }
+        .setup-char-row .char-info small { color: #5a5040; margin-left: 6px; }
+        .setup-char-actions {
+            display: flex;
+            gap: 3px;
+        }
+
+        /* Delete confirmation inline */
+        .setup-delete-confirm {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+            font-size: 9px;
+            color: #a04040;
+        }
+        .setup-delete-confirm.active { display: flex; }
+        .setup-delete-input {
+            background: #0d0b08;
+            border: 1.5px solid #5a3030;
+            color: #a04040;
+            font-family: inherit;
+            font-size: 9px;
+            padding: 3px 6px;
+            width: 80px;
+            outline: none;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
     <!-- Classic Mac Menu Bar -->
     <div class="menu-bar">
         <span class="apple"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:middle"><circle cx="8" cy="8" r="4" stroke="#c4a44e" stroke-width="1.5" fill="none"/><line x1="8" y1="0" x2="8" y2="3" stroke="#c4a44e" stroke-width="1.2"/><line x1="8" y1="13" x2="8" y2="16" stroke="#c4a44e" stroke-width="1.2"/><line x1="0" y1="8" x2="3" y2="8" stroke="#c4a44e" stroke-width="1.2"/><line x1="13" y1="8" x2="16" y2="8" stroke="#c4a44e" stroke-width="1.2"/><line x1="2.3" y1="2.3" x2="4.4" y2="4.4" stroke="#c4a44e" stroke-width="1.2"/><line x1="11.6" y1="11.6" x2="13.7" y2="13.7" stroke="#c4a44e" stroke-width="1.2"/><line x1="2.3" y1="13.7" x2="4.4" y2="11.6" stroke="#c4a44e" stroke-width="1.2"/><line x1="11.6" y1="4.4" x2="13.7" y2="2.3" stroke="#c4a44e" stroke-width="1.2"/><line x1="5" y1="14" x2="11" y2="2" stroke="#c4a44e" stroke-width="1.5"/><line x1="7" y1="1.5" x2="11" y2="2" stroke="#c4a44e" stroke-width="1"/><line x1="11" y1="2" x2="10" y2="5.5" stroke="#c4a44e" stroke-width="1"/></svg></span>
-        <span class="menu-campaign">The Delian Tomb</span>
+        <span class="menu-campaign" id="menuCampaignName">The Delian Tomb</span>
+        <button class="menu-setup-btn" onclick="toggleGameSetup()">&#9881; Setup</button>
         <button class="menu-end-session" onclick="endSession()">End Session</button>
         <button class="menu-reset-session" onclick="showResetModal()">&#10005;</button>
     </div>
@@ -1844,121 +2051,7 @@
                 <div class="stripes-right"></div>
             </div>
             <div class="window-content">
-                <div class="character-card">
-                    <div class="character-header" onclick="toggleCharacter(this)">
-                        <div>
-                            <div class="character-name">Akwan Akusian <span class="character-hp" id="dm-hp-header-akwan">21 / 21 HP</span></div>
-                            <div class="character-class">Bard — Lvl 3</div>
-                        </div>
-                        <span class="character-arrow">&#9654;</span>
-                    </div>
-                    <div class="character-details">
-                        <div class="stat-row"><span class="stat-label">HP</span><span><button onclick="dmChangeHp('akwan',-1)" style="background:#12100c;border:1px solid #4a4030;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-right:2px">−</button><span id="dm-hp-stat-akwan">21 / 21</span><button onclick="dmChangeHp('akwan',1)" style="background:#12100c;border:1px solid #4a4030;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-left:2px">+</button></span></div>
-                        <div class="stat-row"><span class="stat-label">AC</span><span>15</span></div>
-                        <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
-                        <div class="stat-row"><span class="stat-label">DEX</span><span>+3</span></div>
-                        <div class="stat-row"><span class="stat-label">CON</span><span>+1</span></div>
-                        <div class="stat-row"><span class="stat-label">INT</span><span>+1</span></div>
-                        <div class="stat-row"><span class="stat-label">WIS</span><span>+0</span></div>
-                        <div class="stat-row"><span class="stat-label">CHA</span><span>+3</span></div>
-                        <div class="ability-section">
-                            <div class="ability-section-label">Spell Slots</div>
-                            <div class="spell-slot-row">
-                                <span class="spell-slot-label">1st</span>
-                                <div class="spell-slot-pip" data-char="akwan" data-slot="1" data-idx="0" onclick="toggleSlot(this)"></div>
-                                <div class="spell-slot-pip" data-char="akwan" data-slot="1" data-idx="1" onclick="toggleSlot(this)"></div>
-                                <div class="spell-slot-pip" data-char="akwan" data-slot="1" data-idx="2" onclick="toggleSlot(this)"></div>
-                                <div class="spell-slot-pip" data-char="akwan" data-slot="1" data-idx="3" onclick="toggleSlot(this)"></div>
-                            </div>
-                            <div class="spell-slot-row">
-                                <span class="spell-slot-label">2nd</span>
-                                <div class="spell-slot-pip" data-char="akwan" data-slot="2" data-idx="0" onclick="toggleSlot(this)"></div>
-                                <div class="spell-slot-pip" data-char="akwan" data-slot="2" data-idx="1" onclick="toggleSlot(this)"></div>
-                            </div>
-                        </div>
-                        <div class="ability-section">
-                            <div class="ability-section-label">Abilities</div>
-                            <div class="ability-grid">
-                                <button class="ability-btn" data-char="akwan" data-rest="long" data-max="3" data-used="0" data-ability="bardic_inspiration" onclick="useAbility(this)">Bardic Inspiration <span class="ability-count">3/3</span></button>
-                            </div>
-                        </div>
-                        <div class="ability-section">
-                            <div class="ability-section-label">Inventory</div>
-                            <div id="dm-inv-akwan" style="font-size:10px;color:#5a5040;font-style:italic;padding:2px 0">(empty)</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="character-card">
-                    <div class="character-header" onclick="toggleCharacter(this)">
-                        <div>
-                            <div class="character-name">Fiel Amimso <span class="character-hp" id="dm-hp-header-fiel">24 / 24 HP</span></div>
-                            <div class="character-class">Halfling Rogue — Lvl 3</div>
-                        </div>
-                        <span class="character-arrow">&#9654;</span>
-                    </div>
-                    <div class="character-details">
-                        <div class="stat-row"><span class="stat-label">HP</span><span><button onclick="dmChangeHp('fiel',-1)" style="background:#12100c;border:1px solid #4a4030;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-right:2px">−</button><span id="dm-hp-stat-fiel">24 / 24</span><button onclick="dmChangeHp('fiel',1)" style="background:#12100c;border:1px solid #4a4030;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-left:2px">+</button></span></div>
-                        <div class="stat-row"><span class="stat-label">AC</span><span>13</span></div>
-                        <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
-                        <div class="stat-row"><span class="stat-label">DEX</span><span>+3</span></div>
-                        <div class="stat-row"><span class="stat-label">CON</span><span>+2</span></div>
-                        <div class="stat-row"><span class="stat-label">INT</span><span>+0</span></div>
-                        <div class="stat-row"><span class="stat-label">WIS</span><span>+2</span></div>
-                        <div class="stat-row"><span class="stat-label">CHA</span><span>-1</span></div>
-                        <div class="ability-section">
-                            <div class="ability-section-label">Passive Features</div>
-                            <div class="ability-grid">
-                                <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Once per turn, +2d6 with advantage or ally adjacent">Sneak Atk 2d6</button>
-                                <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Bonus action: Dash, Disengage, or Hide">Cunning Action</button>
-                                <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Bonus action: Use Object">Fast Hands</button>
-                                <button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="Reroll natural 1s">Lucky</button>
-                            </div>
-                        </div>
-                        <div class="ability-section">
-                            <div class="ability-section-label">Inventory</div>
-                            <div id="dm-inv-fiel" style="font-size:10px;color:#5a5040;font-style:italic;padding:2px 0">(empty)</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="character-card">
-                    <div class="character-header" onclick="toggleCharacter(this)">
-                        <div>
-                            <div class="character-name">Flicker <span class="character-hp" id="dm-hp-header-flicker">24 / 24 HP</span></div>
-                            <div class="character-class">Changeling Warlock — Lvl 3</div>
-                        </div>
-                        <span class="character-arrow">&#9654;</span>
-                    </div>
-                    <div class="character-details">
-                        <div class="stat-row"><span class="stat-label">HP</span><span><button onclick="dmChangeHp('flicker',-1)" style="background:#12100c;border:1px solid #4a4030;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-right:2px">−</button><span id="dm-hp-stat-flicker">24 / 24</span><button onclick="dmChangeHp('flicker',1)" style="background:#12100c;border:1px solid #4a4030;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;margin-left:2px">+</button></span></div>
-                        <div class="stat-row"><span class="stat-label">AC</span><span>15</span></div>
-                        <div class="stat-row"><span class="stat-label">STR</span><span>-1</span></div>
-                        <div class="stat-row"><span class="stat-label">DEX</span><span>+2</span></div>
-                        <div class="stat-row"><span class="stat-label">CON</span><span>+2</span></div>
-                        <div class="stat-row"><span class="stat-label">INT</span><span>+0</span></div>
-                        <div class="stat-row"><span class="stat-label">WIS</span><span>+0</span></div>
-                        <div class="stat-row"><span class="stat-label">CHA</span><span>+3</span></div>
-                        <div class="ability-section">
-                            <div class="ability-section-label">Warlock Slots (Short Rest)</div>
-                            <div class="spell-slot-row">
-                                <span class="spell-slot-label">2nd</span>
-                                <div class="spell-slot-pip" data-char="flicker" data-slot="w" data-idx="0" onclick="toggleSlot(this)"></div>
-                                <div class="spell-slot-pip" data-char="flicker" data-slot="w" data-idx="1" onclick="toggleSlot(this)"></div>
-                            </div>
-                        </div>
-                        <div class="ability-section">
-                            <div class="ability-section-label">Abilities</div>
-                            <div class="ability-grid">
-                                <button class="ability-btn" data-char="flicker" data-rest="short" data-max="1" data-used="0" data-ability="fey_presence" onclick="useAbility(this)">Fey Presence <span class="ability-count">1/1</span></button>
-                            </div>
-                        </div>
-                        <div class="ability-section">
-                            <div class="ability-section-label">Inventory</div>
-                            <div id="dm-inv-flicker" style="font-size:10px;color:#5a5040;font-style:italic;padding:2px 0">(empty)</div>
-                        </div>
-                    </div>
-                </div>
+                <div id="charSidebarContainer"></div>
 
                 <!-- Rest Buttons -->
                 <div class="rest-buttons">
@@ -2150,15 +2243,15 @@
         firebase.initializeApp(FIREBASE_CONFIG);
         const firebaseDb = firebase.database();
 
-        function initFirebaseSync() {
+        async function initFirebaseSync() {
+            // Load all game data from Firebase first
+            await loadGameData();
+
             // Initialise HP for each character if not yet in Firebase
-            const charMap = { akwan: 'Akwan', fiel: 'Fiel', flicker: 'Flicker' };
-            Object.entries(charMap).forEach(([key, name]) => {
-                const stats = CHARACTER_STATS[name];
-                if (!stats) return;
+            Object.entries(LOADED_CHARS).forEach(([key, c]) => {
                 firebaseDb.ref('characters/' + key + '/hp').once('value', snap => {
                     if (snap.val() === null) {
-                        firebaseDb.ref('characters/' + key).update({ hp: stats.hp, maxHp: stats.hp });
+                        firebaseDb.ref('characters/' + key).update({ hp: c.maxHp, maxHp: c.maxHp });
                     }
                 });
             });
@@ -2178,29 +2271,8 @@
         }
 
         function syncCharacterState() {
-            // SYNC MAP — all fields shared between DM and player screens:
-            //   HP:        characters/{char}/hp              — DM ±buttons, player ±buttons
-            //   Inventory: characters/{char}/inventory       — DM read-only display, player read/write
-            //   Slots:     characters/{char}/slots/{key}     — DM toggle pip, player toggle pip
-            //   Abilities: characters/{char}/abilities/{key} — DM/player use; reset on rest
-
-            // Initialise slot/ability defaults if not yet written
-            const defaults = {
-                'characters/akwan/slots':       { '1_0': false, '1_1': false, '1_2': false, '1_3': false, '2_0': false, '2_1': false },
-                'characters/akwan/abilities':   { bardic_inspiration: 0 },
-                'characters/flicker/slots':     { 'w_0': false, 'w_1': false },
-                'characters/flicker/abilities': { fey_presence: 0 },
-            };
-            Object.entries(defaults).forEach(([path, defaultVal]) => {
-                firebaseDb.ref(path).once('value', snap => {
-                    if (!snap.val()) firebaseDb.ref(path).set(defaultVal);
-                });
-            });
-
-            // HP and inventory listeners for all three characters
-            const charMap = { akwan: 'Akwan', fiel: 'Fiel', flicker: 'Flicker' };
-            Object.entries(charMap).forEach(([key, name]) => {
-                const maxHp = CHARACTER_STATS[name].hp;
+            Object.entries(LOADED_CHARS).forEach(([key, c]) => {
+                const maxHp = c.maxHp || 10;
 
                 firebaseDb.ref('characters/' + key + '/hp').on('value', snap => {
                     const hp = snap.val();
@@ -2216,44 +2288,40 @@
                     const el  = document.getElementById('dm-inv-' + key);
                     if (!el) return;
                     const items = Object.values(inv).filter(Boolean);
-                    el.textContent   = items.length > 0 ? items.join(' · ') : '(empty)';
+                    el.textContent   = items.length > 0 ? items.join(' \u00B7 ') : '(empty)';
                     el.style.fontStyle = items.length > 0 ? 'normal' : 'italic';
                 });
-            });
 
-            // Slot and ability listeners for characters that have them
-            ['akwan', 'flicker'].forEach(char => {
-                firebaseDb.ref('characters/' + char + '/slots').on('value', snap => {
+                firebaseDb.ref('characters/' + key + '/slots').on('value', snap => {
                     const slots = snap.val() || {};
-                    Object.entries(slots).forEach(([key, spent]) => {
-                        const parts = key.split('_');
-                        const slotNum = parts[0];
-                        const idx     = parts[1];
+                    Object.entries(slots).forEach(([sk, spent]) => {
+                        const parts = sk.split('_');
                         const pip = document.querySelector(
-                            '.spell-slot-pip[data-char="' + char + '"][data-slot="' + slotNum + '"][data-idx="' + idx + '"]'
+                            '.spell-slot-pip[data-char="' + key + '"][data-slot="' + parts[0] + '"][data-idx="' + parts[1] + '"]'
                         );
                         if (pip) pip.classList.toggle('spent', spent);
                     });
                 });
 
-                firebaseDb.ref('characters/' + char + '/abilities').on('value', snap => {
+                firebaseDb.ref('characters/' + key + '/abilities').on('value', snap => {
                     const abilities = snap.val() || {};
-                    Object.entries(abilities).forEach(([key, used]) => {
-                        const btn = document.querySelector('.ability-btn[data-char="' + char + '"][data-ability="' + key + '"]');
+                    Object.entries(abilities).forEach(([ak, used]) => {
+                        const btn = document.querySelector('.ability-btn[data-char="' + key + '"][data-ability="' + ak + '"]');
                         if (!btn) return;
                         const max = parseInt(btn.dataset.max);
                         btn.dataset.used = String(used);
-                        btn.querySelector('.ability-count').textContent = (max - used) + '/' + max;
+                        const countEl = btn.querySelector('.ability-count');
+                        if (countEl) countEl.textContent = (max - used) + '/' + max;
                         btn.classList.toggle('used', used >= max);
                     });
                 });
             });
         }
 
-        function dmChangeHp(char, delta) {
-            const nameMap = { akwan: 'Akwan', fiel: 'Fiel', flicker: 'Flicker' };
-            const maxHp = CHARACTER_STATS[nameMap[char]].hp;
-            firebaseDb.ref('characters/' + char + '/hp').transaction(hp => {
+        function dmChangeHp(charKey, delta) {
+            const c = LOADED_CHARS[charKey];
+            const maxHp = c ? c.maxHp : 10;
+            firebaseDb.ref('characters/' + charKey + '/hp').transaction(hp => {
                 return Math.max(0, Math.min(maxHp, (hp === null ? maxHp : hp) + delta));
             });
         }
@@ -2288,40 +2356,93 @@
         window.addEventListener('load', initFirebaseSync);
 
         // =========================================================
-        // CHARACTER & ENEMY STATS  (source of truth for modifiers)
+        // CHARACTER & ENEMY STATS  (loaded from Firebase)
         // =========================================================
-        const CHARACTER_STATS = {
-            'Akwan': {
-                full: 'Akwan Akusian', ac: 15, hp: 21,
-                mods: { STR: -1, DEX: 3, CON: 1, INT: 1, WIS: 0, CHA: 3 },
-                proficiency: 2,
-                proficient_saves: ['DEX', 'CHA'],
-                spell_save_dc: 13, spell_attack: 5,
-            },
-            'Fiel': {
-                full: 'Fiel Amimso', ac: 13, hp: 24,
-                mods: { STR: -1, DEX: 3, CON: 2, INT: 0, WIS: 2, CHA: -1 },
-                proficiency: 2,
-                proficient_saves: ['DEX', 'INT'],
-                spell_save_dc: null, spell_attack: null,
-            },
-            'Flicker': {
-                full: 'Flicker', ac: 15, hp: 24,
-                mods: { STR: -1, DEX: 2, CON: 2, INT: 0, WIS: 0, CHA: 3 },
-                proficiency: 2,
-                proficient_saves: ['WIS', 'CHA'],
-                spell_save_dc: 13, spell_attack: 5,
-            },
-            'Goblin': { ac: 15, hp: 7, mods: { STR: -1, DEX: 2, CON: 0, INT: 0, WIS: -1, CHA: -1 }, proficiency: 2 },
-            'Goblin Shaman': { ac: 15, hp: 7, mods: { STR: -1, DEX: 2, CON: 0, INT: 0, WIS: 1, CHA: -1 }, proficiency: 2 },
-            'Bugbear': { ac: 16, hp: 27, mods: { STR: 2, DEX: 2, CON: 1, INT: -1, WIS: 0, CHA: -1 }, proficiency: 2 },
-            'Skeleton': { ac: 13, hp: 13, mods: { STR: 0, DEX: 2, CON: 2, INT: -2, WIS: -1, CHA: -3 }, proficiency: 2 },
-        };
+        let CHARACTER_STATS = {};
+        let LOADED_CHARS = {};   // key -> full characterSheet data from Firebase
+        let LOADED_CAMPAIGN = null;
+
+        async function loadGameData() {
+            // Load character sheets from Firebase
+            const charSnap = await firebaseDb.ref('characterSheets').once('value');
+            const chars = charSnap.val() || {};
+            LOADED_CHARS = chars;
+            CHARACTER_STATS = {};
+            Object.entries(chars).forEach(([key, c]) => {
+                const firstName = c.name.split(' ')[0];
+                if (c.dmStats) {
+                    CHARACTER_STATS[firstName] = c.dmStats;
+                } else {
+                    CHARACTER_STATS[firstName] = {
+                        full: c.name, ac: c.ac || 10, hp: c.maxHp || 10,
+                        mods: c.stats || {}, proficiency: c.proficiency || 2,
+                        proficient_saves: c.proficientSaves || [],
+                        spell_save_dc: c.spellSaveDC || null,
+                        spell_attack: c.spellAttack ? parseInt(c.spellAttack) : null,
+                    };
+                }
+            });
+
+            // Load campaign enemies into CHARACTER_STATS
+            const campSnap = await firebaseDb.ref('campaign').once('value');
+            LOADED_CAMPAIGN = campSnap.val();
+            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.enemies) {
+                LOADED_CAMPAIGN.enemies.forEach(e => {
+                    if (typeof e === 'object' && e.name && e.stats) {
+                        // Parse enemy stats if structured
+                        CHARACTER_STATS[e.name] = e.stats;
+                    }
+                });
+            }
+
+            // Update menu campaign name
+            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.name) {
+                document.getElementById('menuCampaignName').textContent = LOADED_CAMPAIGN.name;
+            }
+
+            // Update CAMPAIGN_NPCS
+            if (LOADED_CAMPAIGN) {
+                CAMPAIGN_NPCS.npcs = Array.isArray(LOADED_CAMPAIGN.npcs) ? LOADED_CAMPAIGN.npcs : [];
+                CAMPAIGN_NPCS.enemies = Array.isArray(LOADED_CAMPAIGN.enemies) ? LOADED_CAMPAIGN.enemies : [];
+            }
+
+            // Build sidebar and setup panel
+            buildCharSidebar();
+            refreshSetupPanel();
+        }
 
         async function loadPrompts() {
             if (dmPrompts) return dmPrompts;
-            const res = await fetch('prompts/dm_prompts.md');
-            if (!res.ok) throw new Error('Could not load prompts/dm_prompts.md');
+            // Try Firebase campaign data first
+            if (!LOADED_CAMPAIGN) {
+                const snap = await firebaseDb.ref('campaign').once('value');
+                LOADED_CAMPAIGN = snap.val();
+            }
+            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.systemPrompt) {
+                // Build dynamic system prompt with character data
+                let systemSection = LOADED_CAMPAIGN.systemPrompt;
+                // Append character summaries from characterSheets
+                if (Object.keys(LOADED_CHARS).length > 0) {
+                    systemSection += '\n\n### The Party\n\n';
+                    Object.entries(LOADED_CHARS).forEach(([key, c]) => {
+                        systemSection += '**' + c.name + '** — ' + c.cls + '\n';
+                        systemSection += '- HP: ' + c.maxHp + ' | AC: ' + c.ac;
+                        if (c.spellSaveDC) systemSection += ' | Spell Save DC: ' + c.spellSaveDC;
+                        systemSection += '\n- Stats: ' + Object.entries(c.stats || {}).map(([k,v]) => k + ': ' + (v >= 0 ? '+' : '') + v).join(', ') + '\n\n';
+                    });
+                }
+                dmPrompts = {
+                    system: systemSection,
+                    description: LOADED_CAMPAIGN.descriptionPrompt || '',
+                    action: LOADED_CAMPAIGN.actionPrompt || '',
+                    both: LOADED_CAMPAIGN.bothPrompt || '',
+                    'session end': LOADED_CAMPAIGN.sessionEndPrompt || '',
+                };
+                return dmPrompts;
+            }
+            // Fallback to file
+            const res = await fetch('Prompts/dm_prompts.md');
+            if (!res.ok) throw new Error('Could not load Prompts/dm_prompts.md');
             const text = await res.text();
             const sections = {};
             for (const part of text.split(/^## /m)) {
@@ -2331,6 +2452,435 @@
             }
             dmPrompts = sections;
             return dmPrompts;
+        }
+
+        // =========================================================
+        // GAME SETUP — UI
+        // =========================================================
+        function toggleGameSetup() {
+            document.getElementById('gameSetupBackdrop').classList.toggle('open');
+            document.getElementById('gameSetupPanel').classList.toggle('open');
+            refreshSetupPanel();
+        }
+
+        function refreshSetupPanel() {
+            // Campaign info
+            const campInfo = document.getElementById('setupCampaignInfo');
+            const campDel = document.getElementById('campaignDeleteSection');
+            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.name) {
+                campInfo.innerHTML = '<strong>' + LOADED_CAMPAIGN.name + '</strong>';
+                campDel.style.display = '';
+            } else {
+                campInfo.innerHTML = '<span class="setup-none">No campaign loaded</span>';
+                campDel.style.display = 'none';
+            }
+
+            // Character list
+            const list = document.getElementById('setupCharList');
+            const chars = LOADED_CHARS;
+            if (!chars || Object.keys(chars).length === 0) {
+                list.innerHTML = '<div class="setup-none">No characters loaded</div>';
+                return;
+            }
+            list.innerHTML = '';
+            Object.entries(chars).forEach(([key, c]) => {
+                const row = document.createElement('div');
+                row.className = 'setup-char-row';
+                row.innerHTML =
+                    '<div class="char-info"><strong>' + c.name + '</strong><small>' + c.cls + '</small></div>' +
+                    '<div class="setup-char-actions">' +
+                    '<button class="setup-btn" onclick="exportCharacter(\'' + key + '\')">Export</button>' +
+                    '<button class="setup-btn danger" onclick="deleteCharacter(\'' + key + '\')">Delete</button>' +
+                    '</div>';
+                list.appendChild(row);
+            });
+        }
+
+        // =========================================================
+        // CHARACTER SHEET PARSING & UPLOAD
+        // =========================================================
+        function parseCharacterSheet(text) {
+            const lines = text.split('\n');
+            const name = lines[0].trim();
+            const cls = lines[1] ? lines[1].trim() : '';
+            const key = name.split(' ')[0].toLowerCase();
+
+            function extract(pattern) {
+                for (const line of lines) {
+                    const m = line.match(pattern);
+                    if (m) return m[1];
+                }
+                return null;
+            }
+
+            const ac = parseInt(extract(/AC:\s*(\d+)/)) || 10;
+            const maxHp = parseInt(extract(/HP:\s*(\d+)/)) || 10;
+            const proficiency = parseInt(extract(/Proficiency:\s*\+?(\d+)/)) || 2;
+            const spellSaveDC = parseInt(extract(/Spell Save DC:\s*(\d+)/)) || null;
+            const spellAttack = extract(/Spell Attack:\s*(\+?\d+)/);
+
+            // Parse ability mods
+            const stats = {};
+            const statPattern = /^(STR|DEX|CON|INT|WIS|CHA)\s+([+-]?\d+)/;
+            lines.forEach(line => {
+                const m = line.match(statPattern);
+                if (m) stats[m[1]] = parseInt(m[2]);
+            });
+
+            // Parse spell slots
+            const spellSlots = [];
+            const slotPattern = /^(\d+)\w*\s+Level:\s*(\d+)/;
+            lines.forEach(line => {
+                const m = line.match(slotPattern);
+                if (m) {
+                    const lvl = m[1];
+                    const count = parseInt(m[2]);
+                    spellSlots.push({ label: ordinal(lvl) + ' Level', count, key: lvl });
+                }
+            });
+            // Warlock slots
+            const warlockSlot = extract(/Warlock Slots?:\s*(\d+)/i);
+            if (warlockSlot) {
+                spellSlots.push({ label: '2nd (Short Rest)', count: parseInt(warlockSlot), key: 'w' });
+            }
+
+            // Parse abilities (look for "Xn / Y Rest" patterns)
+            const abilities = [];
+            const abilPattern = /^([A-Z][\w\s]+?)\s*\((\d+)x?\s*\/\s*(Short|Long)\s+Rest\)/;
+            lines.forEach(line => {
+                const m = line.match(abilPattern);
+                if (m) {
+                    const abilName = m[1].trim();
+                    abilities.push({
+                        name: abilName,
+                        key: abilName.toLowerCase().replace(/\s+/g, '_'),
+                        max: parseInt(m[2]),
+                        rest: m[3],
+                        passive: false,
+                    });
+                }
+            });
+
+            // Parse passive features (lines under Special Features that don't have usage)
+            let inSpecial = false;
+            lines.forEach(line => {
+                if (/Special Features|Passive/i.test(line)) { inSpecial = true; return; }
+                if (/^[^\s]/.test(line) && !/^(STR|DEX|CON|INT|WIS|CHA)/.test(line) && inSpecial) {
+                    const trimmed = line.trim();
+                    if (trimmed && !abilPattern.test(trimmed) && !/^\d/.test(trimmed) && !/^[•\-]/.test(trimmed) && !/^(AC|HP|Speed|Init|Prof|Spell|XP)/i.test(trimmed)) {
+                        // Check it's not already added
+                        if (!abilities.find(a => a.name === trimmed) && trimmed.length > 2 && trimmed.length < 40) {
+                            abilities.push({ name: trimmed, passive: true, desc: '' });
+                        }
+                    }
+                }
+            });
+
+            const dmStats = {
+                full: name, ac, hp: maxHp,
+                mods: stats, proficiency,
+                proficient_saves: [],
+                spell_save_dc: spellSaveDC,
+                spell_attack: spellAttack ? parseInt(spellAttack) : null,
+            };
+
+            return { key, name, cls, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, dmStats };
+        }
+
+        function ordinal(n) {
+            const s = ['th','st','nd','rd'];
+            const v = parseInt(n) % 100;
+            return n + (s[(v-20)%10] || s[v] || s[0]);
+        }
+
+        async function processCharacterSheets() {
+            const input = document.getElementById('charFileInput');
+            const status = document.getElementById('charStatus');
+            if (!input.files.length) { status.textContent = 'No files selected'; return; }
+
+            status.textContent = 'Processing...';
+            const promises = Array.from(input.files).map(file => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsText(file);
+                });
+            });
+
+            try {
+                const texts = await Promise.all(promises);
+                for (const text of texts) {
+                    const parsed = parseCharacterSheet(text);
+                    await firebaseDb.ref('characterSheets/' + parsed.key).set(parsed);
+                    // Initialize runtime character state
+                    const rtSnap = await firebaseDb.ref('characters/' + parsed.key + '/hp').once('value');
+                    if (rtSnap.val() === null) {
+                        await firebaseDb.ref('characters/' + parsed.key).update({ hp: parsed.maxHp, maxHp: parsed.maxHp });
+                    }
+                    // Initialize slots
+                    if (parsed.spellSlots.length > 0) {
+                        const slotDefaults = {};
+                        parsed.spellSlots.forEach(s => {
+                            for (let i = 0; i < s.count; i++) slotDefaults[s.key + '_' + i] = false;
+                        });
+                        const slotSnap = await firebaseDb.ref('characters/' + parsed.key + '/slots').once('value');
+                        if (!slotSnap.val()) await firebaseDb.ref('characters/' + parsed.key + '/slots').set(slotDefaults);
+                    }
+                    // Initialize abilities
+                    const activeAbils = parsed.abilities.filter(a => !a.passive && a.key);
+                    if (activeAbils.length > 0) {
+                        const abilDefaults = {};
+                        activeAbils.forEach(a => { abilDefaults[a.key] = 0; });
+                        const abilSnap = await firebaseDb.ref('characters/' + parsed.key + '/abilities').once('value');
+                        if (!abilSnap.val()) await firebaseDb.ref('characters/' + parsed.key + '/abilities').set(abilDefaults);
+                    }
+                }
+                status.textContent = texts.length + ' character(s) added successfully';
+                input.value = '';
+                dmPrompts = null; // Force reload
+                await loadGameData();
+            } catch (err) {
+                status.textContent = 'Error: ' + err.message;
+            }
+        }
+
+        // =========================================================
+        // CAMPAIGN PDF PROCESSING
+        // =========================================================
+        async function processCampaignPdf() {
+            const input = document.getElementById('campaignFileInput');
+            const status = document.getElementById('campaignStatus');
+            const btn = document.getElementById('processCampaignBtn');
+            if (!input.files.length) { status.textContent = 'No file selected'; return; }
+            if (!API_KEY) { status.textContent = 'Set API_KEY first'; return; }
+
+            btn.disabled = true;
+            status.textContent = 'Extracting text from PDF...';
+
+            try {
+                const file = input.files[0];
+                const arrayBuffer = await file.arrayBuffer();
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    fullText += content.items.map(item => item.str).join(' ') + '\n\n';
+                }
+
+                status.textContent = 'Sending to Claude for structuring...';
+
+                const extractionPrompt = `You are extracting structured campaign data from a D&D adventure document.
+Given this campaign text, produce a JSON object with these exact fields:
+{
+  "name": "The campaign/adventure name",
+  "systemPrompt": "A comprehensive system prompt for a DM AI. Include: campaign setting, key NPCs with descriptions, key locations with descriptions, key encounters, plot summary, and any important rules or mechanics. Write it as instructions to an AI DM. Do NOT include party/character information - that will be added separately.",
+  "descriptionPrompt": "Instructions for vivid narrative-only mode (2-4 paragraphs, sensory details, no mechanics)",
+  "actionPrompt": "Instructions for mechanical resolution mode (1-3 paragraphs, hit/miss/damage)",
+  "bothPrompt": "Instructions for combined narrative + mechanics mode (3-5 paragraphs)",
+  "sessionEndPrompt": "Instructions for generating an official session summary record",
+  "npcs": ["NPC Name 1", "NPC Name 2"],
+  "enemies": ["Enemy Type 1", "Enemy Type 2"],
+  "enemyStats": {"Enemy Type 1": {"ac": 15, "hp": 7, "mods": {"STR": -1, "DEX": 2, "CON": 0, "INT": 0, "WIS": -1, "CHA": -1}, "proficiency": 2}}
+}
+
+Respond with ONLY the JSON, no markdown fences or extra text.
+
+Campaign document:
+${fullText.slice(0, 30000)}`;
+
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': API_KEY,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true',
+                        'content-type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: API_MODEL,
+                        max_tokens: 4096,
+                        messages: [{ role: 'user', content: extractionPrompt }],
+                    }),
+                });
+
+                if (!res.ok) throw new Error('API error: ' + res.status);
+                const data = await res.json();
+                const responseText = data.content[0].text;
+
+                // Parse JSON from response
+                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error('Could not parse campaign JSON from response');
+                const campaign = JSON.parse(jsonMatch[0]);
+                campaign.rawPdfText = fullText.slice(0, 50000);
+
+                // Save enemy stats into CHARACTER_STATS format
+                if (campaign.enemyStats) {
+                    Object.entries(campaign.enemyStats).forEach(([name, stats]) => {
+                        CHARACTER_STATS[name] = stats;
+                    });
+                }
+
+                await firebaseDb.ref('campaign').set(campaign);
+                status.textContent = 'Campaign "' + campaign.name + '" processed and saved!';
+                input.value = '';
+                dmPrompts = null;
+                await loadGameData();
+            } catch (err) {
+                status.textContent = 'Error: ' + err.message;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // =========================================================
+        // DELETE & EXPORT
+        // =========================================================
+        function showDeleteConfirm(type) {
+            document.getElementById('delete' + cap(type) + 'Confirm').classList.add('active');
+        }
+        function hideDeleteConfirm(type) {
+            document.getElementById('delete' + cap(type) + 'Confirm').classList.remove('active');
+            document.getElementById('delete' + cap(type) + 'Input').value = '';
+        }
+        function checkDeleteInput(type) {
+            const val = document.getElementById('delete' + cap(type) + 'Input').value.trim().toLowerCase();
+            document.getElementById('delete' + cap(type) + 'Btn').disabled = val !== 'delete';
+        }
+        function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+        async function executeDelete(type) {
+            if (type === 'campaign') {
+                await firebaseDb.ref('campaign').remove();
+                LOADED_CAMPAIGN = null;
+                dmPrompts = null;
+                document.getElementById('menuCampaignName').textContent = 'No Campaign';
+            }
+            hideDeleteConfirm(type);
+            await loadGameData();
+        }
+
+        async function deleteCharacter(key) {
+            if (!confirm('Delete ' + (LOADED_CHARS[key]?.name || key) + '? Type "delete" in the next prompt to confirm.')) return;
+            const confirmText = prompt('Type "delete" to confirm:');
+            if (confirmText?.trim().toLowerCase() !== 'delete') return;
+            await firebaseDb.ref('characterSheets/' + key).remove();
+            await firebaseDb.ref('characters/' + key).remove();
+            dmPrompts = null;
+            await loadGameData();
+        }
+
+        function exportCharacter(key) {
+            const c = LOADED_CHARS[key];
+            if (!c || !c.rawMarkdown) { alert('No raw markdown available for export'); return; }
+            const blob = new Blob([c.rawMarkdown], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = c.name.replace(/\s+/g, '_') + '.md';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // =========================================================
+        // DYNAMIC CHARACTER SIDEBAR
+        // =========================================================
+        function buildCharSidebar() {
+            const container = document.getElementById('charSidebarContainer');
+            container.innerHTML = '';
+            const chars = LOADED_CHARS;
+            if (!chars || Object.keys(chars).length === 0) {
+                container.innerHTML = '<div style="padding:8px;font-size:10px;color:#4a4030;text-align:center;font-style:italic">No characters — use Setup to add</div>';
+                return;
+            }
+
+            Object.entries(chars).forEach(([key, c]) => {
+                const card = document.createElement('div');
+                card.className = 'character-card';
+
+                // Header
+                const header = document.createElement('div');
+                header.className = 'character-header';
+                header.onclick = function() { toggleCharacter(this); };
+                header.innerHTML =
+                    '<div>' +
+                    '<div class="character-name">' + c.name + ' <span class="character-hp" id="dm-hp-header-' + key + '">' + c.maxHp + ' / ' + c.maxHp + ' HP</span></div>' +
+                    '<div class="character-class">' + c.cls + '</div>' +
+                    '</div>' +
+                    '<span class="character-arrow">&#9654;</span>';
+
+                // Details
+                const details = document.createElement('div');
+                details.className = 'character-details';
+
+                // HP row
+                const btnStyle = 'background:#12100c;border:1px solid #4a4030;color:#c4a44e;font-family:inherit;font-size:9px;padding:0 3px;cursor:pointer;';
+                let statsHtml =
+                    '<div class="stat-row"><span class="stat-label">HP</span><span>' +
+                    '<button onclick="dmChangeHp(\'' + key + '\',-1)" style="' + btnStyle + 'margin-right:2px">\u2212</button>' +
+                    '<span id="dm-hp-stat-' + key + '">' + c.maxHp + ' / ' + c.maxHp + '</span>' +
+                    '<button onclick="dmChangeHp(\'' + key + '\',1)" style="' + btnStyle + 'margin-left:2px">+</button>' +
+                    '</span></div>';
+                statsHtml += '<div class="stat-row"><span class="stat-label">AC</span><span>' + c.ac + '</span></div>';
+                Object.entries(c.stats || {}).forEach(([stat, mod]) => {
+                    statsHtml += '<div class="stat-row"><span class="stat-label">' + stat + '</span><span>' + (mod >= 0 ? '+' : '') + mod + '</span></div>';
+                });
+
+                // Spell slots
+                if (c.spellSlots && c.spellSlots.length > 0) {
+                    statsHtml += '<div class="ability-section"><div class="ability-section-label">Spell Slots</div>';
+                    c.spellSlots.forEach(slot => {
+                        statsHtml += '<div class="spell-slot-row"><span class="spell-slot-label">' + slot.label.replace(/\s*Level/,'').replace(/\(.*\)/,'').trim() + '</span>';
+                        for (let i = 0; i < slot.count; i++) {
+                            statsHtml += '<div class="spell-slot-pip" data-char="' + key + '" data-slot="' + slot.key + '" data-idx="' + i + '" onclick="toggleSlot(this)"></div>';
+                        }
+                        statsHtml += '</div>';
+                    });
+                    statsHtml += '</div>';
+                }
+
+                // Active abilities
+                const activeAbils = (c.abilities || []).filter(a => !a.passive && a.key);
+                if (activeAbils.length > 0) {
+                    statsHtml += '<div class="ability-section"><div class="ability-section-label">Abilities</div><div class="ability-grid">';
+                    activeAbils.forEach(a => {
+                        statsHtml += '<button class="ability-btn" data-char="' + key + '" data-rest="' + (a.rest || 'long').toLowerCase() + '" data-max="' + a.max + '" data-used="0" data-ability="' + a.key + '" onclick="useAbility(this)">' + a.name + ' <span class="ability-count">' + a.max + '/' + a.max + '</span></button>';
+                    });
+                    statsHtml += '</div></div>';
+                }
+
+                // Passive abilities
+                const passiveAbils = (c.abilities || []).filter(a => a.passive);
+                if (passiveAbils.length > 0) {
+                    statsHtml += '<div class="ability-section"><div class="ability-section-label">Passive Features</div><div class="ability-grid">';
+                    passiveAbils.forEach(a => {
+                        statsHtml += '<button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="' + (a.desc || '') + '">' + a.name + '</button>';
+                    });
+                    statsHtml += '</div></div>';
+                }
+
+                // Inventory
+                statsHtml += '<div class="ability-section"><div class="ability-section-label">Inventory</div><div id="dm-inv-' + key + '" style="font-size:10px;color:#5a5040;font-style:italic;padding:2px 0">(empty)</div></div>';
+
+                details.innerHTML = statsHtml;
+                card.appendChild(header);
+                card.appendChild(details);
+                container.appendChild(card);
+            });
+
+            // Resync after rebuild
+            postSidebarRebuild();
+        }
+
+        // CAMPAIGN_NPCS — loaded dynamically
+        let CAMPAIGN_NPCS = { npcs: [], enemies: [] };
+
+        // After sidebar rebuild, resync Firebase listeners and dice table buttons
+        function postSidebarRebuild() {
+            syncCharacterState();
+            if (typeof buildCharButtons === 'function') buildCharButtons();
         }
 
         // =========================================================
@@ -2616,15 +3166,15 @@
         // =========================================================
         // Characters
         // =========================================================
-        const characters = [
-            { name: 'Akwan Akusian', short: 'Akwan' },
-            { name: 'Fiel Amimso', short: 'Fiel' },
-            { name: 'Flicker', short: 'Flicker' }
-        ];
+        function getCharacters() {
+            return Object.entries(LOADED_CHARS).map(([key, c]) => ({
+                name: c.name, short: c.name.split(' ')[0]
+            }));
+        }
 
         function buildCharButtons() {
             charButtonsEl.innerHTML = '';
-            characters.forEach(c => {
+            getCharacters().forEach(c => {
                 const btn = document.createElement('button');
                 btn.className = 'add-char-btn';
                 btn.textContent = '+ ' + c.short;
@@ -2855,40 +3405,49 @@
         }
 
         function doRest(type) {
-            // Short rest: restore warlock slots + short-rest abilities only
-            document.querySelectorAll('.spell-slot-pip[data-char="flicker"]').forEach(p => p.classList.remove('spent'));
-            document.querySelectorAll('.ability-btn[data-rest="short"]').forEach(btn => {
-                btn.classList.remove('used');
-                btn.dataset.used = '0';
-                const max = parseInt(btn.dataset.max);
-                btn.querySelector('.ability-count').textContent = max + '/' + max;
+            const updates = {};
+            // Build updates dynamically from loaded characters
+            Object.entries(LOADED_CHARS).forEach(([key, c]) => {
+                const isShortRest = type === 'short';
+                // Reset abilities that match rest type
+                (c.abilities || []).forEach(a => {
+                    if (!a.passive && a.key) {
+                        const restType = (a.rest || 'long').toLowerCase();
+                        if (restType === 'short' || (type === 'long' && restType === 'long')) {
+                            updates['characters/' + key + '/abilities/' + a.key] = 0;
+                        }
+                    }
+                });
+                // Reset spell slots
+                (c.spellSlots || []).forEach(slot => {
+                    const isWarlockSlot = slot.key === 'w' || /short/i.test(slot.label);
+                    if (isWarlockSlot || type === 'long') {
+                        for (let i = 0; i < slot.count; i++) {
+                            updates['characters/' + key + '/slots/' + slot.key + '_' + i] = false;
+                        }
+                    }
+                });
             });
-            if (type === 'long') {
-                // Long rest: also restore all other spell slots + long-rest abilities
-                document.querySelectorAll('.spell-slot-pip.spent').forEach(p => p.classList.remove('spent'));
-                document.querySelectorAll('.ability-btn[data-rest="long"]').forEach(btn => {
+            // Update UI
+            if (type === 'short') {
+                document.querySelectorAll('.ability-btn[data-rest="short"]').forEach(btn => {
                     btn.classList.remove('used');
                     btn.dataset.used = '0';
                     const max = parseInt(btn.dataset.max);
-                    btn.querySelector('.ability-count').textContent = max + '/' + max;
+                    const countEl = btn.querySelector('.ability-count');
+                    if (countEl) countEl.textContent = max + '/' + max;
+                });
+            } else {
+                document.querySelectorAll('.spell-slot-pip.spent').forEach(p => p.classList.remove('spent'));
+                document.querySelectorAll('.ability-btn.used').forEach(btn => {
+                    btn.classList.remove('used');
+                    btn.dataset.used = '0';
+                    const max = parseInt(btn.dataset.max);
+                    const countEl = btn.querySelector('.ability-count');
+                    if (countEl) countEl.textContent = max + '/' + max;
                 });
             }
-            // Sync rest to Firebase so player screens update
-            const updates = {
-                'characters/flicker/slots/w_0': false,
-                'characters/flicker/slots/w_1': false,
-                'characters/flicker/abilities/fey_presence': 0,
-            };
-            if (type === 'long') {
-                updates['characters/akwan/slots/1_0'] = false;
-                updates['characters/akwan/slots/1_1'] = false;
-                updates['characters/akwan/slots/1_2'] = false;
-                updates['characters/akwan/slots/1_3'] = false;
-                updates['characters/akwan/slots/2_0'] = false;
-                updates['characters/akwan/slots/2_1'] = false;
-                updates['characters/akwan/abilities/bardic_inspiration'] = 0;
-            }
-            firebaseDb.ref().update(updates);
+            if (Object.keys(updates).length > 0) firebaseDb.ref().update(updates);
         }
 
         function handleKey(e) {
@@ -3238,10 +3797,7 @@
             tableSurface.appendChild(portion);
         }
 
-        const CAMPAIGN_NPCS = {
-            npcs:    ['Matt', 'Lars', 'Bess', 'Lord Delius'],
-            enemies: ['Goblin', 'Goblin Shaman', 'Bugbear', 'Skeleton'],
-        };
+        // CAMPAIGN_NPCS is loaded dynamically via loadGameData()
 
         const NOTES_NAME_SKIP = new Set([
             'The','A','An','In','On','At','To','Of','And','Or','But','Is','Are',
@@ -4345,6 +4901,52 @@
         <div class="reset-modal-footer">
             <button onclick="closeResetModal()">Cancel</button>
             <button class="btn-reset" id="resetConfirmBtn" onclick="executeReset()" disabled>Reset</button>
+        </div>
+    </div>
+    <!-- GAME SETUP MODAL -->
+    <div id="gameSetupBackdrop" onclick="toggleGameSetup()"></div>
+    <div id="gameSetupPanel">
+        <div class="setup-titlebar">
+            <span>&#9881; Game Setup</span>
+            <button class="setup-close" onclick="toggleGameSetup()">&times;</button>
+        </div>
+        <div class="setup-body">
+            <!-- Campaign Section -->
+            <div class="setup-section">
+                <div class="setup-section-header">&#9876; Campaign</div>
+                <div class="setup-section-body">
+                    <div id="setupCampaignInfo" class="setup-current"><span class="setup-none">No campaign loaded</span></div>
+                    <div class="setup-file-row">
+                        <input type="file" accept=".pdf" id="campaignFileInput" class="setup-file-input">
+                        <button class="setup-btn" onclick="processCampaignPdf()" id="processCampaignBtn">Process</button>
+                    </div>
+                    <div class="setup-status" id="campaignStatus"></div>
+                    <div id="campaignDeleteSection" style="display:none;margin-top:6px">
+                        <button class="setup-btn danger" onclick="showDeleteConfirm('campaign')">Delete Campaign</button>
+                        <div class="setup-delete-confirm" id="deleteCampaignConfirm">
+                            <span>Type "delete" to confirm:</span>
+                            <input type="text" class="setup-delete-input" id="deleteCampaignInput" oninput="checkDeleteInput('campaign')">
+                            <button class="setup-btn danger" id="deleteCampaignBtn" disabled onclick="executeDelete('campaign')">Confirm</button>
+                            <button class="setup-btn" onclick="hideDeleteConfirm('campaign')">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Character Sheets Section -->
+            <div class="setup-section">
+                <div class="setup-section-header">&#9876; Character Sheets</div>
+                <div class="setup-section-body">
+                    <div class="setup-char-list" id="setupCharList">
+                        <div class="setup-none">No characters loaded</div>
+                    </div>
+                    <div class="setup-file-row">
+                        <input type="file" accept=".md,.txt" multiple id="charFileInput" class="setup-file-input">
+                        <button class="setup-btn" onclick="processCharacterSheets()">Add Characters</button>
+                    </div>
+                    <div class="setup-status" id="charStatus"></div>
+                </div>
+            </div>
         </div>
     </div>
 </body>

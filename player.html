@@ -1072,51 +1072,9 @@
     const db = firebase.database();
 
     // =========================================================
-    // CHARACTER DATA
+    // CHARACTER DATA — loaded from Firebase
     // =========================================================
-    const CHARS = {
-        akwan: {
-            name: 'Akwan Akusian',
-            cls: 'Bard — Level 3',
-            maxHp: 21, ac: 15, proficiency: 2,
-            spellSaveDC: 13, spellAttack: '+5',
-            stats: { STR: -1, DEX: 3, CON: 1, INT: 1, WIS: 0, CHA: 3 },
-            spellSlots: [
-                { label: '1st Level', count: 4, key: '1' },
-                { label: '2nd Level', count: 2, key: '2' }
-            ],
-            abilities: [
-                { name: 'Bardic Inspiration', key: 'bardic_inspiration', max: 3, rest: 'Long', passive: false }
-            ]
-        },
-        fiel: {
-            name: 'Fiel Amimso',
-            cls: 'Halfling Rogue — Level 3',
-            maxHp: 24, ac: 13, proficiency: 2,
-            spellSaveDC: null, spellAttack: null,
-            stats: { STR: -1, DEX: 3, CON: 2, INT: 0, WIS: 2, CHA: -1 },
-            spellSlots: [],
-            abilities: [
-                { name: 'Sneak Attack 2d6', passive: true, desc: 'Once per turn, +2d6 with advantage or adjacent ally' },
-                { name: 'Cunning Action', passive: true, desc: 'Bonus action: Dash, Disengage, or Hide' },
-                { name: 'Fast Hands', passive: true, desc: 'Bonus action: Use Object' },
-                { name: 'Lucky', passive: true, desc: 'Reroll natural 1s on attack, ability, or saving throw' }
-            ]
-        },
-        flicker: {
-            name: 'Flicker',
-            cls: 'Changeling Warlock — Level 3',
-            maxHp: 24, ac: 15, proficiency: 2,
-            spellSaveDC: 13, spellAttack: '+5',
-            stats: { STR: -1, DEX: 2, CON: 2, INT: 0, WIS: 0, CHA: 3 },
-            spellSlots: [
-                { label: '2nd (Short Rest)', count: 2, key: 'w' }
-            ],
-            abilities: [
-                { name: 'Fey Presence', key: 'fey_presence', max: 1, rest: 'Short', passive: false }
-            ]
-        }
-    };
+    let CHARS = {};
 
     // =========================================================
     // APP STATE
@@ -1125,14 +1083,32 @@
     let char = null;
     let currentHp = null;
     let rollHistory   = [];
-    let dicePoolCounts = {}; // {sides: count}
+    let dicePoolCounts = {};
     let isRolling     = false;
-    // spellSlotState and abilityState are now managed by Firebase
 
     // =========================================================
-    // INIT
+    // INIT — load characters from Firebase, then proceed
     // =========================================================
-    function init() {
+    async function init() {
+        // Load character sheets from Firebase
+        const snap = await db.ref('characterSheets').once('value');
+        const sheets = snap.val() || {};
+        CHARS = {};
+        Object.entries(sheets).forEach(([key, c]) => {
+            CHARS[key] = {
+                name: c.name,
+                cls: c.cls || '',
+                maxHp: c.maxHp || 10,
+                ac: c.ac || 10,
+                proficiency: c.proficiency || 2,
+                spellSaveDC: c.spellSaveDC || null,
+                spellAttack: c.spellAttack || null,
+                stats: c.stats || {},
+                spellSlots: c.spellSlots || [],
+                abilities: c.abilities || [],
+            };
+        });
+
         const params = new URLSearchParams(window.location.search);
         charKey = (params.get('char') || '').toLowerCase();
         char = CHARS[charKey];
@@ -1152,6 +1128,10 @@
     function buildSelectScreen() {
         document.title = 'D&D \u2014 Choose Character';
         const container = document.getElementById('selectCards');
+        if (Object.keys(CHARS).length === 0) {
+            container.innerHTML = '<div style="text-align:center;color:#4a4030;font-size:10px;padding:12px">No characters configured. Use DM Setup to add character sheets.</div>';
+            return;
+        }
         const classIcons = { akwan: '\u266A', fiel: '\u2694', flicker: '\u2727' };
         Object.entries(CHARS).forEach(([key, c]) => {
             const btn = document.createElement('button');
