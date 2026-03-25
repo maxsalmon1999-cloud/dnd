@@ -172,18 +172,19 @@
         .hp-row {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 5px;
+            gap: 6px;
+            margin-bottom: 4px;
         }
 
         .hp-btn {
-            width: 48px;
-            height: 48px;
-            background: #1e2230;
-            border: 1.5px solid #3a3e52;
+            width: 36px;
+            height: 36px;
+            background: #1a1c28;
+            border: 2px solid #2a2e42;
+            box-shadow: inset -1px -1px 0 #0d0e14, inset 1px 1px 0 #3a3e52;
             color: #c4a44e;
             font-family: inherit;
-            font-size: 26px;
+            font-size: 22px;
             cursor: pointer;
             flex-shrink: 0;
             display: flex;
@@ -191,31 +192,10 @@
             justify-content: center;
             line-height: 1;
             user-select: none;
+            image-rendering: pixelated;
         }
 
-        .hp-btn:active { background: #c4a44e; color: #090c10; }
-
-        .hp-display {
-            flex: 1;
-            text-align: center;
-        }
-
-        .hp-current {
-            font-size: 40px;
-            font-weight: bold;
-            color: #c4a44e;
-            line-height: 1;
-            transition: color 0.3s;
-        }
-
-        .hp-current.low  { color: #e04040; }
-        .hp-current.mid  { color: #e07040; }
-
-        .hp-max-label {
-            font-size: 10px;
-            color: #7a7c8e;
-            margin-top: 2px;
-        }
+        .hp-btn:active { background: #c4a44e; color: #090c10; box-shadow: inset 1px 1px 0 #0d0e14, inset -1px -1px 0 #e0c870; }
 
         .char-class-label {
             font-size: 10px;
@@ -224,21 +204,190 @@
             margin-bottom: 6px;
         }
 
-        .hp-bar-wrap {
-            height: 5px;
-            background: #1e2230;
-            border: 1px solid #2a2e42;
-            margin-bottom: 8px;
+        /* — Ornate health bar frame — */
+        .hp-bar-ornate {
+            position: relative;
+            margin: 0 auto 4px;
+            padding: 0 8px;
         }
 
-        .hp-bar {
-            height: 100%;
-            background: #2a8c40;
-            transition: width 0.3s, background 0.3s;
+        .hp-bar-frame {
+            position: relative;
+            height: 22px;
+            background: #0d0e14;
+            border: 2px solid #3a3048;
+            box-shadow:
+                inset 0 0 0 1px #1a1428,
+                inset 0 1px 0 0 #4a3e58,
+                0 2px 0 0 #0a0b10,
+                0 -1px 0 0 #4a3e58;
+            image-rendering: pixelated;
         }
 
-        .hp-bar.low  { background: #cc2020; }
-        .hp-bar.mid  { background: #c05018; }
+        .hp-bar-fill {
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            bottom: 1px;
+            width: calc(100% - 2px);
+            background: linear-gradient(180deg, #d4865a 0%, #c0503a 30%, #a83828 60%, #8c2820 100%);
+            box-shadow:
+                inset 0 1px 0 0 rgba(255,200,140,0.35),
+                inset 0 -1px 0 0 rgba(60,10,10,0.5);
+            transition: width 0.4s ease;
+        }
+
+        .hp-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            right: 4px;
+            height: 2px;
+            background: rgba(255,210,160,0.2);
+        }
+
+        .hp-bar-fill.low {
+            background: linear-gradient(180deg, #cc4040 0%, #a82020 30%, #881818 60%, #601010 100%);
+            box-shadow:
+                inset 0 1px 0 0 rgba(255,100,100,0.35),
+                inset 0 -1px 0 0 rgba(40,5,5,0.5);
+        }
+
+        .hp-bar-fill.mid {
+            background: linear-gradient(180deg, #d89048 0%, #c06028 30%, #a04818 60%, #803810 100%);
+            box-shadow:
+                inset 0 1px 0 0 rgba(255,180,100,0.35),
+                inset 0 -1px 0 0 rgba(50,15,5,0.5);
+        }
+
+        /* Decorative wing flourish on left */
+        .hp-wing {
+            position: absolute;
+            left: -16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .hp-wing::before {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 20px;
+            top: 1px;
+            right: 2px;
+            background:
+                linear-gradient(135deg, transparent 30%, #6a5a78 30%, #6a5a78 35%, transparent 35%),
+                linear-gradient(155deg, transparent 25%, #5a4a68 25%, #5a4a68 30%, transparent 30%),
+                linear-gradient(175deg, transparent 20%, #4a3a58 20%, #4a3a58 25%, transparent 25%);
+        }
+
+        .hp-wing::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 2px;
+            width: 8px;
+            height: 10px;
+            border-radius: 0 0 50% 50%;
+            border: 2px solid #5a4a68;
+            border-top: none;
+            background: transparent;
+        }
+
+        /* Decorative wing flourish on right (mirrored) */
+        .hp-wing-r {
+            position: absolute;
+            right: -16px;
+            top: 50%;
+            transform: translateY(-50%) scaleX(-1);
+            width: 20px;
+            height: 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .hp-wing-r::before {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 20px;
+            top: 1px;
+            right: 2px;
+            background:
+                linear-gradient(135deg, transparent 30%, #6a5a78 30%, #6a5a78 35%, transparent 35%),
+                linear-gradient(155deg, transparent 25%, #5a4a68 25%, #5a4a68 30%, transparent 30%),
+                linear-gradient(175deg, transparent 20%, #4a3a58 20%, #4a3a58 25%, transparent 25%);
+        }
+
+        .hp-wing-r::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 2px;
+            width: 8px;
+            height: 10px;
+            border-radius: 0 0 50% 50%;
+            border: 2px solid #5a4a68;
+            border-top: none;
+            background: transparent;
+        }
+
+        /* Tick marks inside bar */
+        .hp-bar-ticks {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 8px,
+                rgba(0,0,0,0.15) 8px,
+                rgba(0,0,0,0.15) 9px
+            );
+            pointer-events: none;
+        }
+
+        /* HP counter below bar */
+        .hp-counter {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #c4a44e;
+            margin-top: 4px;
+            letter-spacing: 0.05em;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+            transition: color 0.3s;
+        }
+
+        .hp-counter.low { color: #e04040; }
+        .hp-counter.mid { color: #e07040; }
+
+        .hp-counter .hp-slash {
+            color: #5a5068;
+            margin: 0 1px;
+        }
+
+        .hp-counter .hp-label {
+            font-size: 9px;
+            color: #5a5068;
+            margin-left: 4px;
+            font-weight: normal;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
 
         /* ===================== STATS ===================== */
         .core-stats {
@@ -668,16 +817,22 @@
         </div>
         <div class="win-body">
             <div class="char-class-label" id="charClassLabel"></div>
-            <div class="hp-row">
-                <button class="hp-btn" onclick="changeHp(-1)" title="Take damage">−</button>
-                <div class="hp-display">
-                    <div class="hp-current" id="hpCurrent">—</div>
-                    <div class="hp-max-label" id="hpMaxLabel"></div>
+            <div class="hp-bar-ornate">
+                <div class="hp-row" style="justify-content:center;">
+                    <button class="hp-btn" onclick="changeHp(-1)" title="Take damage">−</button>
+                    <div style="flex:1; max-width: 260px; position:relative;">
+                        <div class="hp-bar-frame">
+                            <div class="hp-wing"></div>
+                            <div class="hp-wing-r"></div>
+                            <div class="hp-bar-fill" id="hpBar" style="width:100%"></div>
+                            <div class="hp-bar-ticks"></div>
+                        </div>
+                        <div class="hp-counter" id="hpCounter">
+                            <span id="hpCurrent">—</span><span class="hp-slash">/</span><span id="hpMaxLabel">—</span><span class="hp-label">HP</span>
+                        </div>
+                    </div>
+                    <button class="hp-btn" onclick="changeHp(+1)" title="Heal">+</button>
                 </div>
-                <button class="hp-btn" onclick="changeHp(+1)" title="Heal">+</button>
-            </div>
-            <div class="hp-bar-wrap">
-                <div class="hp-bar" id="hpBar" style="width:100%"></div>
             </div>
         </div>
     </div>
@@ -1210,15 +1365,16 @@
     function updateHpDisplay(hp) {
         currentHp = hp;
         const pct = Math.max(0, hp / char.maxHp);
-        const hpEl   = document.getElementById('hpCurrent');
-        const barEl  = document.getElementById('hpBar');
-        const suffix = pct <= 0.25 ? ' low' : pct <= 0.5 ? ' mid' : '';
+        const hpEl      = document.getElementById('hpCurrent');
+        const barEl     = document.getElementById('hpBar');
+        const counterEl = document.getElementById('hpCounter');
+        const suffix    = pct <= 0.25 ? ' low' : pct <= 0.5 ? ' mid' : '';
 
         hpEl.textContent = hp;
-        hpEl.className = 'hp-current' + suffix;
-        document.getElementById('hpMaxLabel').textContent = '/ ' + char.maxHp + ' HP';
+        document.getElementById('hpMaxLabel').textContent = char.maxHp;
         barEl.style.width = (pct * 100) + '%';
-        barEl.className = 'hp-bar' + suffix;
+        barEl.className = 'hp-bar-fill' + suffix;
+        counterEl.className = 'hp-counter' + suffix;
     }
 
     function changeHp(delta) {
