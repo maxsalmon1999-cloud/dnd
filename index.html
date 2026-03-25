@@ -2456,9 +2456,11 @@
         // GAME SETUP — UI
         // =========================================================
         function toggleGameSetup() {
+            const panel = document.getElementById('gameSetupPanel');
+            const opening = !panel.classList.contains('open');
             document.getElementById('gameSetupBackdrop').classList.toggle('open');
-            document.getElementById('gameSetupPanel').classList.toggle('open');
-            refreshSetupPanel();
+            panel.classList.toggle('open');
+            if (opening) refreshSetupPanel();
         }
 
         function refreshSetupPanel() {
@@ -2534,13 +2536,13 @@
                 if (m) {
                     const lvl = m[1];
                     const count = parseInt(m[2]);
-                    spellSlots.push({ label: ordinal(lvl) + ' Level', count, key: lvl });
+                    spellSlots.push({ label: ordinal(lvl) + ' Level', shortLabel: ordinal(lvl), count, key: lvl });
                 }
             });
             // Warlock slots
             const warlockSlot = extract(/Warlock Slots?:\s*(\d+)/i);
             if (warlockSlot) {
-                spellSlots.push({ label: '2nd (Short Rest)', count: parseInt(warlockSlot), key: 'w' });
+                spellSlots.push({ label: '2nd (Short Rest)', shortLabel: '2nd', count: parseInt(warlockSlot), key: 'w' });
             }
 
             // Parse abilities (look for "Xn / Y Rest" patterns)
@@ -2652,12 +2654,12 @@
                 const file = input.files[0];
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                let fullText = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    fullText += content.items.map(item => item.str).join(' ') + '\n\n';
-                }
+                const pageTexts = await Promise.all(
+                    Array.from({ length: pdf.numPages }, (_, i) =>
+                        pdf.getPage(i + 1).then(p => p.getTextContent()).then(c => c.items.map(item => item.str).join(' '))
+                    )
+                );
+                const fullText = pageTexts.join('\n\n');
 
                 status.textContent = 'Sending to Claude for structuring...';
 
@@ -2841,7 +2843,7 @@ ${fullText.slice(0, 30000)}`;
                 if (c.spellSlots && c.spellSlots.length > 0) {
                     statsHtml += '<div class="ability-section"><div class="ability-section-label">Spell Slots</div>';
                     c.spellSlots.forEach(slot => {
-                        statsHtml += '<div class="spell-slot-row"><span class="spell-slot-label">' + slot.label.replace(/\s*Level/,'').replace(/\(.*\)/,'').trim() + '</span>';
+                        statsHtml += '<div class="spell-slot-row"><span class="spell-slot-label">' + (slot.shortLabel || slot.key) + '</span>';
                         for (let i = 0; i < slot.count; i++) {
                             statsHtml += '<div class="spell-slot-pip" data-char="' + key + '" data-slot="' + slot.key + '" data-idx="' + i + '" onclick="toggleSlot(this)"></div>';
                         }
@@ -3415,10 +3417,7 @@ ${fullText.slice(0, 30000)}`;
 
         function doRest(type) {
             const updates = {};
-            // Build updates dynamically from loaded characters
             Object.entries(LOADED_CHARS).forEach(([key, c]) => {
-                const isShortRest = type === 'short';
-                // Reset abilities that match rest type
                 (c.abilities || []).forEach(a => {
                     if (!a.passive && a.key) {
                         const restType = (a.rest || 'long').toLowerCase();
@@ -3427,7 +3426,6 @@ ${fullText.slice(0, 30000)}`;
                         }
                     }
                 });
-                // Reset spell slots
                 (c.spellSlots || []).forEach(slot => {
                     const isWarlockSlot = slot.key === 'w' || /short/i.test(slot.label);
                     if (isWarlockSlot || type === 'long') {
@@ -3437,25 +3435,7 @@ ${fullText.slice(0, 30000)}`;
                     }
                 });
             });
-            // Update UI
-            if (type === 'short') {
-                document.querySelectorAll('.ability-btn[data-rest="short"]').forEach(btn => {
-                    btn.classList.remove('used');
-                    btn.dataset.used = '0';
-                    const max = parseInt(btn.dataset.max);
-                    const countEl = btn.querySelector('.ability-count');
-                    if (countEl) countEl.textContent = max + '/' + max;
-                });
-            } else {
-                document.querySelectorAll('.spell-slot-pip.spent').forEach(p => p.classList.remove('spent'));
-                document.querySelectorAll('.ability-btn.used').forEach(btn => {
-                    btn.classList.remove('used');
-                    btn.dataset.used = '0';
-                    const max = parseInt(btn.dataset.max);
-                    const countEl = btn.querySelector('.ability-count');
-                    if (countEl) countEl.textContent = max + '/' + max;
-                });
-            }
+            // Firebase listeners in syncCharacterState handle UI updates
             if (Object.keys(updates).length > 0) firebaseDb.ref().update(updates);
         }
 
