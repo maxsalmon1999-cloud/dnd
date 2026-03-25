@@ -1132,11 +1132,12 @@
             container.innerHTML = '<div style="text-align:center;color:#4a4030;font-size:10px;padding:12px">No characters configured. Use DM Setup to add character sheets.</div>';
             return;
         }
-        const classIcons = { akwan: '\u266A', fiel: '\u2694', flicker: '\u2727' };
+        const clsIconMap = { bard: '\u266A', rogue: '\u2694', warlock: '\u2727', wizard: '\u2727', cleric: '\u2720', fighter: '\u2694', ranger: '\u2694', paladin: '\u2694', monk: '\u25C9', druid: '\u2726', sorcerer: '\u2727', barbarian: '\u2692' };
         Object.entries(CHARS).forEach(([key, c]) => {
             const btn = document.createElement('button');
             btn.className = 'select-card';
-            const icon = classIcons[key] || '\u2694';
+            const clsLower = (c.cls || '').toLowerCase();
+            const icon = Object.entries(clsIconMap).find(([k]) => clsLower.includes(k))?.[1] || '\u2694';
             btn.innerHTML =
                 '<div><div class="select-name">' + icon + ' ' + c.name + '</div>' +
                 '<div class="select-class">' + c.cls + '</div></div>' +
