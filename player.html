@@ -1182,14 +1182,14 @@
                 <!-- ATTACK panel -->
                 <div class="dice-panel">
                     <div class="dice-panel-header">
-                        <span class="dice-panel-label">&#9876; Attack</span>
+                        <span class="dice-panel-label">&#9876; Event 1</span>
                         <button class="clear-btn" onclick="clearDiceZone('atk')">Clear</button>
                     </div>
                     <div class="player-dice-surface" id="atkSurface">
                         <div class="player-dice-hint" id="atkHint">&#9860; Drop dice here</div>
                     </div>
                     <div class="dice-actions">
-                        <button class="roll-all-btn" id="atkRollBtn" onclick="rollZone('atk')" disabled>Roll Attack</button>
+                        <button class="roll-all-btn" id="atkRollBtn" onclick="rollZone('atk')" disabled>Roll Event 1</button>
                     </div>
                     <div class="dice-result-bar" id="atkResultBar" style="display:none">
                         <div class="dice-result-total" id="atkResultTotal"></div>
@@ -1200,14 +1200,14 @@
                 <!-- DAMAGE panel -->
                 <div class="dice-panel">
                     <div class="dice-panel-header">
-                        <span class="dice-panel-label">&#128481; Damage</span>
+                        <span class="dice-panel-label">&#128481; Event 2</span>
                         <button class="clear-btn" onclick="clearDiceZone('dmg')">Clear</button>
                     </div>
                     <div class="player-dice-surface" id="dmgSurface">
                         <div class="player-dice-hint" id="dmgHint">&#9860; Drop dice here</div>
                     </div>
                     <div class="dice-actions">
-                        <button class="roll-all-btn" id="dmgRollBtn" onclick="rollZone('dmg')" disabled>Roll Damage</button>
+                        <button class="roll-all-btn" id="dmgRollBtn" onclick="rollZone('dmg')" disabled>Roll Event 2</button>
                     </div>
                     <div class="dice-result-bar" id="dmgResultBar" style="display:none">
                         <div class="dice-result-total" id="dmgResultTotal"></div>
@@ -1836,7 +1836,7 @@
         const totalId    = zoneId === 'atk' ? 'atkResultTotal'    : 'dmgResultTotal';
         const breakdownId= zoneId === 'atk' ? 'atkResultBreakdown': 'dmgResultBreakdown';
         const barId      = zoneId === 'atk' ? 'atkResultBar'      : 'dmgResultBar';
-        const typeLabel  = zoneId === 'atk' ? 'Attack' : 'Damage';
+        const typeLabel  = zoneId === 'atk' ? 'Event 1' : 'Event 2';
 
         const total  = rolls.reduce((s, r) => s + r.result, 0);
         const isCrit = zoneId === 'atk' && rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
