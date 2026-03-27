@@ -2233,7 +2233,7 @@
         // API CONFIG
         // =========================================================
         if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const API_KEY = ''; // Paste your Anthropic API key here
+        const WORKER_URL = 'https://dnd-anthropic-proxy.max-salmon1999.workers.dev';
         const API_MODEL = 'claude-opus-4-6';
         let conversationHistory = [];
         let dmPrompts = null;
@@ -2401,16 +2401,16 @@
 
             LOADED_CAMPAIGN = campSnap.val();
             if (LOADED_CAMPAIGN) {
-                if (LOADED_CAMPAIGN.enemyStats) {
-                    Object.entries(LOADED_CAMPAIGN.enemyStats).forEach(([name, stats]) => {
-                        CHARACTER_STATS[name] = stats;
-                    });
+                Object.entries(LOADED_CAMPAIGN.enemyStats || {}).forEach(([name, stats]) => {
+                    CHARACTER_STATS[name] = stats;
+                });
+                if (LOADED_CAMPAIGN.meta && LOADED_CAMPAIGN.meta.name) {
+                    document.getElementById('menuCampaignName').textContent = LOADED_CAMPAIGN.meta.name;
                 }
-                if (LOADED_CAMPAIGN.name) {
-                    document.getElementById('menuCampaignName').textContent = LOADED_CAMPAIGN.name;
-                }
-                CAMPAIGN_NPCS.npcs = Array.isArray(LOADED_CAMPAIGN.npcs) ? LOADED_CAMPAIGN.npcs : [];
-                CAMPAIGN_NPCS.enemies = Array.isArray(LOADED_CAMPAIGN.enemies) ? LOADED_CAMPAIGN.enemies : [];
+                CAMPAIGN_NPCS.npcs = LOADED_CAMPAIGN.npcs ? Object.values(LOADED_CAMPAIGN.npcs).map(n => n.name) : [];
+                CAMPAIGN_NPCS.enemies = LOADED_CAMPAIGN.encounters
+                    ? [...new Set(Object.values(LOADED_CAMPAIGN.encounters).flatMap(e => e.enemies || []))]
+                    : [];
             }
 
             buildCharSidebar();
@@ -2419,23 +2419,50 @@
 
         async function loadPrompts() {
             if (dmPrompts) return dmPrompts;
-            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.systemPrompt) {
-                let systemSection = LOADED_CAMPAIGN.systemPrompt;
+            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.meta) {
+                const { meta, promptTemplates, npcs, locations } = LOADED_CAMPAIGN;
+
+                let systemSection = '';
+                if (meta.setting) systemSection += meta.setting + '\n\n';
+                if (meta.plotSummary) systemSection += '### Plot Summary\n\n' + meta.plotSummary + '\n\n';
+
+                if (npcs && Object.keys(npcs).length > 0) {
+                    systemSection += '### Key NPCs\n\n';
+                    Object.values(npcs).forEach(npc => {
+                        systemSection += '**' + npc.name + '**';
+                        if (npc.role) systemSection += ' (' + npc.role + ')';
+                        systemSection += '\n';
+                        if (npc.description) systemSection += '- ' + npc.description + '\n';
+                        if (npc.personality) systemSection += '- Personality: ' + npc.personality + '\n';
+                        if (npc.notes) systemSection += '- Notes: ' + npc.notes + '\n';
+                        systemSection += '\n';
+                    });
+                }
+
+                if (locations && Object.keys(locations).length > 0) {
+                    systemSection += '### Key Locations\n\n';
+                    Object.values(locations).forEach(loc => {
+                        systemSection += '**' + loc.name + '**: ' + (loc.description || '') + '\n';
+                    });
+                    systemSection += '\n';
+                }
+
                 if (Object.keys(LOADED_CHARS).length > 0) {
-                    systemSection += '\n\n### The Party\n\n';
-                    Object.entries(LOADED_CHARS).forEach(([key, c]) => {
+                    systemSection += '### The Party\n\n';
+                    Object.values(LOADED_CHARS).forEach(c => {
                         systemSection += '**' + c.name + '** \u2014 ' + c.cls + '\n';
                         systemSection += '- HP: ' + c.maxHp + ' | AC: ' + c.ac;
                         if (c.spellSaveDC) systemSection += ' | Spell Save DC: ' + c.spellSaveDC;
                         systemSection += '\n- Stats: ' + Object.entries(c.stats || {}).map(([k,v]) => k + ': ' + (v >= 0 ? '+' : '') + v).join(', ') + '\n\n';
                     });
                 }
+
                 dmPrompts = {
                     system: systemSection,
-                    description: LOADED_CAMPAIGN.descriptionPrompt || '',
-                    action: LOADED_CAMPAIGN.actionPrompt || '',
-                    both: LOADED_CAMPAIGN.bothPrompt || '',
-                    'session end': LOADED_CAMPAIGN.sessionEndPrompt || '',
+                    description: promptTemplates?.description || '',
+                    action: promptTemplates?.action || '',
+                    both: promptTemplates?.both || '',
+                    'session end': promptTemplates?.sessionEnd || '',
                 };
                 return dmPrompts;
             }
@@ -2467,8 +2494,8 @@
             // Campaign info
             const campInfo = document.getElementById('setupCampaignInfo');
             const campDel = document.getElementById('campaignDeleteSection');
-            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.name) {
-                campInfo.innerHTML = '<strong>' + LOADED_CAMPAIGN.name + '</strong>';
+            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.meta && LOADED_CAMPAIGN.meta.name) {
+                campInfo.innerHTML = '<strong>' + LOADED_CAMPAIGN.meta.name + '</strong>';
                 campDel.style.display = '';
             } else {
                 campInfo.innerHTML = '<span class="setup-none">No campaign loaded</span>';
@@ -2645,7 +2672,6 @@
             const status = document.getElementById('campaignStatus');
             const btn = document.getElementById('processCampaignBtn');
             if (!input.files.length) { status.textContent = 'No file selected'; return; }
-            if (!API_KEY) { status.textContent = 'Set API_KEY first'; return; }
 
             btn.disabled = true;
             status.textContent = 'Extracting text from PDF...';
@@ -2664,17 +2690,48 @@
                 status.textContent = 'Sending to Claude for structuring...';
 
                 const extractionPrompt = `You are extracting structured campaign data from a D&D adventure document.
-Given this campaign text, produce a JSON object with these exact fields:
+Given this campaign text, produce a JSON object with this exact structure:
 {
-  "name": "The campaign/adventure name",
-  "systemPrompt": "A comprehensive system prompt for a DM AI. Include: campaign setting, key NPCs with descriptions, key locations with descriptions, key encounters, plot summary, and any important rules or mechanics. Write it as instructions to an AI DM. Do NOT include party/character information - that will be added separately.",
-  "descriptionPrompt": "Instructions for vivid narrative-only mode (2-4 paragraphs, sensory details, no mechanics)",
-  "actionPrompt": "Instructions for mechanical resolution mode (1-3 paragraphs, hit/miss/damage)",
-  "bothPrompt": "Instructions for combined narrative + mechanics mode (3-5 paragraphs)",
-  "sessionEndPrompt": "Instructions for generating an official session summary record",
-  "npcs": ["NPC Name 1", "NPC Name 2"],
-  "enemies": ["Enemy Type 1", "Enemy Type 2"],
-  "enemyStats": {"Enemy Type 1": {"ac": 15, "hp": 7, "mods": {"STR": -1, "DEX": 2, "CON": 0, "INT": 0, "WIS": -1, "CHA": -1}, "proficiency": 2}}
+  "meta": {
+    "name": "The campaign/adventure name",
+    "setting": "2-3 sentence world/setting description for AI context",
+    "plotSummary": "~200 word summary of the campaign arc and key events"
+  },
+  "promptTemplates": {
+    "description": "Instructions for vivid narrative-only mode (2-4 paragraphs, sensory details, no mechanics)",
+    "action": "Instructions for mechanical resolution mode (1-3 paragraphs, hit/miss/damage)",
+    "both": "Instructions for combined narrative + mechanics mode (3-5 paragraphs)",
+    "sessionEnd": "Instructions for generating an official session summary record"
+  },
+  "npcs": {
+    "npc_key": {
+      "name": "Full NPC Name",
+      "role": "innkeeper / villain / quest giver etc",
+      "description": "Physical appearance in 1-2 sentences",
+      "personality": "How they speak and behave in 1-2 sentences",
+      "notes": "Secrets, motivations, relationships"
+    }
+  },
+  "locations": {
+    "location_key": {
+      "name": "Location Name",
+      "description": "Atmosphere and key features in 2-3 sentences",
+      "connections": ["other_location_key"]
+    }
+  },
+  "encounters": {
+    "encounter_key": {
+      "name": "Encounter Name",
+      "trigger": "What causes this encounter",
+      "enemies": ["Enemy Type 1", "Enemy Type 2"]
+    }
+  },
+  "enemyStats": {
+    "Enemy Type 1": {
+      "ac": 15, "hp": 7, "proficiency": 2,
+      "mods": {"STR": -1, "DEX": 2, "CON": 0, "INT": 0, "WIS": -1, "CHA": -1}
+    }
+  }
 }
 
 Respond with ONLY the JSON, no markdown fences or extra text.
@@ -2682,14 +2739,9 @@ Respond with ONLY the JSON, no markdown fences or extra text.
 Campaign document:
 ${fullText.slice(0, 30000)}`;
 
-                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                const res = await fetch(WORKER_URL, {
                     method: 'POST',
-                    headers: {
-                        'x-api-key': API_KEY,
-                        'anthropic-version': '2023-06-01',
-                        'anthropic-dangerous-direct-browser-access': 'true',
-                        'content-type': 'application/json',
-                    },
+                    headers: { 'content-type': 'application/json' },
                     body: JSON.stringify({
                         model: API_MODEL,
                         max_tokens: 4096,
@@ -2705,17 +2757,14 @@ ${fullText.slice(0, 30000)}`;
                 const jsonMatch = responseText.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) throw new Error('Could not parse campaign JSON from response');
                 const campaign = JSON.parse(jsonMatch[0]);
-                campaign.rawPdfText = fullText.slice(0, 50000);
 
                 // Save enemy stats into CHARACTER_STATS format
-                if (campaign.enemyStats) {
-                    Object.entries(campaign.enemyStats).forEach(([name, stats]) => {
-                        CHARACTER_STATS[name] = stats;
-                    });
-                }
+                Object.entries(campaign.enemyStats || {}).forEach(([name, stats]) => {
+                    CHARACTER_STATS[name] = stats;
+                });
 
                 await firebaseDb.ref('campaign').set(campaign);
-                status.textContent = 'Campaign "' + campaign.name + '" processed and saved!';
+                status.textContent = 'Campaign "' + campaign.meta.name + '" processed and saved!';
                 input.value = '';
                 dmPrompts = null;
                 await loadGameData();
@@ -3202,14 +3251,6 @@ ${fullText.slice(0, 30000)}`;
         async function endSession() {
             openSessionModal(null); // open immediately in loading state
 
-            if (!API_KEY) {
-                document.getElementById('sessionSummaryText').value =
-                    '(API key not set — write your own summary below.)';
-                document.getElementById('sessionSummaryText').readOnly = false;
-                document.getElementById('sessionAdditions').focus();
-                return;
-            }
-
             try {
                 const prompts = await loadPrompts();
                 const systemPrompt = prompts['session end'] || prompts['session-end'] || '';
@@ -3225,14 +3266,9 @@ ${fullText.slice(0, 30000)}`;
 
                 const messages = [...conversationHistory, { role: 'user', content: context }];
 
-                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                const res = await fetch(WORKER_URL, {
                     method: 'POST',
-                    headers: {
-                        'x-api-key': API_KEY,
-                        'anthropic-version': '2023-06-01',
-                        'anthropic-dangerous-direct-browser-access': 'true',
-                        'content-type': 'application/json',
-                    },
+                    headers: { 'content-type': 'application/json' },
                     body: JSON.stringify({ model: API_MODEL, max_tokens: 2048, system: systemPrompt, messages }),
                 });
 
@@ -3462,15 +3498,6 @@ ${fullText.slice(0, 30000)}`;
             promptInput.value = '';
             conversationHistory.push({ role: 'user', content: text });
 
-            if (!API_KEY) {
-                setTimeout(() => {
-                    addStoryEntry('assistant', 'Dungeon Master',
-                        '(Claude API key not set — paste your Anthropic API key into API_KEY in the script.)',
-                        currentMode);
-                }, 300);
-                return;
-            }
-
             const loadingEl = document.createElement('div');
             loadingEl.className = 'story-entry assistant';
             loadingEl.innerHTML = '<div class="label">Dungeon Master</div><div class="text">…</div>';
@@ -3483,14 +3510,9 @@ ${fullText.slice(0, 30000)}`;
                 const modeSection = prompts[currentMode] || '';
                 const systemPrompt = [base, modeSection].filter(Boolean).join('\n\n---\n\n');
 
-                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                const res = await fetch(WORKER_URL, {
                     method: 'POST',
-                    headers: {
-                        'x-api-key': API_KEY,
-                        'anthropic-version': '2023-06-01',
-                        'anthropic-dangerous-direct-browser-access': 'true',
-                        'content-type': 'application/json',
-                    },
+                    headers: { 'content-type': 'application/json' },
                     body: JSON.stringify({
                         model: API_MODEL,
                         max_tokens: 1024,
