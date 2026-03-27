@@ -70,12 +70,15 @@
         }
 
         .select-card {
-            background: #1a1018;
-            border: 2px solid #4a2030;
-            box-shadow:
-                inset 0 1px 0 rgba(107,26,42,0.3),
-                inset 0 -1px 0 #0e0a0c,
-                2px 2px 0 #080608;
+            background: none;
+            border: 12px solid transparent;
+            border-image-source: url('assets/sprites/panel-outline.png');
+            border-image-slice: 22;
+            border-image-width: 12px;
+            border-image-repeat: stretch;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 2px 2px 0 #080608;
             padding: 10px 12px;
             cursor: pointer;
             text-align: left;
@@ -88,21 +91,10 @@
             position: relative;
         }
 
-        .select-card::before {
-            content: '';
-            position: absolute;
-            top: 3px; left: 3px; right: 3px; bottom: 3px;
-            border: 1px solid rgba(107,26,42,0.25);
-            pointer-events: none;
-        }
-
         .select-card:hover, .select-card:active {
-            background: #241820;
+            border-image-source: url('assets/sprites/panel-filled.png');
             color: #d4b45e;
-            border-color: #8c2a3a;
             box-shadow:
-                inset 0 1px 0 rgba(140,42,58,0.4),
-                inset 0 -1px 0 #0e0a0c,
                 2px 2px 0 #080608,
                 0 0 10px rgba(107,26,42,0.3);
         }
@@ -151,39 +143,20 @@
             overflow-y: auto;
         }
 
-        /* Window chrome — ornate retro beveled */
+        /* Window chrome — ornate retro with spritesheet border */
         .win {
             background: #1a1018;
-            border: 3px solid #4a2030;
+            border: 22px solid transparent;
+            border-image-source: url('assets/sprites/panel-filled.png');
+            border-image-slice: 22;
+            border-image-width: 22px;
+            border-image-repeat: stretch;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
             box-shadow:
-                inset 0 0 0 1px #2a1520,
-                inset 0 0 0 2px #120c10,
                 2px 2px 0 #080608,
                 0 0 12px rgba(74,32,48,0.4);
             position: relative;
-        }
-
-        /* Ornate corner flourishes */
-        .win::after {
-            content: '';
-            position: absolute;
-            top: 2px; left: 2px; right: 2px; bottom: 2px;
-            border: 1px solid rgba(107,26,42,0.2);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .win::before {
-            content: '\269C';
-            position: absolute;
-            top: -11px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 16px;
-            color: #6b2a3a;
-            z-index: 2;
-            text-shadow: 0 0 6px rgba(107,42,58,0.5), 0 1px 2px #000;
-            line-height: 1;
         }
 
         .win-title {
@@ -266,8 +239,10 @@
         .section-label::after {
             content: '';
             flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #4a2030, transparent);
+            height: 8px;
+            background: url('assets/sprites/divider-med.png') no-repeat center / contain;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
 
         .spell-level-label {
@@ -283,13 +258,17 @@
             border-color: #3a2040;
         }
 
-        /* Ornate section divider */
+        /* Ornate section divider using sprite */
         .section-divider {
             text-align: center;
             border: none;
             margin: 5px 0;
-            font-size: 10px;
-            color: #4a2030;
+            height: 15px;
+            background: url('assets/sprites/ornate-flourish-med.png') no-repeat center / contain;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            color: transparent;
+            overflow: hidden;
             line-height: 1;
         }
 
@@ -304,11 +283,14 @@
         .hp-btn {
             width: 52px;
             height: 52px;
-            background: #1a1018;
-            border: 2px solid #4a2030;
-            box-shadow:
-                inset -1px -1px 0 #0e0a0c,
-                inset 1px 1px 0 #6b2a3a;
+            background: none;
+            border: 8px solid transparent;
+            border-image-source: url('assets/sprites/btn-9slice-1.png');
+            border-image-slice: 8 fill;
+            border-image-width: 8px;
+            border-image-repeat: stretch;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
             color: #c4a44e;
             font-family: inherit;
             font-size: 28px;
@@ -319,11 +301,10 @@
             justify-content: center;
             line-height: 1;
             user-select: none;
-            image-rendering: pixelated;
             touch-action: manipulation;
         }
 
-        .hp-btn:active { background: #c4a44e; color: #0e0a0c; box-shadow: inset 1px 1px 0 #0e0a0c, inset -1px -1px 0 #d4b45e; }
+        .hp-btn:active { border-image-source: url('assets/sprites/btn-9slice-3.png'); color: #0e0a0c; }
 
         .char-class-label {
             font-size: 12px;
@@ -389,86 +370,32 @@
                 inset 0 -1px 0 0 rgba(50,15,5,0.5);
         }
 
-        /* Decorative wing flourish on left */
+        /* Decorative wing flourish on left — sprite-based */
         .hp-wing {
             position: absolute;
-            left: -14px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 18px;
-            height: 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            justify-content: center;
-            pointer-events: none;
-        }
-
-        .hp-wing::before {
-            content: '';
-            position: absolute;
-            width: 10px;
-            height: 16px;
-            top: 1px;
-            right: 2px;
-            background:
-                linear-gradient(135deg, transparent 30%, #8c2a3a 30%, #8c2a3a 35%, transparent 35%),
-                linear-gradient(155deg, transparent 25%, #6b2a3a 25%, #6b2a3a 30%, transparent 30%),
-                linear-gradient(175deg, transparent 20%, #4a2030 20%, #4a2030 25%, transparent 25%);
-        }
-
-        .hp-wing::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            right: 2px;
-            width: 7px;
-            height: 8px;
-            border-radius: 0 0 50% 50%;
-            border: 2px solid #6b2a3a;
-            border-top: none;
-            background: transparent;
-        }
-
-        /* Decorative wing flourish on right (mirrored) */
-        .hp-wing-r {
-            position: absolute;
-            right: -14px;
+            left: -20px;
             top: 50%;
             transform: translateY(-50%) scaleX(-1);
-            width: 18px;
-            height: 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            justify-content: center;
+            width: 26px;
+            height: 46px;
+            background: url('assets/sprites/ornate-vert.png') no-repeat center / contain;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
             pointer-events: none;
         }
 
-        .hp-wing-r::before {
-            content: '';
+        /* Decorative wing flourish on right (mirrored) — sprite-based */
+        .hp-wing-r {
             position: absolute;
-            width: 10px;
-            height: 16px;
-            top: 1px;
-            right: 2px;
-            background:
-                linear-gradient(135deg, transparent 30%, #8c2a3a 30%, #8c2a3a 35%, transparent 35%),
-                linear-gradient(155deg, transparent 25%, #6b2a3a 25%, #6b2a3a 30%, transparent 30%),
-                linear-gradient(175deg, transparent 20%, #4a2030 20%, #4a2030 25%, transparent 25%);
-        }
-
-        .hp-wing-r::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            right: 2px;
-            width: 7px;
-            height: 8px;
-            border-radius: 0 0 50% 50%;
-            border: 2px solid #6b2a3a;
-            border-top: none;
-            background: transparent;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 26px;
+            height: 46px;
+            background: url('assets/sprites/ornate-vert.png') no-repeat center / contain;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            pointer-events: none;
         }
 
 
@@ -1107,15 +1034,50 @@
 
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
+
+        /* ===================== SPRITE UTILITIES ===================== */
+        .sprite-ornate-wide {
+            display: block;
+            width: 152px;
+            height: 62px;
+            margin: 4px auto;
+            background: url('assets/sprites/ornate-flourish-wide.png') no-repeat center / contain;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            pointer-events: none;
+        }
+        .sprite-ornate-med {
+            display: block;
+            width: 92px;
+            height: 30px;
+            margin: 2px auto;
+            background: url('assets/sprites/ornate-flourish-med.png') no-repeat center / contain;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            pointer-events: none;
+        }
+        .sprite-heart {
+            display: inline-block;
+            width: 22px;
+            height: 19px;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            vertical-align: middle;
+        }
+        .sprite-heart-full { background: url('assets/sprites/heart-full.png') no-repeat center / contain; }
+        .sprite-heart-half { background: url('assets/sprites/heart-half.png') no-repeat center / contain; }
+        .sprite-heart-empty { background: url('assets/sprites/heart-empty.png') no-repeat center / contain; }
     </style>
 </head>
 <body>
 
 <!-- CHARACTER SELECT SCREEN -->
 <div id="selectScreen" class="select-screen" style="display:none">
+    <div class="sprite-ornate-wide"></div>
     <div class="select-title">&#9884; D&amp;D — Choose Your Character &#9884;</div>
     <p class="select-subtitle">Tap your character to open your screen</p>
     <div class="select-cards" id="selectCards"></div>
+    <div class="sprite-ornate-wide" style="transform: scaleY(-1);"></div>
 </div>
 
 <!-- PLAYER SCREEN -->
@@ -1140,6 +1102,7 @@
                             <div class="hp-wing-r"></div>
                             <div class="hp-bar-fill" id="hpBar" style="width:100%"></div>
                         </div>
+                        <div style="text-align:center;margin-top:2px;" id="hpHearts"></div>
                         <div class="hp-counter" id="hpCounter">
                             <span id="hpCurrent">—</span><span class="hp-slash">/</span><span id="hpMaxLabel">—</span><span class="hp-label">&#10018; HP</span>
                         </div>
@@ -1878,6 +1841,7 @@
         const breakdownId= zoneId === 'atk' ? 'atkResultBreakdown': 'dmgResultBreakdown';
         const barId      = zoneId === 'atk' ? 'atkResultBar'      : 'dmgResultBar';
         const typeLabel  = zoneId === 'atk' ? 'Event 1' : 'Event 2';
+        const typeLabel  = zoneId === 'atk' ? 'Event 1' : 'Event 2';
 
         const total  = rolls.reduce((s, r) => s + r.result, 0);
         const isCrit = zoneId === 'atk' && rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
@@ -1990,12 +1954,26 @@
     // =========================================================
     // HP
     // =========================================================
+    function renderHpHearts(hp, maxHp, maxHearts) {
+        maxHearts = maxHearts || 5;
+        var ratio = hp / maxHp;
+        var fullHearts = Math.floor(ratio * maxHearts);
+        var hasHalf = (ratio * maxHearts) - fullHearts >= 0.5;
+        var emptyHearts = maxHearts - fullHearts - (hasHalf ? 1 : 0);
+        var html = '';
+        for (var i = 0; i < fullHearts; i++) html += '<span class="sprite-heart sprite-heart-full"></span>';
+        if (hasHalf) html += '<span class="sprite-heart sprite-heart-half"></span>';
+        for (var i = 0; i < emptyHearts; i++) html += '<span class="sprite-heart sprite-heart-empty"></span>';
+        return html;
+    }
+
     function updateHpDisplay(hp) {
         currentHp = hp;
         const pct = Math.max(0, hp / char.maxHp);
         const hpEl      = document.getElementById('hpCurrent');
         const barEl     = document.getElementById('hpBar');
         const counterEl = document.getElementById('hpCounter');
+        const heartsEl  = document.getElementById('hpHearts');
         const suffix    = pct <= 0.25 ? ' low' : pct <= 0.5 ? ' mid' : '';
 
         hpEl.textContent = hp;
@@ -2003,6 +1981,7 @@
         barEl.style.width = (pct * 100) + '%';
         barEl.className = 'hp-bar-fill' + suffix;
         counterEl.className = 'hp-counter' + suffix;
+        if (heartsEl) heartsEl.innerHTML = renderHpHearts(hp, char.maxHp, 5);
     }
 
     function changeHp(delta) {
