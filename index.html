@@ -2843,10 +2843,11 @@
             });
 
             // Parse passive features (lines under Special Features that don't have usage)
+            // Section headers start with non-ASCII (emoji) — use them to track current section
             let inSpecial = false;
             lines.forEach(line => {
-                if (/Special Features|Passive/i.test(line)) { inSpecial = true; return; }
-                if (/^[^\s]/.test(line) && !/^(STR|DEX|CON|INT|WIS|CHA)/.test(line) && inSpecial) {
+                if (/^[^\x00-\x7F]/.test(line)) { inSpecial = /Special Features/i.test(line); return; }
+                if (inSpecial && /^[^\s]/.test(line) && !/^(STR|DEX|CON|INT|WIS|CHA)/.test(line)) {
                     const trimmed = line.trim();
                     if (trimmed && !abilPattern.test(trimmed) && !/^\d/.test(trimmed) && !/^[•\-]/.test(trimmed) && !/^(AC|HP|Speed|Init|Prof|Spell|XP)/i.test(trimmed)) {
                         if (!abilities.find(a => a.name === trimmed) && trimmed.length > 2 && trimmed.length < 40) {
