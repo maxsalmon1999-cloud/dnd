@@ -1251,6 +1251,7 @@
     let char = null;
     let currentHp = null;
     let rollHistory = [];
+    let pendingRequests = {};
 
     // =========================================================
     // INIT — load characters from Firebase, then proceed
@@ -1875,7 +1876,6 @@
         });
 
         // Live inventory updates
-        let pendingRequests = {};
         charRef.child('inventory').on('value', snap => {
             renderInventory(snap.val() || {});
         });
