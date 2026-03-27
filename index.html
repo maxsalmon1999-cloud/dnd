@@ -719,10 +719,12 @@
             display: flex;
             flex-direction: column;
             min-width: 0;
+            background: #100c0e;
         }
 
         .story-display {
             flex: 1;
+            max-height: 30vh;
             overflow-y: auto;
             padding: 8px;
             background: #100c0e;
@@ -865,6 +867,7 @@
             border-top: 2px solid #4a2030;
             background: #120c10;
             flex-shrink: 0;
+            margin-top: auto;
         }
 
         .prompt-tab {
@@ -905,11 +908,11 @@
             background: #100c0e;
             border: 1.5px solid #4a2030;
             color: #b8a080;
-            padding: 1px 6px;
+            padding: 4px 6px;
             font-family: inherit;
             font-size: 11px;
             resize: none;
-            height: 18px;
+            height: 54px;
             outline: none;
             -webkit-font-smoothing: none;
         }
@@ -2342,7 +2345,10 @@
                 <div class="meta-section" id="diceLogSection">
                     <div class="meta-header" onclick="this.parentElement.classList.toggle('open')">
                         <span>Player Dice Log</span>
-                        <span class="character-arrow">&#9654;</span>
+                        <div style="display:flex;align-items:center;gap:4px">
+                            <button onclick="event.stopPropagation();clearDiceLog()" style="background:none;border:1px solid #4a2030;color:#5a4048;font-family:inherit;font-size:9px;cursor:pointer;padding:1px 4px;line-height:1" title="Clear log">Clear</button>
+                            <span class="character-arrow">&#9654;</span>
+                        </div>
                     </div>
                     <div class="meta-list" id="diceLogList">
                         <div class="meta-empty">No player rolls yet</div>
@@ -2583,6 +2589,12 @@
             });
         }
 
+        function clearDiceLog() {
+            firebaseDb.ref('diceLog').remove();
+            const list = document.getElementById('diceLogList');
+            list.innerHTML = '<div class="meta-empty">No player rolls yet</div>';
+        }
+
         function appendPlayerRoll(entry) {
             if (!entry) return;
             const section = document.getElementById('diceLogSection');
@@ -2607,7 +2619,6 @@
 
             list.insertBefore(item, list.firstChild);
             while (list.children.length > 20) list.removeChild(list.lastChild);
-            section.classList.add('open');
         }
 
         window.addEventListener('load', initFirebaseSync);
