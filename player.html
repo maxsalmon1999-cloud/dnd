@@ -741,6 +741,56 @@
 
         .inv-add-btn:active { background: #c4a44e; color: #0e0a0c; }
 
+        .inv-cat-header {
+            font-size: 9px;
+            color: #6b2a3a;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 6px 3px 2px;
+            margin-top: 2px;
+            border-top: 1px solid #2a1520;
+        }
+        .inv-cat-header:first-child { border-top: none; padding-top: 2px; }
+        .inv-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .inv-amount-group { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+        .inv-amt-btn {
+            background: #1a1018;
+            border: 1px solid #4a2030;
+            color: #c4a44e;
+            width: 16px; height: 16px;
+            font-size: 11px;
+            cursor: pointer;
+            font-family: inherit;
+            line-height: 1;
+            padding: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .inv-amt-btn:active { background: #4a2030; }
+        .inv-amt-display { font-size: 10px; color: #c4a44e; min-width: 20px; text-align: center; }
+        .inv-pending { color: #8c7a3a; }
+        .inv-delta { color: #6b5a28; }
+        .inv-cat-select {
+            background: #0e0a0c;
+            border: 1.5px solid #4a2030;
+            color: #c4a44e;
+            padding: 5px 3px;
+            font-family: inherit;
+            font-size: 9px;
+            outline: none;
+        }
+        .inv-amt-new {
+            width: 36px;
+            background: #0e0a0c;
+            border: 1.5px solid #4a2030;
+            color: #c4a44e;
+            padding: 5px 4px;
+            font-family: inherit;
+            font-size: 10px;
+            outline: none;
+            text-align: center;
+        }
+        .inv-amt-new::-webkit-inner-spin-button { -webkit-appearance: none; }
+
         /* ===================== DICE ===================== */
 
         /* 3D canvas wrapper */
@@ -1058,12 +1108,20 @@
         <!-- INVENTORY TAB -->
         <div class="tab-panel" id="tab-inventory">
             <div class="win-body">
-                <div class="inv-list" id="invList">
-                    <div class="inv-empty">No items yet</div>
+                <div id="invList">
+                    <div class="inv-empty">&#9871; Your pack is empty &#9871;</div>
                 </div>
-                <div class="inv-add">
-                    <input type="text" class="inv-input" id="invInput" placeholder="Add an item..." maxlength="60">
-                    <button class="inv-add-btn" onclick="addItem()">Add</button>
+                <div class="inv-add" style="flex-wrap:wrap;gap:3px;margin-top:6px">
+                    <input type="text" class="inv-input" id="invInput" placeholder="Item name..." maxlength="60" style="flex:1;min-width:80px">
+                    <input type="number" class="inv-amt-new" id="invAmtInput" value="1" min="1" max="9999">
+                    <select class="inv-cat-select" id="invCatSelect">
+                        <option value="weapons">Weapons</option>
+                        <option value="cash">Cash</option>
+                        <option value="loot">Loot</option>
+                        <option value="consumables" selected>Consumables</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <button class="inv-add-btn" onclick="addItem()">+</button>
                 </div>
             </div>
         </div>
@@ -1498,8 +1556,15 @@
         });
 
         // Live inventory updates
+        let pendingRequests = {};
         charRef.child('inventory').on('value', snap => {
             renderInventory(snap.val() || {});
+        });
+        db.ref('inventoryRequests/' + charKey).on('value', snap => {
+            pendingRequests = snap.val() || {};
+            charRef.child('inventory').once('value', invSnap => {
+                renderInventory(invSnap.val() || {});
+            });
         });
 
         // Initialise spell slots in Firebase if not set
@@ -1579,6 +1644,14 @@
     // =========================================================
     // INVENTORY
     // =========================================================
+    const INV_CATEGORIES = [
+        { key: 'weapons',     label: '\u2694 Weapons' },
+        { key: 'cash',        label: '\u25CE Cash' },
+        { key: 'loot',        label: '\u25C6 Loot' },
+        { key: 'consumables', label: '\u25CF Consumables' },
+        { key: 'other',       label: '\u25CB Other' },
+    ];
+
     function renderInventory(items) {
         const list = document.getElementById('invList');
         list.innerHTML = '';
@@ -1587,30 +1660,113 @@
             list.innerHTML = '<div class="inv-empty">\u2694 Your pack is empty \u2694</div>';
             return;
         }
-        keys.forEach(key => {
-            const row = document.createElement('div');
-            row.className = 'inv-item';
-            const name = document.createElement('span');
-            name.textContent = items[key];
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'inv-remove';
-            removeBtn.textContent = '×';
-            removeBtn.title = 'Remove item';
-            removeBtn.onclick = () => {
-                db.ref('characters/' + charKey + '/inventory/' + key).remove();
-            };
-            row.appendChild(name);
-            row.appendChild(removeBtn);
-            list.appendChild(row);
+
+        // Normalise legacy string items
+        const normalized = {};
+        keys.forEach(k => {
+            const v = items[k];
+            normalized[k] = typeof v === 'string' ? { name: v, amount: 1, category: 'other' } : v;
+        });
+
+        // Map itemKey -> pending request
+        const pendingByItem = {};
+        Object.entries(pendingRequests).forEach(([reqKey, req]) => {
+            pendingByItem[req.itemKey] = { reqKey, delta: req.delta, currentAmount: req.currentAmount };
+        });
+
+        INV_CATEGORIES.forEach(cat => {
+            const catItems = Object.entries(normalized).filter(([, v]) => (v.category || 'other') === cat.key);
+            if (!catItems.length) return;
+
+            const header = document.createElement('div');
+            header.className = 'inv-cat-header';
+            header.textContent = cat.label;
+            list.appendChild(header);
+
+            catItems.forEach(([key, item]) => {
+                const pending = pendingByItem[key];
+                const row = document.createElement('div');
+                row.className = 'inv-item';
+
+                const nameEl = document.createElement('span');
+                nameEl.className = 'inv-item-name' + (pending ? ' inv-pending' : '');
+
+                if (pending) {
+                    const sign = pending.delta >= 0 ? '+' : '';
+                    nameEl.innerHTML = '(' + item.amount + ') ' + item.name +
+                        ' <span class="inv-delta">(' + sign + pending.delta + ')</span>';
+                } else {
+                    nameEl.textContent = item.name;
+                }
+                row.appendChild(nameEl);
+
+                if (!pending) {
+                    const amtGroup = document.createElement('div');
+                    amtGroup.className = 'inv-amount-group';
+                    const minusBtn = document.createElement('button');
+                    minusBtn.className = 'inv-amt-btn';
+                    minusBtn.textContent = '\u2212';
+                    minusBtn.onclick = () => adjustAmount(key, item.name, item.amount, -1);
+                    const amtDisplay = document.createElement('span');
+                    amtDisplay.className = 'inv-amt-display';
+                    amtDisplay.textContent = item.amount;
+                    const plusBtn = document.createElement('button');
+                    plusBtn.className = 'inv-amt-btn';
+                    plusBtn.textContent = '+';
+                    plusBtn.onclick = () => adjustAmount(key, item.name, item.amount, 1);
+                    amtGroup.appendChild(minusBtn);
+                    amtGroup.appendChild(amtDisplay);
+                    amtGroup.appendChild(plusBtn);
+                    row.appendChild(amtGroup);
+                }
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'inv-remove';
+                removeBtn.textContent = '\xD7';
+                removeBtn.title = 'Remove item';
+                removeBtn.onclick = () => removeItem(key);
+                row.appendChild(removeBtn);
+
+                list.appendChild(row);
+            });
+        });
+    }
+
+    function adjustAmount(itemKey, itemName, currentAmount, delta) {
+        const existing = Object.entries(pendingRequests).find(([, r]) => r.itemKey === itemKey);
+        if (existing) {
+            const [reqKey, req] = existing;
+            const newDelta = req.delta + delta;
+            if (newDelta === 0) {
+                db.ref('inventoryRequests/' + charKey + '/' + reqKey).remove();
+            } else {
+                db.ref('inventoryRequests/' + charKey + '/' + reqKey + '/delta').set(newDelta);
+            }
+        } else {
+            db.ref('inventoryRequests/' + charKey).push({
+                charKey, charName: char.name, itemKey, itemName,
+                currentAmount, delta, timestamp: Date.now(),
+            });
+        }
+    }
+
+    function removeItem(key) {
+        db.ref('characters/' + charKey + '/inventory/' + key).remove();
+        Object.entries(pendingRequests).forEach(([reqKey, req]) => {
+            if (req.itemKey === key) db.ref('inventoryRequests/' + charKey + '/' + reqKey).remove();
         });
     }
 
     function addItem() {
         const input = document.getElementById('invInput');
-        const val = input.value.trim();
-        if (!val) return;
-        db.ref('characters/' + charKey + '/inventory').push(val);
+        const amtInput = document.getElementById('invAmtInput');
+        const catSelect = document.getElementById('invCatSelect');
+        const name = input.value.trim();
+        if (!name) return;
+        const amount = Math.max(1, parseInt(amtInput.value) || 1);
+        db.ref('characters/' + charKey + '/inventory').push({ name, amount, category: catSelect.value });
         input.value = '';
+        amtInput.value = '1';
         input.focus();
     }
 

@@ -1049,6 +1049,32 @@
             color: #5a4048;
         }
 
+        /* Inventory requests */
+        .inv-req-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 6px;
+            border-bottom: 1px dotted #4a2030;
+            font-size: 10px;
+        }
+        .inv-req-text { flex: 1; color: #c4a44e; }
+        .inv-req-delta { color: #8c7a3a; }
+        .inv-req-btn {
+            background: none;
+            border: 1px solid #4a2030;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+            padding: 1px 5px;
+            line-height: 1;
+        }
+        .inv-req-btn.approve { color: #4a8c4a; border-color: #2a5a2a; }
+        .inv-req-btn.approve:hover { background: #4a8c4a; color: #000; }
+        .inv-req-btn.reject { color: #8c4a4a; border-color: #5a2a2a; }
+        .inv-req-btn.reject:hover { background: #8c4a4a; color: #000; }
+        .inv-req-badge { color: #8c7a3a; font-weight: normal; }
+
         /* Mode badge on story entries */
         .story-entry .mode-badge {
             display: inline-block;
@@ -2323,6 +2349,16 @@
                     </div>
                 </div>
 
+                <div class="meta-section" id="invReqSection">
+                    <div class="meta-header" onclick="this.parentElement.classList.toggle('open')">
+                        <span>Inventory Requests <span class="inv-req-badge" id="invReqBadge" style="display:none"></span></span>
+                        <span class="character-arrow">&#9654;</span>
+                    </div>
+                    <div class="meta-list" id="invReqList">
+                        <div class="meta-empty">No pending requests</div>
+                    </div>
+                </div>
+
                 <div class="notes-section" id="notesSection">
                     <div class="notes-header" onclick="this.parentElement.classList.toggle('open')">
                         <span>Story Notes</span>
@@ -2399,9 +2435,68 @@
         firebase.initializeApp(FIREBASE_CONFIG);
         const firebaseDb = firebase.database();
 
+        // =========================================================
+        // INVENTORY REQUESTS
+        // =========================================================
+        function syncInvRequests() {
+            firebaseDb.ref('inventoryRequests').on('value', snap => {
+                const allReqs = snap.val() || {};
+                const list  = document.getElementById('invReqList');
+                const badge = document.getElementById('invReqBadge');
+
+                // Flatten: { charKey: { reqKey: req } } → [{ reqKey, charKey, ...req }]
+                const entries = [];
+                Object.entries(allReqs).forEach(([charKey, charReqs]) => {
+                    Object.entries(charReqs).forEach(([reqKey, req]) => {
+                        entries.push({ reqKey, charKey, ...req });
+                    });
+                });
+
+                entries.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+                badge.style.display = entries.length ? '' : 'none';
+                badge.textContent = '(' + entries.length + ')';
+
+                if (!entries.length) {
+                    list.innerHTML = '<div class="meta-empty">No pending requests</div>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                entries.forEach(req => {
+                    const sign = req.delta >= 0 ? '+' : '';
+                    const newAmount = req.currentAmount + req.delta;
+                    const charFirst = (req.charName || req.charKey).split(' ')[0];
+                    const row = document.createElement('div');
+                    row.className = 'inv-req-row';
+                    row.innerHTML =
+                        '<span class="inv-req-text"><strong>' + charFirst + '</strong>: ' +
+                        '(' + req.currentAmount + ') ' + req.itemName +
+                        ' <span class="inv-req-delta">(' + sign + req.delta + ')</span></span>' +
+                        '<button class="inv-req-btn approve" title="Approve">&#10003;</button>' +
+                        '<button class="inv-req-btn reject" title="Reject">&#10007;</button>';
+                    row.querySelector('.approve').onclick = () =>
+                        approveInvRequest(req.reqKey, req.charKey, req.itemKey, newAmount);
+                    row.querySelector('.reject').onclick = () =>
+                        rejectInvRequest(req.reqKey, req.charKey);
+                    list.appendChild(row);
+                });
+            });
+        }
+
+        async function approveInvRequest(reqKey, charKey, itemKey, newAmount) {
+            await firebaseDb.ref('characters/' + charKey + '/inventory/' + itemKey + '/amount').set(newAmount);
+            await firebaseDb.ref('inventoryRequests/' + charKey + '/' + reqKey).remove();
+        }
+
+        async function rejectInvRequest(reqKey, charKey) {
+            await firebaseDb.ref('inventoryRequests/' + charKey + '/' + reqKey).remove();
+        }
+
         async function initFirebaseSync() {
             // Load all game data from Firebase first
             await loadGameData();
+            syncInvRequests();
 
             // Initialise HP for each character if not yet in Firebase
             Object.entries(LOADED_CHARS).forEach(([key, c]) => {
@@ -2447,7 +2542,9 @@
                     const inv = snap.val() || {};
                     const el  = document.getElementById('dm-inv-' + key);
                     if (!el) return;
-                    const items = Object.values(inv).filter(Boolean);
+                    const items = Object.values(inv).filter(Boolean).map(v =>
+                        typeof v === 'string' ? v : v.name + (v.amount > 1 ? ' (' + v.amount + ')' : '')
+                    );
                     el.textContent   = items.length > 0 ? items.join(' \u00B7 ') : '(empty)';
                     el.style.fontStyle = items.length > 0 ? 'normal' : 'italic';
                 });
