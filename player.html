@@ -777,13 +777,28 @@
 
         /* ===================== DICE ===================== */
 
-        /* 3D canvas wrapper */
-        /* ===================== DICE STRIP ===================== */
+        /* Ghost element that follows finger during touch drag */
+        .die-drag-ghost {
+            position: fixed;
+            background: #c4a44e;
+            color: #0e0a0c;
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 12px 18px;
+            border: 2px solid #6b2a3a;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+            pointer-events: none;
+            user-select: none;
+            z-index: 9999;
+        }
+
         .dice-strip {
             display: flex;
             align-items: center;
-            gap: 4px;
-            padding: 4px 6px;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 8px;
             border-top: 2px solid #4a2030;
             background: #120c10;
             flex-shrink: 0;
@@ -791,15 +806,15 @@
 
         .dice-strip-label {
             font-size: 10px;
-            font-weight: bold;
-            margin-right: 2px;
-            color: #8a6050;
+            color: #5a4048;
+            width: 100%;
+            margin-bottom: -2px;
         }
 
         .die-sym {
-            width: 36px;
-            height: 36px;
-            border: 1.5px solid #4a2030;
+            width: 56px;
+            height: 56px;
+            border: 2px solid #4a2030;
             background: #1a1018;
             cursor: grab;
             display: flex;
@@ -807,15 +822,16 @@
             justify-content: center;
             user-select: none;
             position: relative;
+            touch-action: none;
         }
 
         .die-sym canvas { image-rendering: pixelated; }
 
         .die-sym .die-label {
             position: absolute;
-            bottom: 1px;
-            right: 2px;
-            font-size: 7px;
+            bottom: 2px;
+            right: 3px;
+            font-size: 9px;
             font-weight: bold;
             color: #8a6050;
             line-height: 1;
@@ -826,24 +842,49 @@
         .die-sym:hover { background: #2a1828; border-color: #c4a44e; }
         .die-sym.dragging { opacity: 0.4; }
 
-        /* Player dice drop surface */
+        /* Attack / Damage panels */
+        .dice-panel {
+            border: 1.5px solid #2a1520;
+            margin-bottom: 8px;
+            background: #100c0e;
+        }
+
+        .dice-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1a1018;
+            border-bottom: 1px solid #2a1520;
+            padding: 8px 10px;
+        }
+
+        .dice-panel-label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #8a6050;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        /* Drop surface */
         .player-dice-surface {
-            flex: 1;
-            min-height: 80px;
+            min-height: 72px;
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
-            padding: 6px;
+            gap: 6px;
+            padding: 8px;
             align-content: flex-start;
-            border: 2px dashed #2a1520;
-            margin-bottom: 6px;
+            border: 2px dashed transparent;
             position: relative;
-            overflow-y: auto;
         }
 
         .player-dice-surface.drag-over {
-            border-color: #6b2a3a;
-            background: #160e12;
+            border-color: #8c2a3a;
+            background: #1a0e14;
+        }
+
+        .player-dice-surface.drag-ready {
+            border-color: #3a2030;
         }
 
         .player-dice-hint {
@@ -852,8 +893,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #2a1520;
-            font-size: 9px;
+            color: #3a2030;
+            font-size: 11px;
             font-style: italic;
             pointer-events: none;
         }
@@ -861,139 +902,152 @@
         .dice-chip {
             background: #1a1018;
             border: 1.5px solid #4a2030;
-            padding: 2px 5px;
-            font-size: 10px;
+            padding: 6px 8px;
+            font-size: 13px;
             font-weight: bold;
-            cursor: grab;
             user-select: none;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
             color: #b8a080;
         }
 
         .dice-chip.rolled { background: #c4a44e; color: #000; border-color: #c4a44e; }
         .dice-chip .chip-pixel-die { image-rendering: pixelated; flex-shrink: 0; }
-        .dice-chip .chip-result { font-size: 11px; }
-        .dice-chip .chip-sides { font-size: 8px; color: #5a4048; }
-        .dice-chip.rolled .chip-sides { color: #5a3018; }
-        .dice-chip .chip-remove { cursor: pointer; font-size: 9px; margin-left: 1px; opacity: 0.6; }
-        .dice-chip .chip-remove:hover { opacity: 1; }
-        .dice-chip.dragging { opacity: 0.4; }
-
-        /* Result bar */
-        .dice-result-bar {
-            background: #0e0a0c;
-            border: 2px solid #4a2030;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
-            padding: 5px 8px;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .dice-result-total {
-            font-size: 24px;
-            font-weight: bold;
-            color: #c4a44e;
+        .dice-chip .chip-result { font-size: 16px; min-width: 24px; text-align: center; }
+        .dice-chip .chip-remove {
+            cursor: pointer;
+            font-size: 20px;
+            padding: 2px 6px;
+            opacity: 0.5;
+            touch-action: manipulation;
             line-height: 1;
-            flex-shrink: 0;
-            text-shadow: 0 0 6px rgba(196,164,78,0.2);
         }
+        .dice-chip .chip-remove:hover { opacity: 1; }
 
-        .dice-result-total.crit { color: #4aff4a; }
-        .dice-result-total.fail { color: #e04040; }
-
-        .dice-result-breakdown {
-            font-size: 8px;
-            color: #5a4048;
-            line-height: 1.7;
-        }
-
-        /* Roll / Clear buttons */
+        /* Roll / Clear row */
         .dice-actions {
             display: flex;
-            gap: 4px;
-            margin-bottom: 6px;
+            gap: 0;
+            border-top: 1px solid #2a1520;
         }
 
         .roll-all-btn {
             flex: 1;
             background: linear-gradient(180deg, #8c2a3a 0%, #6b1a2a 50%, #4a1020 100%);
-            border: 2px solid #6b2a3a;
-            box-shadow:
-                inset 0 1px 0 rgba(180,60,80,0.3),
-                inset 0 -1px 0 rgba(40,8,16,0.5);
+            border: none;
+            border-right: 1px solid #2a1520;
             color: #c4a44e;
             font-family: inherit;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
-            padding: 8px 4px;
+            padding: 14px 4px;
             cursor: pointer;
             text-transform: uppercase;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.12em;
             text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            touch-action: manipulation;
         }
 
         .roll-all-btn:disabled {
-            background: #1a1018;
-            border-color: #2a1520;
-            color: #3a2030;
-            box-shadow: none;
+            background: #120c10;
+            color: #2a1520;
             cursor: default;
             text-shadow: none;
         }
         .roll-all-btn:not(:disabled):active { background: linear-gradient(180deg, #a03848 0%, #8c2a3a 50%, #6b1a2a 100%); }
 
         .clear-btn {
-            background: #1a1018;
-            border: 1.5px solid #4a2030;
-            color: #5a4048;
+            background: none;
+            border: none;
+            color: #4a3040;
             font-family: inherit;
-            font-size: 10px;
-            padding: 8px 10px;
+            font-size: 12px;
+            padding: 14px 14px;
             cursor: pointer;
+            touch-action: manipulation;
+        }
+        .clear-btn:active { color: #e04040; }
+
+        /* Result bar */
+        .dice-result-bar {
+            background: #0a0608;
+            border-top: 1.5px solid #2a1520;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .clear-btn:active { background: #241820; }
+        .dice-result-total {
+            font-size: 32px;
+            font-weight: bold;
+            color: #c4a44e;
+            line-height: 1;
+            flex-shrink: 0;
+            text-shadow: 0 0 8px rgba(196,164,78,0.25);
+        }
+
+        .dice-result-total.crit { color: #4aff4a; }
+        .dice-result-total.fail { color: #e04040; }
+
+        .dice-result-breakdown {
+            font-size: 10px;
+            color: #5a4048;
+            line-height: 1.8;
+        }
 
         /* Roll history */
-        .roll-history-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2px 0;
-            border-bottom: 1px dotted #2a1520;
-            font-size: 9px;
-            color: #5a4048;
+        .roll-history-section {
+            padding: 6px 0;
+            border-top: 1px solid #2a1520;
+            margin-top: 2px;
         }
-
-        .roll-history-val { font-weight: bold; color: #c4a44e; }
-        .roll-history-val.crit { color: #4aff4a; }
-        .roll-history-val.fail { color: #e04040; }
 
         .roll-history-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
+            font-size: 10px;
+            color: #4a3040;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
         }
 
         .roll-history-clear {
             background: none;
             border: 1px solid #2a1520;
-            color: #5a4048;
+            color: #4a3040;
             font-family: inherit;
-            font-size: 8px;
-            padding: 1px 5px;
+            font-size: 9px;
+            padding: 3px 10px;
             cursor: pointer;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            touch-action: manipulation;
+        }
+        .roll-history-clear:active { color: #e04040; }
+
+        .roll-history-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px dotted #2a1520;
+            font-size: 10px;
+            color: #5a4048;
         }
 
-        .roll-history-clear:hover { color: #c4a44e; border-color: #4a2030; }
-        .roll-history-clear:active { color: #e04040; }
+        .roll-history-type {
+            font-size: 9px;
+            color: #4a3040;
+            margin-right: 5px;
+            text-transform: uppercase;
+        }
+
+        .roll-history-val { font-weight: bold; color: #c4a44e; }
+        .roll-history-val.crit { color: #4aff4a; }
+        .roll-history-val.fail { color: #e04040; }
 
         /* ===================== TABS ===================== */
         .tab-bar {
@@ -1111,22 +1165,42 @@
 
         <!-- DICE TAB -->
         <div class="tab-panel" id="tab-dice">
-            <div class="win-body" style="padding:6px;display:flex;flex-direction:column;height:100%">
-                <!-- Drop surface -->
-                <div class="player-dice-surface" id="playerDiceSurface">
-                    <div class="player-dice-hint" id="playerDiceHint">&#9860; Drag dice here to roll</div>
+            <div class="win-body" style="padding:8px;display:flex;flex-direction:column;height:100%;overflow-y:auto">
+
+                <!-- ATTACK panel -->
+                <div class="dice-panel">
+                    <div class="dice-panel-header">
+                        <span class="dice-panel-label">&#9876; Attack</span>
+                        <button class="clear-btn" onclick="clearDiceZone('atk')">Clear</button>
+                    </div>
+                    <div class="player-dice-surface" id="atkSurface">
+                        <div class="player-dice-hint" id="atkHint">&#9860; Drop dice here</div>
+                    </div>
+                    <div class="dice-actions">
+                        <button class="roll-all-btn" id="atkRollBtn" onclick="rollZone('atk')" disabled>Roll Attack</button>
+                    </div>
+                    <div class="dice-result-bar" id="atkResultBar" style="display:none">
+                        <div class="dice-result-total" id="atkResultTotal"></div>
+                        <div class="dice-result-breakdown" id="atkResultBreakdown"></div>
+                    </div>
                 </div>
 
-                <!-- Roll / Clear -->
-                <div class="dice-actions">
-                    <button class="roll-all-btn" id="rollAllBtn" onclick="rollAll()" disabled>Roll</button>
-                    <button class="clear-btn" onclick="clearAllDice()">Clear</button>
-                </div>
-
-                <!-- Result -->
-                <div class="dice-result-bar" id="diceResultBar" style="display:none">
-                    <div class="dice-result-total" id="diceResultTotal"></div>
-                    <div class="dice-result-breakdown" id="diceResultBreakdown"></div>
+                <!-- DAMAGE panel -->
+                <div class="dice-panel">
+                    <div class="dice-panel-header">
+                        <span class="dice-panel-label">&#128481; Damage</span>
+                        <button class="clear-btn" onclick="clearDiceZone('dmg')">Clear</button>
+                    </div>
+                    <div class="player-dice-surface" id="dmgSurface">
+                        <div class="player-dice-hint" id="dmgHint">&#9860; Drop dice here</div>
+                    </div>
+                    <div class="dice-actions">
+                        <button class="roll-all-btn" id="dmgRollBtn" onclick="rollZone('dmg')" disabled>Roll Damage</button>
+                    </div>
+                    <div class="dice-result-bar" id="dmgResultBar" style="display:none">
+                        <div class="dice-result-total" id="dmgResultTotal"></div>
+                        <div class="dice-result-breakdown" id="dmgResultBreakdown"></div>
+                    </div>
                 </div>
 
                 <!-- History -->
@@ -1134,14 +1208,14 @@
 
                 <!-- Dice strip -->
                 <div class="dice-strip">
-                    <span class="dice-strip-label">Dice:</span>
-                    <div class="die-sym" draggable="true" data-sides="4"></div>
-                    <div class="die-sym" draggable="true" data-sides="6"></div>
-                    <div class="die-sym" draggable="true" data-sides="8"></div>
-                    <div class="die-sym" draggable="true" data-sides="10"></div>
-                    <div class="die-sym" draggable="true" data-sides="12"></div>
-                    <div class="die-sym" draggable="true" data-sides="20"></div>
-                    <div class="die-sym" draggable="true" data-sides="100"></div>
+                    <span class="dice-strip-label">&#9860; Tap &amp; drag onto a section:</span>
+                    <div class="die-sym" data-sides="4"></div>
+                    <div class="die-sym" data-sides="6"></div>
+                    <div class="die-sym" data-sides="8"></div>
+                    <div class="die-sym" data-sides="10"></div>
+                    <div class="die-sym" data-sides="12"></div>
+                    <div class="die-sym" data-sides="20"></div>
+                    <div class="die-sym" data-sides="100"></div>
                 </div>
             </div>
         </div>
@@ -1553,22 +1627,30 @@
         });
     }, 1000 / FPS);
 
+    // Touch drag state
+    let touchDragSides = null;
+    let touchDragGhost = null;
+
     function initDiceStrip() {
-        const surface = document.getElementById('playerDiceSurface');
-        surface.addEventListener('dragover', e => { e.preventDefault(); surface.classList.add('drag-over'); });
-        surface.addEventListener('dragleave', () => surface.classList.remove('drag-over'));
-        surface.addEventListener('drop', e => {
-            e.preventDefault();
-            surface.classList.remove('drag-over');
-            const sides = parseInt(e.dataTransfer.getData('text/plain'));
-            if (sides) addDiceChip(sides);
+        // Desktop drop zones
+        ['atkSurface', 'dmgSurface'].forEach(id => {
+            const surface = document.getElementById(id);
+            const zoneId = id === 'atkSurface' ? 'atk' : 'dmg';
+            surface.addEventListener('dragover', e => { e.preventDefault(); surface.classList.add('drag-over'); });
+            surface.addEventListener('dragleave', () => surface.classList.remove('drag-over'));
+            surface.addEventListener('drop', e => {
+                e.preventDefault();
+                surface.classList.remove('drag-over');
+                const sides = parseInt(e.dataTransfer.getData('text/plain'));
+                if (sides) addDiceChip(sides, zoneId);
+            });
         });
 
         document.querySelectorAll('.die-sym').forEach(die => {
             const sides = parseInt(die.dataset.sides);
             const c = document.createElement('canvas');
             c.width = 32; c.height = 32;
-            c.style.width = '28px'; c.style.height = '28px';
+            c.style.width = '42px'; c.style.height = '42px';
             die.appendChild(c);
 
             const label = document.createElement('span');
@@ -1581,17 +1663,68 @@
             die.addEventListener('mouseleave', () => { hovering = false; });
             registerAnim(c, sides, () => false, () => null, () => hovering);
 
+            // Desktop drag
+            die.draggable = true;
             die.addEventListener('dragstart', e => {
                 die.classList.add('dragging');
                 e.dataTransfer.setData('text/plain', String(sides));
             });
             die.addEventListener('dragend', () => die.classList.remove('dragging'));
+
+            // Mobile touch drag
+            die.addEventListener('touchstart', e => {
+                e.preventDefault();
+                touchDragSides = sides;
+                touchDragGhost = document.createElement('div');
+                touchDragGhost.className = 'die-drag-ghost';
+                touchDragGhost.textContent = 'd' + sides;
+                document.body.appendChild(touchDragGhost);
+                const t = e.touches[0];
+                touchDragGhost.style.left = (t.clientX - 28) + 'px';
+                touchDragGhost.style.top  = (t.clientY - 28) + 'px';
+                document.querySelectorAll('.player-dice-surface').forEach(s => s.classList.add('drag-ready'));
+            }, { passive: false });
+
+            die.addEventListener('touchmove', e => {
+                e.preventDefault();
+                if (!touchDragGhost) return;
+                const t = e.touches[0];
+                touchDragGhost.style.left = (t.clientX - 28) + 'px';
+                touchDragGhost.style.top  = (t.clientY - 28) + 'px';
+                document.querySelectorAll('.player-dice-surface').forEach(s => {
+                    const r = s.getBoundingClientRect();
+                    const over = t.clientX >= r.left && t.clientX <= r.right &&
+                                 t.clientY >= r.top  && t.clientY <= r.bottom;
+                    s.classList.toggle('drag-over', over);
+                });
+            }, { passive: false });
+
+            die.addEventListener('touchend', e => {
+                document.querySelectorAll('.player-dice-surface').forEach(s => {
+                    s.classList.remove('drag-over');
+                    s.classList.remove('drag-ready');
+                });
+                if (!touchDragGhost) return;
+                const t = e.changedTouches[0];
+                touchDragGhost.style.display = 'none';
+                const el = document.elementFromPoint(t.clientX, t.clientY);
+                touchDragGhost.remove();
+                touchDragGhost = null;
+                if (el) {
+                    const surface = el.closest('.player-dice-surface');
+                    if (surface) {
+                        const zoneId = surface.id === 'atkSurface' ? 'atk' : 'dmg';
+                        addDiceChip(touchDragSides, zoneId);
+                    }
+                }
+                touchDragSides = null;
+            });
         });
     }
 
-    function addDiceChip(sides) {
-        const surface = document.getElementById('playerDiceSurface');
-        document.getElementById('playerDiceHint').style.display = 'none';
+    function addDiceChip(sides, zoneId) {
+        const surface = document.getElementById(zoneId === 'atk' ? 'atkSurface' : 'dmgSurface');
+        document.getElementById(zoneId === 'atk' ? 'atkHint' : 'dmgHint').style.display = 'none';
 
         const chip = document.createElement('div');
         chip.className = 'dice-chip';
@@ -1602,7 +1735,7 @@
         const c = document.createElement('canvas');
         c.className = 'chip-pixel-die';
         c.width = 32; c.height = 32;
-        c.style.width = '22px'; c.style.height = '22px';
+        c.style.width = '32px'; c.style.height = '32px';
         chip.appendChild(c);
 
         registerAnim(c, sides,
@@ -1611,11 +1744,6 @@
             () => chip.dataset.rolled === 'true'
         );
 
-        const sidesLabel = document.createElement('span');
-        sidesLabel.className = 'chip-sides';
-        sidesLabel.textContent = 'd' + sides;
-        chip.appendChild(sidesLabel);
-
         const resultSpan = document.createElement('span');
         resultSpan.className = 'chip-result';
         resultSpan.textContent = 'd' + sides;
@@ -1623,52 +1751,45 @@
 
         const removeSpan = document.createElement('span');
         removeSpan.className = 'chip-remove';
-        removeSpan.title = 'Remove';
         removeSpan.innerHTML = '&times;';
         removeSpan.onclick = e => {
             e.stopPropagation();
             unregisterAnim(c);
             chip.remove();
-            updateRollBtn();
-            checkDiceSurfaceEmpty();
+            updateRollBtn(zoneId);
+            checkZoneEmpty(zoneId);
         };
         chip.appendChild(removeSpan);
 
-        chip.draggable = true;
-        chip.addEventListener('dragstart', e => {
-            chip.classList.add('dragging');
-            e.dataTransfer.setData('text/plain', String(sides));
-            setTimeout(() => { unregisterAnim(c); chip.remove(); updateRollBtn(); checkDiceSurfaceEmpty(); }, 0);
-        });
-
         surface.appendChild(chip);
-        updateRollBtn();
+        updateRollBtn(zoneId);
     }
 
-    function checkDiceSurfaceEmpty() {
-        const chips = document.getElementById('playerDiceSurface').querySelectorAll('.dice-chip');
-        document.getElementById('playerDiceHint').style.display = chips.length === 0 ? 'flex' : 'none';
+    function checkZoneEmpty(zoneId) {
+        const chips = document.getElementById(zoneId === 'atk' ? 'atkSurface' : 'dmgSurface').querySelectorAll('.dice-chip');
+        document.getElementById(zoneId === 'atk' ? 'atkHint' : 'dmgHint').style.display = chips.length === 0 ? 'flex' : 'none';
     }
 
-    function updateRollBtn() {
-        const unrolled = document.getElementById('playerDiceSurface').querySelectorAll('.dice-chip[data-rolled="false"]');
-        document.getElementById('rollAllBtn').disabled = unrolled.length === 0;
+    function updateRollBtn(zoneId) {
+        const unrolled = document.getElementById(zoneId === 'atk' ? 'atkSurface' : 'dmgSurface')
+                                 .querySelectorAll('.dice-chip[data-rolled="false"]');
+        document.getElementById(zoneId === 'atk' ? 'atkRollBtn' : 'dmgRollBtn').disabled = unrolled.length === 0;
     }
 
-    function clearAllDice() {
-        const surface = document.getElementById('playerDiceSurface');
+    function clearDiceZone(zoneId) {
+        const surface = document.getElementById(zoneId === 'atk' ? 'atkSurface' : 'dmgSurface');
         surface.querySelectorAll('.dice-chip canvas').forEach(c => unregisterAnim(c));
         surface.querySelectorAll('.dice-chip').forEach(c => c.remove());
-        document.getElementById('playerDiceHint').style.display = 'flex';
-        document.getElementById('rollAllBtn').disabled = true;
-        document.getElementById('diceResultBar').style.display = 'none';
+        checkZoneEmpty(zoneId);
+        updateRollBtn(zoneId);
+        document.getElementById(zoneId === 'atk' ? 'atkResultBar' : 'dmgResultBar').style.display = 'none';
     }
 
     // =========================================================
     // ROLLING
     // =========================================================
-    function rollAll() {
-        const surface = document.getElementById('playerDiceSurface');
+    function rollZone(zoneId) {
+        const surface = document.getElementById(zoneId === 'atk' ? 'atkSurface' : 'dmgSurface');
         const unrolled = [...surface.querySelectorAll('.dice-chip[data-rolled="false"]')];
         if (unrolled.length === 0) return;
 
@@ -1677,8 +1798,7 @@
         const interval = setInterval(() => {
             elapsed += tickRate;
             unrolled.forEach(chip => {
-                const sides = parseInt(chip.dataset.sides);
-                chip.dataset.value = Math.floor(Math.random() * sides) + 1;
+                chip.dataset.value = Math.floor(Math.random() * parseInt(chip.dataset.sides)) + 1;
                 chip.querySelector('.chip-result').textContent = chip.dataset.value;
             });
             if (elapsed >= 600) {
@@ -1693,31 +1813,36 @@
                     chip.querySelector('.chip-result').textContent = result;
                     rolls.push({ sides, result });
                 });
-                updateRollBtn();
-                showResults(rolls);
+                updateRollBtn(zoneId);
+                showResults(rolls, zoneId);
             }
         }, tickRate);
     }
 
-    function showResults(rolls) {
-        const total = rolls.reduce((s, r) => s + r.result, 0);
-        const isCrit = rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
-        const isFail = rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 1;
+    function showResults(rolls, zoneId) {
+        const totalId    = zoneId === 'atk' ? 'atkResultTotal'    : 'dmgResultTotal';
+        const breakdownId= zoneId === 'atk' ? 'atkResultBreakdown': 'dmgResultBreakdown';
+        const barId      = zoneId === 'atk' ? 'atkResultBar'      : 'dmgResultBar';
+        const typeLabel  = zoneId === 'atk' ? 'Attack' : 'Damage';
 
-        const totalEl = document.getElementById('diceResultTotal');
+        const total  = rolls.reduce((s, r) => s + r.result, 0);
+        const isCrit = zoneId === 'atk' && rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
+        const isFail = zoneId === 'atk' && rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 1;
+
+        const totalEl = document.getElementById(totalId);
         totalEl.textContent = total;
         totalEl.className = 'dice-result-total' + (isCrit ? ' crit' : isFail ? ' fail' : '');
 
         const breakdown = rolls.map(r => `d${r.sides}:${r.result}`).join('  ');
-        document.getElementById('diceResultBreakdown').textContent =
+        document.getElementById(breakdownId).textContent =
             rolls.length > 1 ? breakdown + '  =  ' + total
                              : (isCrit ? 'Critical Hit!' : isFail ? 'Critical Fail' : breakdown);
-        document.getElementById('diceResultBar').style.display = 'flex';
+        document.getElementById(barId).style.display = 'flex';
 
         const historyLabel = rolls.map(r => `d${r.sides}`).join('+');
         const suffix = isCrit ? ' CRIT!' : isFail ? ' FAIL' : '';
-        rollHistory.unshift({ label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
-        if (rollHistory.length > 6) rollHistory.pop();
+        rollHistory.unshift({ type: typeLabel, label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
+        if (rollHistory.length > 8) rollHistory.pop();
         renderRollHistory();
 
         db.ref('diceLog').push({
@@ -1725,6 +1850,7 @@
             charKey,
             dice:      historyLabel,
             result:    total,
+            type:      typeLabel,
             timestamp: Date.now(),
         });
     }
@@ -1975,22 +2101,27 @@
         container.innerHTML = '';
         if (rollHistory.length === 0) return;
 
+        const section = document.createElement('div');
+        section.className = 'roll-history-section';
+
         const header = document.createElement('div');
         header.className = 'roll-history-header';
         header.innerHTML =
-            '<span class="die-picker-label" style="margin:0">\u2726 History</span>' +
+            '<span>\u2726 History</span>' +
             '<button class="roll-history-clear" onclick="clearRollHistory()">clear</button>';
-        container.appendChild(header);
+        section.appendChild(header);
 
         rollHistory.forEach(entry => {
             const row = document.createElement('div');
             row.className = 'roll-history-row';
             const valCls = entry.isTotalCrit ? ' crit' : entry.isTotalFail ? ' fail' : '';
             row.innerHTML =
-                '<span>' + entry.label + '</span>' +
+                '<span><span class="roll-history-type">' + (entry.type || '') + '</span>' + entry.label + '</span>' +
                 '<span class="roll-history-val' + valCls + '">' + entry.total + entry.suffix + '</span>';
-            container.appendChild(row);
+            section.appendChild(row);
         });
+
+        container.appendChild(section);
     }
 
     function clearRollHistory() {
