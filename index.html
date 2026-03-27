@@ -2518,8 +2518,8 @@
                     const row = document.createElement('div');
                     row.className = 'inv-req-row';
                     row.innerHTML =
-                        '<span class="inv-req-text"><strong>' + charFirst + '</strong>: ' +
-                        '(' + req.currentAmount + ') ' + req.itemName +
+                        '<span class="inv-req-text"><strong>' + escapeHtml(charFirst) + '</strong>: ' +
+                        '(' + req.currentAmount + ') ' + escapeHtml(req.itemName || '') +
                         ' <span class="inv-req-delta">(' + sign + req.delta + ')</span></span>' +
                         '<button class="inv-req-btn approve" title="Approve">&#10003;</button>' +
                         '<button class="inv-req-btn reject" title="Reject">&#10007;</button>';
@@ -2615,7 +2615,7 @@
                     Object.entries(slots).forEach(([sk, spent]) => {
                         const parts = sk.split('_');
                         const pip = document.querySelector(
-                            '.spell-slot-pip[data-char="' + key + '"][data-slot="' + parts[0] + '"][data-idx="' + parts[1] + '"]'
+                            '.spell-slot-pip[data-char="' + escapeCssValue(key) + '"][data-slot="' + escapeCssValue(parts[0]) + '"][data-idx="' + escapeCssValue(parts[1]) + '"]'
                         );
                         if (pip) pip.classList.toggle('spent', spent);
                     });
@@ -2624,7 +2624,7 @@
                 firebaseDb.ref('characters/' + key + '/abilities').on('value', snap => {
                     const abilities = snap.val() || {};
                     Object.entries(abilities).forEach(([ak, used]) => {
-                        const btn = document.querySelector('.ability-btn[data-char="' + key + '"][data-ability="' + ak + '"]');
+                        const btn = document.querySelector('.ability-btn[data-char="' + escapeCssValue(key) + '"][data-ability="' + escapeCssValue(ak) + '"]');
                         if (!btn) return;
                         const max = parseInt(btn.dataset.max);
                         btn.dataset.used = String(used);
@@ -2679,21 +2679,10 @@
         window.addEventListener('load', initFirebaseSync);
 
         // =========================================================
-        // CHARACTER & ENEMY STATS  (loaded from Firebase)
+        // LOADED GAME DATA
         // =========================================================
-        let CHARACTER_STATS = {};
         let LOADED_CHARS = {};   // key -> full characterSheet data from Firebase
         let LOADED_CAMPAIGN = null;
-
-        function charStatFromSheet(c) {
-            return {
-                full: c.name, ac: c.ac || 10, hp: c.maxHp || 10,
-                mods: c.stats || {}, proficiency: c.proficiency || 2,
-                proficient_saves: c.proficientSaves || [],
-                spell_save_dc: c.spellSaveDC || null,
-                spell_attack: c.spellAttack ? parseInt(c.spellAttack) : null,
-            };
-        }
 
         async function loadGameData() {
             const [charSnap, campSnap] = await Promise.all([
@@ -2702,16 +2691,9 @@
             ]);
 
             LOADED_CHARS = charSnap.val() || {};
-            CHARACTER_STATS = {};
-            Object.entries(LOADED_CHARS).forEach(([key, c]) => {
-                CHARACTER_STATS[c.name.split(' ')[0]] = charStatFromSheet(c);
-            });
 
             LOADED_CAMPAIGN = campSnap.val();
             if (LOADED_CAMPAIGN) {
-                Object.entries(LOADED_CAMPAIGN.enemyStats || {}).forEach(([name, stats]) => {
-                    CHARACTER_STATS[name] = stats;
-                });
                 if (LOADED_CAMPAIGN.meta && LOADED_CAMPAIGN.meta.name) {
                     document.getElementById('menuCampaignName').textContent = LOADED_CAMPAIGN.meta.name;
                 }
@@ -2803,7 +2785,7 @@
             const campInfo = document.getElementById('setupCampaignInfo');
             const campDel = document.getElementById('campaignDeleteSection');
             if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.meta && LOADED_CAMPAIGN.meta.name) {
-                campInfo.innerHTML = '<strong>' + LOADED_CAMPAIGN.meta.name + '</strong>';
+                campInfo.innerHTML = '<strong>' + escapeHtml(LOADED_CAMPAIGN.meta.name) + '</strong>';
                 campDel.style.display = '';
             } else {
                 campInfo.innerHTML = '<span class="setup-none">No campaign loaded</span>';
@@ -2822,11 +2804,12 @@
                 const row = document.createElement('div');
                 row.className = 'setup-char-row';
                 row.dataset.key = key;
+                const keyJs = escapeJsAttr(key);
                 row.innerHTML =
-                    '<div class="char-info"><strong>' + c.name + '</strong><small>' + c.cls + '</small></div>' +
+                    '<div class="char-info"><strong>' + escapeHtml(c.name || '') + '</strong><small>' + escapeHtml(c.cls || '') + '</small></div>' +
                     '<div class="setup-char-actions">' +
-                    '<button class="setup-btn" onclick="exportCharacter(\'' + key + '\')">Export</button>' +
-                    '<button class="setup-btn danger" onclick="deleteCharacter(\'' + key + '\')">Delete</button>' +
+                    '<button class="setup-btn" onclick="exportCharacter(' + keyJs + ')">Export</button>' +
+                    '<button class="setup-btn danger" onclick="deleteCharacter(' + keyJs + ')">Delete</button>' +
                     '</div>';
                 list.appendChild(row);
             });
@@ -2835,11 +2818,43 @@
         // =========================================================
         // CHARACTER SHEET PARSING & UPLOAD
         // =========================================================
+        function normalizeCharacterName(name) {
+            return String(name || '').trim().toLowerCase();
+        }
+
+        function slugifyCharacterKey(name) {
+            const slug = String(name || '')
+                .normalize('NFKD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            return slug || 'character';
+        }
+
+        function resolveCharacterKey(name, existingChars, reservedKeys) {
+            const normalizedName = normalizeCharacterName(name);
+            for (const [key, existing] of Object.entries(existingChars)) {
+                if (normalizeCharacterName(existing.name) === normalizedName) {
+                    reservedKeys.add(key);
+                    return key;
+                }
+            }
+
+            const base = slugifyCharacterKey(name);
+            let key = base;
+            let suffix = 2;
+            while (reservedKeys.has(key)) {
+                key = `${base}-${suffix++}`;
+            }
+            reservedKeys.add(key);
+            return key;
+        }
+
         function parseCharacterSheet(text) {
             const lines = text.split('\n');
             const name = lines[0].trim();
             const cls = lines[1] ? lines[1].trim() : '';
-            const key = name.split(' ')[0].toLowerCase();
 
             function extract(pattern) {
                 for (const line of lines) {
@@ -2936,7 +2951,7 @@
                 }
             });
 
-            return { key, name, cls, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells };
+            return { name, cls, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells };
         }
 
         function ordinal(n) {
@@ -2962,28 +2977,33 @@
 
             try {
                 const texts = await Promise.all(promises);
+                const reservedKeys = new Set(Object.keys(LOADED_CHARS));
+                const knownChars = { ...LOADED_CHARS };
                 await Promise.all(texts.map(async text => {
                     const parsed = parseCharacterSheet(text);
-                    await firebaseDb.ref('characterSheets/' + parsed.key).set(parsed);
+                    const key = resolveCharacterKey(parsed.name, knownChars, reservedKeys);
+                    const record = { ...parsed, key };
+                    knownChars[key] = record;
+                    await firebaseDb.ref('characterSheets/' + key).set(record);
                     const initUpdates = {};
-                    const rtSnap = await firebaseDb.ref('characters/' + parsed.key + '/hp').once('value');
+                    const rtSnap = await firebaseDb.ref('characters/' + key + '/hp').once('value');
                     if (rtSnap.val() === null) {
-                        initUpdates['characters/' + parsed.key + '/hp'] = parsed.maxHp;
-                        initUpdates['characters/' + parsed.key + '/maxHp'] = parsed.maxHp;
+                        initUpdates['characters/' + key + '/hp'] = parsed.maxHp;
+                        initUpdates['characters/' + key + '/maxHp'] = parsed.maxHp;
                     }
                     if (parsed.spellSlots.length > 0) {
-                        const slotSnap = await firebaseDb.ref('characters/' + parsed.key + '/slots').once('value');
+                        const slotSnap = await firebaseDb.ref('characters/' + key + '/slots').once('value');
                         if (!slotSnap.val()) {
                             parsed.spellSlots.forEach(s => {
-                                for (let i = 0; i < s.count; i++) initUpdates['characters/' + parsed.key + '/slots/' + s.key + '_' + i] = false;
+                                for (let i = 0; i < s.count; i++) initUpdates['characters/' + key + '/slots/' + s.key + '_' + i] = false;
                             });
                         }
                     }
                     const activeAbils = parsed.abilities.filter(a => !a.passive && a.key);
                     if (activeAbils.length > 0) {
-                        const abilSnap = await firebaseDb.ref('characters/' + parsed.key + '/abilities').once('value');
+                        const abilSnap = await firebaseDb.ref('characters/' + key + '/abilities').once('value');
                         if (!abilSnap.val()) {
-                            activeAbils.forEach(a => { initUpdates['characters/' + parsed.key + '/abilities/' + a.key] = 0; });
+                            activeAbils.forEach(a => { initUpdates['characters/' + key + '/abilities/' + a.key] = 0; });
                         }
                     }
                     if (Object.keys(initUpdates).length > 0) await firebaseDb.ref().update(initUpdates);
@@ -3091,11 +3111,6 @@ ${fullText.slice(0, 30000)}`;
                 if (!jsonMatch) throw new Error('Could not parse campaign JSON from response');
                 const campaign = JSON.parse(jsonMatch[0]);
 
-                // Save enemy stats into CHARACTER_STATS format
-                Object.entries(campaign.enemyStats || {}).forEach(([name, stats]) => {
-                    CHARACTER_STATS[name] = stats;
-                });
-
                 await firebaseDb.ref('campaign').set(campaign);
                 status.textContent = 'Campaign "' + campaign.meta.name + '" processed and saved!';
                 input.value = '';
@@ -3139,8 +3154,7 @@ ${fullText.slice(0, 30000)}`;
 
         function deleteCharacter(key) {
             pendingDeleteCharKey = key;
-            const name = LOADED_CHARS[key]?.name || key;
-            const row = document.querySelector('.setup-char-row[data-key="' + key + '"]');
+            const row = document.querySelector('.setup-char-row[data-key="' + escapeCssValue(key) + '"]');
             if (!row) return;
             let confirm = row.querySelector('.char-delete-confirm');
             if (confirm) { confirm.style.display = 'flex'; return; }
@@ -3193,6 +3207,10 @@ ${fullText.slice(0, 30000)}`;
             Object.entries(chars).forEach(([key, c]) => {
                 const card = document.createElement('div');
                 card.className = 'character-card';
+                const safeKeyAttr = escapeHtml(key);
+                const safeKeyJs = escapeJsAttr(key);
+                const safeName = escapeHtml(c.name || '');
+                const safeClass = escapeHtml(c.cls || '');
 
                 // Header
                 const header = document.createElement('div');
@@ -3200,8 +3218,8 @@ ${fullText.slice(0, 30000)}`;
                 header.onclick = function() { toggleCharacter(this); };
                 header.innerHTML =
                     '<div>' +
-                    '<div class="character-name">' + c.name + ' <span class="character-hp" id="dm-hp-header-' + key + '">' + renderHpHearts(c.maxHp, c.maxHp, 5) + ' ' + c.maxHp + '/' + c.maxHp + '</span></div>' +
-                    '<div class="character-class">' + c.cls + '</div>' +
+                    '<div class="character-name">' + safeName + ' <span class="character-hp" id="dm-hp-header-' + safeKeyAttr + '">' + renderHpHearts(c.maxHp, c.maxHp, 5) + ' ' + c.maxHp + '/' + c.maxHp + '</span></div>' +
+                    '<div class="character-class">' + safeClass + '</div>' +
                     '</div>' +
                     '<span class="character-arrow">&#9654;</span>';
 
@@ -3212,22 +3230,22 @@ ${fullText.slice(0, 30000)}`;
                 // HP row
                 let statsHtml =
                     '<div class="stat-row"><span class="stat-label">HP</span><span>' +
-                    '<button class="dm-hp-btn" style="margin-right:2px" onclick="dmChangeHp(\'' + key + '\',-1)">\u2212</button>' +
-                    '<span id="dm-hp-stat-' + key + '">' + c.maxHp + ' / ' + c.maxHp + '</span>' +
-                    '<button class="dm-hp-btn" style="margin-left:2px" onclick="dmChangeHp(\'' + key + '\',1)">+</button>' +
+                    '<button class="dm-hp-btn" style="margin-right:2px" onclick="dmChangeHp(' + safeKeyJs + ',-1)">\u2212</button>' +
+                    '<span id="dm-hp-stat-' + safeKeyAttr + '">' + c.maxHp + ' / ' + c.maxHp + '</span>' +
+                    '<button class="dm-hp-btn" style="margin-left:2px" onclick="dmChangeHp(' + safeKeyJs + ',1)">+</button>' +
                     '</span></div>';
                 statsHtml += '<div class="stat-row"><span class="stat-label">AC</span><span>' + c.ac + '</span></div>';
                 Object.entries(c.stats || {}).forEach(([stat, mod]) => {
-                    statsHtml += '<div class="stat-row"><span class="stat-label">' + stat + '</span><span>' + (mod >= 0 ? '+' : '') + mod + '</span></div>';
+                    statsHtml += '<div class="stat-row"><span class="stat-label">' + escapeHtml(stat) + '</span><span>' + (mod >= 0 ? '+' : '') + mod + '</span></div>';
                 });
 
                 // Spell slots
                 if (c.spellSlots && c.spellSlots.length > 0) {
                     statsHtml += '<div class="ability-section"><div class="ability-section-label">Spell Slots</div>';
                     c.spellSlots.forEach(slot => {
-                        statsHtml += '<div class="spell-slot-row"><span class="spell-slot-label">' + (slot.shortLabel || slot.key) + '</span>';
+                        statsHtml += '<div class="spell-slot-row"><span class="spell-slot-label">' + escapeHtml(slot.shortLabel || slot.key) + '</span>';
                         for (let i = 0; i < slot.count; i++) {
-                            statsHtml += '<div class="spell-slot-pip" data-char="' + key + '" data-slot="' + slot.key + '" data-idx="' + i + '" onclick="toggleSlot(this)"></div>';
+                            statsHtml += '<div class="spell-slot-pip" data-char="' + safeKeyAttr + '" data-slot="' + escapeHtml(slot.key) + '" data-idx="' + i + '" onclick="toggleSlot(this)"></div>';
                         }
                         statsHtml += '</div>';
                     });
@@ -3241,9 +3259,9 @@ ${fullText.slice(0, 30000)}`;
                     const levels = [];
                     charSpells.forEach(s => { if (levels.indexOf(s.level) === -1) levels.push(s.level); });
                     levels.forEach(lvl => {
-                        statsHtml += '<div style="font-size:8px;color:#8a6050;margin-top:3px;font-weight:bold">' + lvl + '</div>';
+                        statsHtml += '<div style="font-size:8px;color:#8a6050;margin-top:3px;font-weight:bold">' + escapeHtml(lvl) + '</div>';
                         charSpells.filter(s => s.level === lvl).forEach(s => {
-                            statsHtml += '<div style="font-size:9px;color:#c8b070;padding:1px 0 1px 6px">\u2022 ' + s.name + '</div>';
+                            statsHtml += '<div style="font-size:9px;color:#c8b070;padding:1px 0 1px 6px">\u2022 ' + escapeHtml(s.name) + '</div>';
                         });
                     });
                     statsHtml += '</div>';
@@ -3254,7 +3272,7 @@ ${fullText.slice(0, 30000)}`;
                 if (activeAbils.length > 0) {
                     statsHtml += '<div class="ability-section"><div class="ability-section-label">Abilities</div><div class="ability-grid">';
                     activeAbils.forEach(a => {
-                        statsHtml += '<button class="ability-btn" data-char="' + key + '" data-rest="' + (a.rest || 'long').toLowerCase() + '" data-max="' + a.max + '" data-used="0" data-ability="' + a.key + '" onclick="useAbility(this)">' + a.name + ' <span class="ability-count">' + a.max + '/' + a.max + '</span></button>';
+                        statsHtml += '<button class="ability-btn" data-char="' + safeKeyAttr + '" data-rest="' + escapeHtml((a.rest || 'long').toLowerCase()) + '" data-max="' + a.max + '" data-used="0" data-ability="' + escapeHtml(a.key) + '" onclick="useAbility(this)">' + escapeHtml(a.name) + ' <span class="ability-count">' + a.max + '/' + a.max + '</span></button>';
                     });
                     statsHtml += '</div></div>';
                 }
@@ -3264,13 +3282,13 @@ ${fullText.slice(0, 30000)}`;
                 if (passiveAbils.length > 0) {
                     statsHtml += '<div class="ability-section"><div class="ability-section-label">Passive Features</div><div class="ability-grid">';
                     passiveAbils.forEach(a => {
-                        statsHtml += '<button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="' + (a.desc || '') + '">' + a.name + '</button>';
+                        statsHtml += '<button class="ability-btn" style="cursor:default;opacity:0.7" disabled title="' + escapeHtml(a.desc || '') + '">' + escapeHtml(a.name) + '</button>';
                     });
                     statsHtml += '</div></div>';
                 }
 
                 // Inventory
-                statsHtml += '<div class="ability-section"><div class="ability-section-label">Inventory</div><div id="dm-inv-' + key + '" style="font-size:10px;color:#5a5040;font-style:italic;padding:2px 0">(empty)</div></div>';
+                statsHtml += '<div class="ability-section"><div class="ability-section-label">Inventory</div><div id="dm-inv-' + safeKeyAttr + '" style="font-size:10px;color:#5a5040;font-style:italic;padding:2px 0">(empty)</div></div>';
 
                 details.innerHTML = statsHtml;
                 card.appendChild(header);
@@ -3934,8 +3952,20 @@ ${fullText.slice(0, 30000)}`;
 
         function escapeHtml(str) {
             const div = document.createElement('div');
-            div.textContent = str;
+            div.textContent = str == null ? '' : String(str);
             return div.innerHTML;
+        }
+
+        function escapeJsAttr(str) {
+            return escapeHtml(JSON.stringify(str == null ? '' : String(str)));
+        }
+
+        function escapeCssValue(str) {
+            const value = str == null ? '' : String(str);
+            if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+                return CSS.escape(value);
+            }
+            return value.replace(/["\\]/g, '\\$&');
         }
 
         // =========================================================
@@ -5128,7 +5158,6 @@ ${fullText.slice(0, 30000)}`;
                 '.add-npc',
                 '.btn-save',
                 '.undo-btn',
-                '.dice-confirm-btn',
                 '[onclick*="rollAll"]',
                 '[onclick*="spotifyToggle"]',
                 '[onclick*="spotifyPrev"]',
@@ -5143,7 +5172,6 @@ ${fullText.slice(0, 30000)}`;
                 '[onclick*="cancelDiceConfirmation"]',
                 '.chip-remove',
                 '.portion-delete',
-                '.npc-item',
                 '.rest-btn',
                 '.ability-btn',
                 '.spell-slot-pip',

@@ -1288,19 +1288,19 @@
             container.innerHTML = '<div style="text-align:center;color:#4a4030;font-size:10px;padding:12px">No characters configured. Use DM Setup to add character sheets.</div>';
             return;
         }
-        const clsIconMap = { bard: '\u266A', rogue: '\u2694', warlock: '\u2727', wizard: '\u2727', cleric: '\u2720', fighter: '\u2694', ranger: '\u2694', paladin: '\u2694', monk: '\u25C9', druid: '\u2726', sorcerer: '\u2727', barbarian: '\u2692' };
-        Object.entries(CHARS).forEach(([key, c]) => {
-            const btn = document.createElement('button');
-            btn.className = 'select-card';
-            const clsLower = (c.cls || '').toLowerCase();
-            const icon = Object.entries(clsIconMap).find(([k]) => clsLower.includes(k))?.[1] || '\u2694';
-            btn.innerHTML =
-                '<div><div class="select-name">' + icon + ' ' + c.name + '</div>' +
-                '<div class="select-class">' + c.cls + '</div></div>' +
-                '<span class="select-arrow">\u25B6</span>';
-            btn.onclick = () => { window.location.search = '?char=' + key; };
-            container.appendChild(btn);
-        });
+            const clsIconMap = { bard: '\u266A', rogue: '\u2694', warlock: '\u2727', wizard: '\u2727', cleric: '\u2720', fighter: '\u2694', ranger: '\u2694', paladin: '\u2694', monk: '\u25C9', druid: '\u2726', sorcerer: '\u2727', barbarian: '\u2692' };
+            Object.entries(CHARS).forEach(([key, c]) => {
+                const btn = document.createElement('button');
+                btn.className = 'select-card';
+                const clsLower = (c.cls || '').toLowerCase();
+                const icon = Object.entries(clsIconMap).find(([k]) => clsLower.includes(k))?.[1] || '\u2694';
+                btn.innerHTML =
+                    '<div><div class="select-name">' + icon + ' ' + escapeHtml(c.name || '') + '</div>' +
+                    '<div class="select-class">' + escapeHtml(c.cls || '') + '</div></div>' +
+                    '<span class="select-arrow">\u25B6</span>';
+                btn.onclick = () => { window.location.search = '?char=' + key; };
+                container.appendChild(btn);
+            });
     }
 
     function goBack() {
@@ -1841,7 +1841,6 @@
         const breakdownId= zoneId === 'atk' ? 'atkResultBreakdown': 'dmgResultBreakdown';
         const barId      = zoneId === 'atk' ? 'atkResultBar'      : 'dmgResultBar';
         const typeLabel  = zoneId === 'atk' ? 'Event 1' : 'Event 2';
-        const typeLabel  = zoneId === 'atk' ? 'Event 1' : 'Event 2';
 
         const total  = rolls.reduce((s, r) => s + r.result, 0);
         const isCrit = zoneId === 'atk' && rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
@@ -2044,7 +2043,7 @@
 
                 if (pending) {
                     const sign = pending.delta >= 0 ? '+' : '';
-                    nameEl.innerHTML = '(' + item.amount + ') ' + item.name +
+                    nameEl.innerHTML = '(' + item.amount + ') ' + escapeHtml(item.name || '') +
                         ' <span class="inv-delta">(' + sign + pending.delta + ')</span>';
                 } else {
                     nameEl.textContent = item.name;
@@ -2171,6 +2170,12 @@
     // =========================================================
     // HELPERS
     // =========================================================
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str == null ? '' : String(str);
+        return div.innerHTML;
+    }
+
     function fmtMod(mod) {
         return mod >= 0 ? '+' + mod : String(mod);
     }
