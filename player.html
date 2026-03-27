@@ -751,6 +751,18 @@
         }
         .inv-amt-btn:active { background: #4a2030; }
         .inv-amt-display { font-size: 13px; color: #c4a44e; min-width: 28px; text-align: center; }
+        .inv-delta-input {
+            width: 36px;
+            background: #0e0a0c;
+            border: 1.5px solid #4a2030;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 3px 2px;
+            outline: none;
+            text-align: center;
+        }
+        .inv-delta-input::-webkit-inner-spin-button { -webkit-appearance: none; }
         .inv-pending { color: #8c7a3a; }
         .inv-delta { color: #6b5a28; }
         .inv-cat-select {
@@ -2022,19 +2034,26 @@
                 if (!pending) {
                     const amtGroup = document.createElement('div');
                     amtGroup.className = 'inv-amount-group';
-                    const minusBtn = document.createElement('button');
-                    minusBtn.className = 'inv-amt-btn';
-                    minusBtn.textContent = '\u2212';
-                    minusBtn.onclick = () => adjustAmount(key, item.name, item.amount, -1);
                     const amtDisplay = document.createElement('span');
                     amtDisplay.className = 'inv-amt-display';
                     amtDisplay.textContent = item.amount;
+                    const deltaInput = document.createElement('input');
+                    deltaInput.type = 'number';
+                    deltaInput.className = 'inv-delta-input';
+                    deltaInput.value = '1';
+                    deltaInput.min = '1';
+                    deltaInput.max = '9999';
+                    const minusBtn = document.createElement('button');
+                    minusBtn.className = 'inv-amt-btn';
+                    minusBtn.textContent = '\u2212';
+                    minusBtn.onclick = () => adjustAmount(key, item.name, item.amount, -(Math.max(1, parseInt(deltaInput.value) || 1)));
                     const plusBtn = document.createElement('button');
                     plusBtn.className = 'inv-amt-btn';
                     plusBtn.textContent = '+';
-                    plusBtn.onclick = () => adjustAmount(key, item.name, item.amount, 1);
-                    amtGroup.appendChild(minusBtn);
+                    plusBtn.onclick = () => adjustAmount(key, item.name, item.amount, Math.max(1, parseInt(deltaInput.value) || 1));
                     amtGroup.appendChild(amtDisplay);
+                    amtGroup.appendChild(minusBtn);
+                    amtGroup.appendChild(deltaInput);
                     amtGroup.appendChild(plusBtn);
                     row.appendChild(amtGroup);
                 }
