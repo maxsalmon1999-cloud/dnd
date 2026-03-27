@@ -6,15 +6,6 @@
     <title>D&D Player Screen</title>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
-    <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.155.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.155.0/examples/jsm/"
-      }
-    }
-    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -465,22 +456,6 @@
             background: transparent;
         }
 
-        /* Tick marks inside bar */
-        .hp-bar-ticks {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: repeating-linear-gradient(
-                90deg,
-                transparent,
-                transparent 8px,
-                rgba(0,0,0,0.15) 8px,
-                rgba(0,0,0,0.15) 9px
-            );
-            pointer-events: none;
-        }
 
         /* HP counter below bar */
         .hp-counter {
@@ -794,25 +769,75 @@
         /* ===================== DICE ===================== */
 
         /* 3D canvas wrapper */
-        .dice-canvas-wrap {
+        /* ===================== DICE STRIP ===================== */
+        .dice-strip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 6px;
+            border-top: 2px solid #4a2030;
+            background: #120c10;
+            flex-shrink: 0;
+        }
+
+        .dice-strip-label {
+            font-size: 10px;
+            font-weight: bold;
+            margin-right: 2px;
+            color: #8a6050;
+        }
+
+        .die-sym {
+            width: 36px;
+            height: 36px;
+            border: 1.5px solid #4a2030;
+            background: #1a1018;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
             position: relative;
-            width: 100%;
-            height: 260px;
-            background: #0a0608;
-            border: 2px solid #4a2030;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.9), inset 0 0 20px rgba(74,32,48,0.15);
-            border-radius: 0;
+        }
+
+        .die-sym canvas { image-rendering: pixelated; }
+
+        .die-sym .die-label {
+            position: absolute;
+            bottom: 1px;
+            right: 2px;
+            font-size: 7px;
+            font-weight: bold;
+            color: #8a6050;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .die-sym:hover .die-label { color: #c4a44e; }
+        .die-sym:hover { background: #2a1828; border-color: #c4a44e; }
+        .die-sym.dragging { opacity: 0.4; }
+
+        /* Player dice drop surface */
+        .player-dice-surface {
+            flex: 1;
+            min-height: 80px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 6px;
+            align-content: flex-start;
+            border: 2px dashed #2a1520;
             margin-bottom: 6px;
-            overflow: hidden;
+            position: relative;
+            overflow-y: auto;
         }
 
-        #diceCanvas {
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
+        .player-dice-surface.drag-over {
+            border-color: #6b2a3a;
+            background: #160e12;
         }
 
-        .dice-empty-hint {
+        .player-dice-hint {
             position: absolute;
             inset: 0;
             display: flex;
@@ -824,39 +849,28 @@
             pointer-events: none;
         }
 
-        /* Pool bar — shows what's queued */
-        .dice-pool-bar {
+        .dice-chip {
+            background: #1a1018;
+            border: 1.5px solid #4a2030;
+            padding: 2px 5px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: grab;
+            user-select: none;
             display: flex;
             align-items: center;
             gap: 4px;
-            flex-wrap: wrap;
-            padding: 3px 0 5px;
-            font-size: 9px;
-            color: #5a4048;
+            color: #b8a080;
         }
 
-        .pool-type-chip {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            background: #1a1018;
-            border: 1px solid #4a2030;
-            padding: 2px 5px;
-            color: #c4a44e;
-            font-weight: bold;
-        }
-
-        .pool-type-minus {
-            background: none;
-            border: none;
-            color: #5a4048;
-            cursor: pointer;
-            font-size: 12px;
-            line-height: 1;
-            padding: 0 1px;
-        }
-
-        .pool-type-minus:active { color: #e04040; }
+        .dice-chip.rolled { background: #c4a44e; color: #000; border-color: #c4a44e; }
+        .dice-chip .chip-pixel-die { image-rendering: pixelated; flex-shrink: 0; }
+        .dice-chip .chip-result { font-size: 11px; }
+        .dice-chip .chip-sides { font-size: 8px; color: #5a4048; }
+        .dice-chip.rolled .chip-sides { color: #5a3018; }
+        .dice-chip .chip-remove { cursor: pointer; font-size: 9px; margin-left: 1px; opacity: 0.6; }
+        .dice-chip .chip-remove:hover { opacity: 1; }
+        .dice-chip.dragging { opacity: 0.4; }
 
         /* Result bar */
         .dice-result-bar {
@@ -934,45 +948,6 @@
         }
 
         .clear-btn:active { background: #241820; }
-
-        /* Die picker at the bottom */
-        .die-picker {
-            border-top: 1.5px solid #2a1520;
-            padding-top: 6px;
-        }
-
-        .die-picker-label {
-            font-size: 8px;
-            color: #5a4048;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 5px;
-        }
-
-        .die-picker-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 3px;
-        }
-
-        .add-die-btn {
-            background: #1a1018;
-            border: 1.5px solid #4a2030;
-            box-shadow:
-                inset 1px 1px 0 rgba(107,26,42,0.3),
-                inset -1px -1px 0 rgba(14,10,12,0.5);
-            color: #8a6050;
-            font-family: inherit;
-            font-size: 10px;
-            font-weight: bold;
-            padding: 5px 0;
-            cursor: pointer;
-            flex: 1;
-            min-width: 28px;
-            text-align: center;
-        }
-
-        .add-die-btn:active { background: #2a1520; color: #c4a44e; border-color: #6b2a3a; }
 
         /* Roll history */
         .roll-history-row {
@@ -1076,7 +1051,6 @@
                             <div class="hp-wing"></div>
                             <div class="hp-wing-r"></div>
                             <div class="hp-bar-fill" id="hpBar" style="width:100%"></div>
-                            <div class="hp-bar-ticks"></div>
                         </div>
                         <div class="hp-counter" id="hpCounter">
                             <span id="hpCurrent">—</span><span class="hp-slash">/</span><span id="hpMaxLabel">—</span><span class="hp-label">&#10018; HP</span>
@@ -1128,23 +1102,16 @@
 
         <!-- DICE TAB -->
         <div class="tab-panel" id="tab-dice">
-            <div class="win-body">
-                <!-- 3D canvas -->
-                <div class="dice-canvas-wrap" id="diceCanvasWrap">
-                    <canvas id="diceCanvas"></canvas>
-                    <div class="dice-empty-hint" id="diceEmptyHint">&#9860; Add dice from below</div>
-                </div>
-
-                <!-- Pool bar: shows queued dice with − per type -->
-                <div class="dice-pool-bar" id="dicePoolBar" style="display:none">
-                    <span style="color:#3a3e52">Rolling:</span>
-                    <span id="dicePoolChips"></span>
+            <div class="win-body" style="padding:6px;display:flex;flex-direction:column;height:100%">
+                <!-- Drop surface -->
+                <div class="player-dice-surface" id="playerDiceSurface">
+                    <div class="player-dice-hint" id="playerDiceHint">&#9860; Drag dice here to roll</div>
                 </div>
 
                 <!-- Roll / Clear -->
                 <div class="dice-actions">
                     <button class="roll-all-btn" id="rollAllBtn" onclick="rollAll()" disabled>Roll</button>
-                    <button class="clear-btn" onclick="clearDice()">Clear</button>
+                    <button class="clear-btn" onclick="clearAllDice()">Clear</button>
                 </div>
 
                 <!-- Result -->
@@ -1156,10 +1123,16 @@
                 <!-- History -->
                 <div id="rollHistory"></div>
 
-                <!-- Picker -->
-                <div class="die-picker">
-                    <div class="die-picker-label">&#9860; Add a die</div>
-                    <div class="die-picker-row" id="diePickerRow"></div>
+                <!-- Dice strip -->
+                <div class="dice-strip">
+                    <span class="dice-strip-label">Dice:</span>
+                    <div class="die-sym" draggable="true" data-sides="4"></div>
+                    <div class="die-sym" draggable="true" data-sides="6"></div>
+                    <div class="die-sym" draggable="true" data-sides="8"></div>
+                    <div class="die-sym" draggable="true" data-sides="10"></div>
+                    <div class="die-sym" draggable="true" data-sides="12"></div>
+                    <div class="die-sym" draggable="true" data-sides="20"></div>
+                    <div class="die-sym" draggable="true" data-sides="100"></div>
                 </div>
             </div>
         </div>
@@ -1194,9 +1167,7 @@
     let charKey = null;
     let char = null;
     let currentHp = null;
-    let rollHistory   = [];
-    let dicePoolCounts = {};
-    let isRolling     = false;
+    let rollHistory = [];
 
     // =========================================================
     // INIT — load characters from Firebase, then proceed
@@ -1274,7 +1245,7 @@
         buildCoreStats();
         buildAbilityScores();
         buildSpecial();
-        buildDicePicker();
+        initDiceStrip();
         startFirebaseSync();
     }
 
@@ -1419,111 +1390,324 @@
     }
 
     // =========================================================
-    // DICE POOL (delegates to window.DiceEngine set up by the
-    // Three.js module further down the page)
+    // PIXEL ART DICE SYSTEM
     // =========================================================
-    function buildDicePicker() {
-        const row = document.getElementById('diePickerRow');
-        [4, 6, 8, 10, 12, 20, 100].forEach(sides => {
-            const btn = document.createElement('button');
-            btn.className = 'add-die-btn';
-            btn.textContent = 'd' + sides;
-            btn.onclick = () => addDie(sides);
-            row.appendChild(btn);
+    const PX = 2;
+    const C = {
+        outline: '#5a5040', outlineDim: '#4a4030', face: '#0d0b08', faceLight: '#12100c',
+        dot: '#c4a44e', dotDim: '#6a5e48', text: '#c4a44e', textDim: '#6a5e48',
+    };
+    const CI = {
+        outline: '#090c10', outlineDim: '#6a5030', face: '#c4a44e', faceLight: '#b89840',
+        dot: '#090c10', dotDim: '#5a4020', text: '#090c10', textDim: '#5a4020',
+    };
+
+    function px(ctx, x, y, color) { ctx.fillStyle = color; ctx.fillRect(x * PX, y * PX, PX, PX); }
+
+    function drawD4(ctx, frame, rolled, value, inv) {
+        const p = inv ? CI : C; const f = frame % 4;
+        const oc = rolled ? p.outline : p.outlineDim, fc = p.face, tc = rolled ? p.text : p.textDim;
+        ctx.clearRect(0, 0, 32, 32);
+        const offY = [0, -1, 0, 1][f];
+        for (let row = 0; row < 10; row++) {
+            const half = Math.floor(row * 0.7);
+            for (let col = 7 - half; col <= 8 + half; col++) px(ctx, col, 4 + row + offY, fc);
+        }
+        for (let row = 0; row < 10; row++) {
+            const half = Math.floor(row * 0.7);
+            px(ctx, 7 - half, 4 + row + offY, oc); px(ctx, 8 + half, 4 + row + offY, oc);
+        }
+        for (let col = 1; col <= 14; col++) px(ctx, col, 13 + offY, oc);
+        if (rolled && value != null) drawPixelNum(ctx, value, 7, 8 + offY, tc);
+    }
+
+    function drawD6(ctx, frame, rolled, value, inv) {
+        const p = inv ? CI : C; const f = frame % 4;
+        const oc = rolled ? p.outline : p.outlineDim, fc = p.face, dc = rolled ? p.dot : p.dotDim;
+        ctx.clearRect(0, 0, 32, 32);
+        const offX = [0, 1, 0, -1][f];
+        for (let y = 3; y <= 13; y++) for (let x = 3; x <= 13; x++) px(ctx, x + offX, y, fc);
+        for (let i = 3; i <= 13; i++) {
+            px(ctx, i + offX, 3, oc); px(ctx, i + offX, 13, oc);
+            px(ctx, 3 + offX, i, oc); px(ctx, 13 + offX, i, oc);
+        }
+        if (rolled && value != null) { drawPixelNum(ctx, value, 7 + offX, 7, dc); }
+        else { const dots = [[5,5],[8,8],[11,11],[5,11],[11,5],[8,5]][f % 3]; px(ctx, dots[0] + offX, dots[1], dc); }
+    }
+
+    function drawD8(ctx, frame, rolled, value, inv) {
+        const p = inv ? CI : C; const f = frame % 4;
+        const oc = rolled ? p.outline : p.outlineDim, fc = p.face, tc = rolled ? p.text : p.textDim;
+        ctx.clearRect(0, 0, 32, 32);
+        const rot = [0, 1, 0, -1][f];
+        for (let row = 0; row < 12; row++) {
+            const half = row < 6 ? row : 11 - row;
+            for (let col = 7 - half; col <= 8 + half; col++) px(ctx, col + rot, 2 + row, fc);
+            px(ctx, 7 - half + rot, 2 + row, oc); px(ctx, 8 + half + rot, 2 + row, oc);
+        }
+        if (rolled && value != null) drawPixelNum(ctx, value, 7 + rot, 7, tc);
+    }
+
+    function drawD10(ctx, frame, rolled, value, inv) {
+        const p = inv ? CI : C; const f = frame % 4;
+        const oc = rolled ? p.outline : p.outlineDim, fc = p.face, tc = rolled ? p.text : p.textDim;
+        ctx.clearRect(0, 0, 32, 32);
+        const offY = [0, -1, 0, 1][f];
+        for (let row = 0; row < 13; row++) {
+            const half = row < 5 ? row : Math.max(0, Math.floor((12 - row) * 1.2));
+            for (let col = 7 - half; col <= 8 + half; col++) px(ctx, col, 2 + row + offY, fc);
+            px(ctx, 7 - half, 2 + row + offY, oc); px(ctx, 8 + half, 2 + row + offY, oc);
+        }
+        if (rolled && value != null) drawPixelNum(ctx, value, 7, 7 + offY, tc);
+    }
+
+    function drawD12(ctx, frame, rolled, value, inv) {
+        const p = inv ? CI : C; const f = frame % 4;
+        const oc = rolled ? p.outline : p.outlineDim, fc = p.face, tc = rolled ? p.text : p.textDim;
+        ctx.clearRect(0, 0, 32, 32);
+        const rot = [0, 1, 0, -1][f];
+        const shape = [[7,8],[5,10],[4,11],[3,12],[2,13],[2,13],[2,13],[2,13],[3,12],[4,11],[4,11],[4,11]];
+        shape.forEach(([l, r], i) => {
+            const y = 2 + i, isFlat = i === 0 || i === shape.length - 1;
+            for (let x = l; x <= r; x++) px(ctx, x + rot, y, (isFlat || x === l || x === r) ? oc : fc);
         });
+        if (rolled && value != null) drawPixelNum(ctx, value, 7 + rot, 7, tc);
     }
 
-    function addDie(sides) {
-        if (isRolling) return;
-        dicePoolCounts[sides] = (dicePoolCounts[sides] || 0) + 1;
-        window.DiceEngine && window.DiceEngine.addDie(sides);
-        document.getElementById('diceEmptyHint').style.display = 'none';
-        document.getElementById('rollAllBtn').disabled = false;
-        updatePoolBar();
+    function drawD20(ctx, frame, rolled, value, inv) {
+        const p = inv ? CI : C; const f = frame % 4;
+        const oc = rolled ? p.outline : p.outlineDim, fc = p.face, tc = rolled ? p.text : p.textDim, hc = p.faceLight;
+        ctx.clearRect(0, 0, 32, 32);
+        const offY = [0, -1, 0, 1][f];
+        const shape = [[5,10],[3,12],[2,13],[2,13],[2,13],[2,13],[2,13],[2,13],[2,13],[2,13],[3,12],[5,10]];
+        shape.forEach(([l, r], i) => {
+            const y = 2 + i + offY, isFlat = i === 0 || i === shape.length - 1;
+            for (let x = l; x <= r; x++)
+                px(ctx, x, y, (isFlat || x === l || x === r) ? oc : (i < 5 ? hc : fc));
+        });
+        if (rolled && value != null) drawPixelNum(ctx, value, 7, 7 + offY, tc);
     }
 
-    function removeOneDie(sides) {
-        if (isRolling || !dicePoolCounts[sides]) return;
-        dicePoolCounts[sides]--;
-        if (dicePoolCounts[sides] === 0) delete dicePoolCounts[sides];
-        window.DiceEngine && window.DiceEngine.removeOne(sides);
-        updatePoolBar();
-        if (Object.keys(dicePoolCounts).length === 0) {
-            document.getElementById('diceEmptyHint').style.display = 'flex';
-            document.getElementById('rollAllBtn').disabled = true;
+    function drawD100(ctx, frame, rolled, value, inv) {
+        const p = inv ? CI : C; const f = frame % 4;
+        const oc = rolled ? p.outline : p.outlineDim, fc = p.face, tc = rolled ? p.text : p.textDim;
+        ctx.clearRect(0, 0, 32, 32);
+        const offX = [0, 1, 0, -1][f];
+        const cx1 = 6 + offX, cy1 = 8, cx2 = 10 + offX, cy2 = 8, r = 5;
+        for (let y = 1; y <= 15; y++) for (let x = 1; x <= 15; x++) {
+            const d1 = Math.sqrt((x-cx1)**2+(y-cy1)**2), d2 = Math.sqrt((x-cx2)**2+(y-cy2)**2);
+            if (d1 <= r || d2 <= r) {
+                if (Math.abs(d1-r) < 1.0 || Math.abs(d2-r) < 1.0) px(ctx, x, y, oc);
+                else px(ctx, x, y, fc);
+            }
+        }
+        if (rolled && value != null) drawPixelNum(ctx, value, 8 + offX, 8, tc);
+    }
+
+    const DIGITS = {
+        0:[0b111,0b101,0b101,0b101,0b111], 1:[0b010,0b110,0b010,0b010,0b111],
+        2:[0b111,0b001,0b111,0b100,0b111], 3:[0b111,0b001,0b111,0b001,0b111],
+        4:[0b101,0b101,0b111,0b001,0b001], 5:[0b111,0b100,0b111,0b001,0b111],
+        6:[0b111,0b100,0b111,0b101,0b111], 7:[0b111,0b001,0b010,0b010,0b010],
+        8:[0b111,0b101,0b111,0b101,0b111], 9:[0b111,0b101,0b111,0b001,0b111],
+    };
+
+    function drawPixelNum(ctx, num, cx, cy, color) {
+        const s = String(num); const totalW = s.length * 4 - 1;
+        let startX = cx - Math.floor(totalW / 2);
+        for (let d = 0; d < s.length; d++) {
+            const glyph = DIGITS[s[d]]; if (!glyph) continue;
+            for (let row = 0; row < 5; row++) for (let col = 0; col < 3; col++)
+                if (glyph[row] & (1 << (2 - col))) px(ctx, startX + col, cy - 2 + row, color);
+            startX += 4;
         }
     }
 
-    function clearDice() {
-        if (isRolling) return;
-        dicePoolCounts = {};
-        window.DiceEngine && window.DiceEngine.clearAll();
-        document.getElementById('diceEmptyHint').style.display = 'flex';
-        document.getElementById('rollAllBtn').disabled = true;
-        document.getElementById('dicePoolBar').style.display = 'none';
-        document.getElementById('diceResultBar').style.display = 'none';
+    const drawFns = { 4: drawD4, 6: drawD6, 8: drawD8, 10: drawD10, 12: drawD12, 20: drawD20, 100: drawD100 };
+    function drawDie(ctx, sides, frame, rolled, value, inv) { (drawFns[sides] || drawD6)(ctx, frame, rolled, value, inv); }
+
+    const FPS = 4;
+    let globalFrame = 0;
+    let animCanvases = [];
+
+    function registerAnim(canvas, sides, getRolled, getValue, getInv) {
+        animCanvases.push({ canvas, sides, getRolled, getValue, getInv: getInv || (() => false) });
+    }
+    function unregisterAnim(canvas) { animCanvases = animCanvases.filter(a => a.canvas !== canvas); }
+
+    setInterval(() => {
+        globalFrame++;
+        animCanvases.forEach(a => {
+            const ctx = a.canvas.getContext('2d');
+            const rolled = a.getRolled(), val = a.getValue(), inv = a.getInv();
+            drawDie(ctx, a.sides, rolled ? 0 : globalFrame, rolled, val, inv);
+        });
+    }, 1000 / FPS);
+
+    function initDiceStrip() {
+        const surface = document.getElementById('playerDiceSurface');
+        surface.addEventListener('dragover', e => { e.preventDefault(); surface.classList.add('drag-over'); });
+        surface.addEventListener('dragleave', () => surface.classList.remove('drag-over'));
+        surface.addEventListener('drop', e => {
+            e.preventDefault();
+            surface.classList.remove('drag-over');
+            const sides = parseInt(e.dataTransfer.getData('text/plain'));
+            if (sides) addDiceChip(sides);
+        });
+
+        document.querySelectorAll('.die-sym').forEach(die => {
+            const sides = parseInt(die.dataset.sides);
+            const c = document.createElement('canvas');
+            c.width = 32; c.height = 32;
+            c.style.width = '28px'; c.style.height = '28px';
+            die.appendChild(c);
+
+            const label = document.createElement('span');
+            label.className = 'die-label';
+            label.textContent = 'd' + sides;
+            die.appendChild(label);
+
+            let hovering = false;
+            die.addEventListener('mouseenter', () => { hovering = true; });
+            die.addEventListener('mouseleave', () => { hovering = false; });
+            registerAnim(c, sides, () => false, () => null, () => hovering);
+
+            die.addEventListener('dragstart', e => {
+                die.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', String(sides));
+            });
+            die.addEventListener('dragend', () => die.classList.remove('dragging'));
+        });
     }
 
-    function updatePoolBar() {
-        const bar   = document.getElementById('dicePoolBar');
-        const chips = document.getElementById('dicePoolChips');
-        const counts = Object.entries(dicePoolCounts);
-        if (counts.length === 0) { bar.style.display = 'none'; return; }
-        bar.style.display = 'flex';
-        chips.innerHTML = '';
-        counts.forEach(([sides, n]) => {
-            const chip = document.createElement('span');
-            chip.className = 'pool-type-chip';
-            chip.innerHTML =
-                `${n}× d${sides}` +
-                `<button class="pool-type-minus" onclick="removeOneDie(${sides})" title="Remove one d${sides}">−</button>`;
-            chips.appendChild(chip);
+    function addDiceChip(sides) {
+        const surface = document.getElementById('playerDiceSurface');
+        document.getElementById('playerDiceHint').style.display = 'none';
+
+        const chip = document.createElement('div');
+        chip.className = 'dice-chip';
+        chip.dataset.sides = sides;
+        chip.dataset.rolled = 'false';
+        chip.dataset.value = '';
+
+        const c = document.createElement('canvas');
+        c.className = 'chip-pixel-die';
+        c.width = 32; c.height = 32;
+        c.style.width = '22px'; c.style.height = '22px';
+        chip.appendChild(c);
+
+        registerAnim(c, sides,
+            () => chip.dataset.rolled === 'true',
+            () => chip.dataset.value ? parseInt(chip.dataset.value) : null,
+            () => chip.dataset.rolled === 'true'
+        );
+
+        const sidesLabel = document.createElement('span');
+        sidesLabel.className = 'chip-sides';
+        sidesLabel.textContent = 'd' + sides;
+        chip.appendChild(sidesLabel);
+
+        const resultSpan = document.createElement('span');
+        resultSpan.className = 'chip-result';
+        resultSpan.textContent = 'd' + sides;
+        chip.appendChild(resultSpan);
+
+        const removeSpan = document.createElement('span');
+        removeSpan.className = 'chip-remove';
+        removeSpan.title = 'Remove';
+        removeSpan.innerHTML = '&times;';
+        removeSpan.onclick = e => {
+            e.stopPropagation();
+            unregisterAnim(c);
+            chip.remove();
+            updateRollBtn();
+            checkDiceSurfaceEmpty();
+        };
+        chip.appendChild(removeSpan);
+
+        chip.draggable = true;
+        chip.addEventListener('dragstart', e => {
+            chip.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', String(sides));
+            setTimeout(() => { unregisterAnim(c); chip.remove(); updateRollBtn(); checkDiceSurfaceEmpty(); }, 0);
         });
+
+        surface.appendChild(chip);
+        updateRollBtn();
+    }
+
+    function checkDiceSurfaceEmpty() {
+        const chips = document.getElementById('playerDiceSurface').querySelectorAll('.dice-chip');
+        document.getElementById('playerDiceHint').style.display = chips.length === 0 ? 'flex' : 'none';
+    }
+
+    function updateRollBtn() {
+        const unrolled = document.getElementById('playerDiceSurface').querySelectorAll('.dice-chip[data-rolled="false"]');
+        document.getElementById('rollAllBtn').disabled = unrolled.length === 0;
+    }
+
+    function clearAllDice() {
+        const surface = document.getElementById('playerDiceSurface');
+        surface.querySelectorAll('.dice-chip canvas').forEach(c => unregisterAnim(c));
+        surface.querySelectorAll('.dice-chip').forEach(c => c.remove());
+        document.getElementById('playerDiceHint').style.display = 'flex';
+        document.getElementById('rollAllBtn').disabled = true;
+        document.getElementById('diceResultBar').style.display = 'none';
     }
 
     // =========================================================
     // ROLLING
     // =========================================================
     function rollAll() {
-        if (isRolling || Object.keys(dicePoolCounts).length === 0) return;
-        isRolling = true;
-        document.getElementById('rollAllBtn').disabled = true;
-        document.getElementById('diceResultBar').style.display = 'none';
+        const surface = document.getElementById('playerDiceSurface');
+        const unrolled = [...surface.querySelectorAll('.dice-chip[data-rolled="false"]')];
+        if (unrolled.length === 0) return;
 
-        // Pre-compute all results
-        const rolls = [];
-        Object.entries(dicePoolCounts).forEach(([sides, n]) => {
-            for (let i = 0; i < n; i++) {
-                rolls.push({ sides: +sides, result: Math.floor(Math.random() * +sides) + 1 });
+        const tickRate = 1000 / FPS;
+        let elapsed = 0;
+        const interval = setInterval(() => {
+            elapsed += tickRate;
+            unrolled.forEach(chip => {
+                const sides = parseInt(chip.dataset.sides);
+                chip.dataset.value = Math.floor(Math.random() * sides) + 1;
+                chip.querySelector('.chip-result').textContent = chip.dataset.value;
+            });
+            if (elapsed >= 600) {
+                clearInterval(interval);
+                const rolls = [];
+                unrolled.forEach(chip => {
+                    const sides = parseInt(chip.dataset.sides);
+                    const result = Math.floor(Math.random() * sides) + 1;
+                    chip.dataset.rolled = 'true';
+                    chip.dataset.value = result;
+                    chip.classList.add('rolled');
+                    chip.querySelector('.chip-result').textContent = result;
+                    rolls.push({ sides, result });
+                });
+                updateRollBtn();
+                showResults(rolls);
             }
-        });
-
-        // Hand off to physics engine; it calls back when settled
-        window.DiceEngine.throwAll(rolls, () => {
-            showResults(rolls);
-            isRolling = false;
-            document.getElementById('rollAllBtn').disabled = false;
-        });
+        }, tickRate);
     }
 
     function showResults(rolls) {
         const total = rolls.reduce((s, r) => s + r.result, 0);
-        const isTotalCrit = rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
-        const isTotalFail = rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 1;
+        const isCrit = rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
+        const isFail = rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 1;
 
         const totalEl = document.getElementById('diceResultTotal');
         totalEl.textContent = total;
-        totalEl.className = 'dice-result-total' + (isTotalCrit ? ' crit' : isTotalFail ? ' fail' : '');
+        totalEl.className = 'dice-result-total' + (isCrit ? ' crit' : isFail ? ' fail' : '');
 
         const breakdown = rolls.map(r => `d${r.sides}:${r.result}`).join('  ');
         document.getElementById('diceResultBreakdown').textContent =
             rolls.length > 1 ? breakdown + '  =  ' + total
-                             : (isTotalCrit ? 'Critical Hit!' : isTotalFail ? 'Critical Fail' : breakdown);
+                             : (isCrit ? 'Critical Hit!' : isFail ? 'Critical Fail' : breakdown);
         document.getElementById('diceResultBar').style.display = 'flex';
 
         const historyLabel = rolls.map(r => `d${r.sides}`).join('+');
-        const suffix = isTotalCrit ? ' CRIT!' : isTotalFail ? ' FAIL' : '';
-        rollHistory.unshift({ label: historyLabel, total, isTotalCrit, isTotalFail, suffix });
+        const suffix = isCrit ? ' CRIT!' : isFail ? ' FAIL' : '';
+        rollHistory.unshift({ label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
         if (rollHistory.length > 6) rollHistory.pop();
         renderRollHistory();
 
@@ -1816,351 +2000,6 @@
     // START
     // =========================================================
     init();
-</script>
-
-<!-- =========================================================
-     THREE.JS + CANNON-ES DICE ENGINE
-     Exposes window.DiceEngine = { addDie, removeOne, clearAll, throwAll }
-     ========================================================= -->
-<script type="module">
-import * as THREE from 'three';
-import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
-import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
-
-// ── Scene setup ─────────────────────────────────────────────
-const wrap     = document.getElementById('diceCanvasWrap');
-const canvas   = document.getElementById('diceCanvas');
-
-const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-renderer.shadowMap.enabled = true;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 300);
-camera.position.set(0, 18, 10);
-camera.lookAt(0, 0, 0);
-
-// Lights
-scene.add(new THREE.AmbientLight(0xfff5e0, 0.7));
-const sun = new THREE.PointLight(0xfff5e0, 1.2);
-sun.position.set(8, 20, 6);
-sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-scene.add(sun);
-
-// Dark table floor (receives shadows, barely visible)
-const floorMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
-    new THREE.ShadowMaterial({ opacity: 0.18 })
-);
-floorMesh.receiveShadow = true;
-floorMesh.rotation.x = -Math.PI / 2;
-floorMesh.position.y = -0.5;
-scene.add(floorMesh);
-
-// ── Physics world ────────────────────────────────────────────
-const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -20, 0) });
-world.allowSleep = true;
-world.defaultContactMaterial.restitution = 0.5;
-world.defaultContactMaterial.friction    = 0.4;
-
-const floorBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane() });
-floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1,0,0), -Math.PI/2);
-floorBody.position.y = -0.5;
-world.addBody(floorBody);
-
-// Invisible walls to keep dice in view
-[
-    { pos: [-9, 4, 0],  axis: [0,0,1], ang: -Math.PI/2 },
-    { pos: [ 9, 4, 0],  axis: [0,0,1], ang:  Math.PI/2 },
-    { pos: [ 0, 4,-7],  axis: [1,0,0], ang:  Math.PI/2 },
-    { pos: [ 0, 4, 7],  axis: [1,0,0], ang: -Math.PI/2 },
-].forEach(w => {
-    const b = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane() });
-    b.position.set(...w.pos);
-    b.quaternion.setFromAxisAngle(new CANNON.Vec3(...w.axis), w.ang);
-    world.addBody(b);
-});
-
-// ── Materials ────────────────────────────────────────────────
-const MAT_OUTER = new THREE.MeshStandardMaterial({ color: 0xede4c8, roughness: 0.25, metalness: 0.05 });
-const MAT_INNER = new THREE.MeshStandardMaterial({ color: 0x1a1410, roughness: 0, metalness: 0.9, side: THREE.DoubleSide });
-
-// ── d6 geometry (from tutorial — rounded box with carved pips) ─
-const D6_PARAMS = { segments: 28, edgeRadius: 0.07, notchRadius: 0.13, notchDepth: 0.1 };
-
-function createD6Outer() {
-    let geo = new THREE.BoxGeometry(1,1,1, D6_PARAMS.segments, D6_PARAMS.segments, D6_PARAMS.segments);
-    const pos = geo.attributes.position;
-    const sub = 0.5 - D6_PARAMS.edgeRadius;
-    const notchWave = v => {
-        v = (1 / D6_PARAMS.notchRadius) * v;
-        v = Math.PI * Math.max(-1, Math.min(1, v));
-        return D6_PARAMS.notchDepth * (Math.cos(v) + 1);
-    };
-    const notch = (a, b) => notchWave(a) * notchWave(b);
-    const off = 0.23;
-    for (let i = 0; i < pos.count; i++) {
-        let p = new THREE.Vector3().fromBufferAttribute(pos, i);
-        const s = new THREE.Vector3(Math.sign(p.x), Math.sign(p.y), Math.sign(p.z)).multiplyScalar(sub);
-        const d = new THREE.Vector3().subVectors(p, s);
-        if (Math.abs(p.x) > sub && Math.abs(p.y) > sub && Math.abs(p.z) > sub) {
-            d.normalize().multiplyScalar(D6_PARAMS.edgeRadius); p = s.clone().add(d);
-        } else if (Math.abs(p.x) > sub && Math.abs(p.y) > sub) {
-            d.z=0; d.normalize().multiplyScalar(D6_PARAMS.edgeRadius); p.x=s.x+d.x; p.y=s.y+d.y;
-        } else if (Math.abs(p.x) > sub && Math.abs(p.z) > sub) {
-            d.y=0; d.normalize().multiplyScalar(D6_PARAMS.edgeRadius); p.x=s.x+d.x; p.z=s.z+d.z;
-        } else if (Math.abs(p.y) > sub && Math.abs(p.z) > sub) {
-            d.x=0; d.normalize().multiplyScalar(D6_PARAMS.edgeRadius); p.y=s.y+d.y; p.z=s.z+d.z;
-        }
-        if      (p.y ===  .5) { p.y -= notch(p.x, p.z); }
-        else if (p.x ===  .5) { p.x -= notch(p.y+off,p.z+off); p.x -= notch(p.y-off,p.z-off); }
-        else if (p.z ===  .5) { p.z -= notch(p.x-off,p.y+off); p.z -= notch(p.x,p.y); p.z -= notch(p.x+off,p.y-off); }
-        else if (p.z === -.5) { p.z += notch(p.x+off,p.y+off); p.z += notch(p.x+off,p.y-off); p.z += notch(p.x-off,p.y+off); p.z += notch(p.x-off,p.y-off); }
-        else if (p.x === -.5) { p.x += notch(p.y+off,p.z+off); p.x += notch(p.y+off,p.z-off); p.x += notch(p.y,p.z); p.x += notch(p.y-off,p.z+off); p.x += notch(p.y-off,p.z-off); }
-        else if (p.y === -.5) { p.y += notch(p.x+off,p.z+off); p.y += notch(p.x+off,p.z); p.y += notch(p.x+off,p.z-off); p.y += notch(p.x-off,p.z+off); p.y += notch(p.x-off,p.z); p.y += notch(p.x-off,p.z-off); }
-        pos.setXYZ(i, p.x, p.y, p.z);
-    }
-    geo.deleteAttribute('normal'); geo.deleteAttribute('uv');
-    geo = BufferGeometryUtils.mergeVertices(geo);
-    geo.computeVertexNormals();
-    return geo;
-}
-
-function createD6Inner() {
-    const base = new THREE.PlaneGeometry(1 - 2*D6_PARAMS.edgeRadius, 1 - 2*D6_PARAMS.edgeRadius);
-    const o = 0.48;
-    return BufferGeometryUtils.mergeGeometries([
-        base.clone().translate(0,0,o), base.clone().translate(0,0,-o),
-        base.clone().rotateX(Math.PI/2).translate(0,-o,0), base.clone().rotateX(Math.PI/2).translate(0,o,0),
-        base.clone().rotateY(Math.PI/2).translate(-o,0,0), base.clone().rotateY(Math.PI/2).translate(o,0,0),
-    ], false);
-}
-
-// Cached d6 template mesh
-const d6Outer = new THREE.Mesh(createD6Outer(), MAT_OUTER);
-const d6Inner = new THREE.Mesh(createD6Inner(), MAT_INNER);
-d6Outer.castShadow = true;
-const D6_TEMPLATE = new THREE.Group();
-D6_TEMPLATE.add(d6Inner.clone(), d6Outer.clone());
-
-// ── Geometry map for non-d6 dice ─────────────────────────────
-function makePolyMesh(sides) {
-    let geo;
-    if      (sides === 4)   geo = new THREE.TetrahedronGeometry(0.78, 0);
-    else if (sides === 8)   geo = new THREE.OctahedronGeometry(0.72, 0);
-    else if (sides === 12)  geo = new THREE.DodecahedronGeometry(0.68, 0);
-    else if (sides === 20)  geo = new THREE.IcosahedronGeometry(0.72, 0);
-    else if (sides === 10 || sides === 100) {
-        // 10-sided pentagonal trapezohedron approximation
-        const pts = [], idx = [];
-        const n = 5;
-        for (let i = 0; i < n; i++) {
-            const a = (i / n) * Math.PI * 2;
-            const b = a + Math.PI / n;
-            pts.push(new THREE.Vector3(Math.cos(a)*0.65, 0.22, Math.sin(a)*0.65));
-            pts.push(new THREE.Vector3(Math.cos(b)*0.65, -0.22, Math.sin(b)*0.65));
-        }
-        pts.push(new THREE.Vector3(0, 0.75, 0));  // top pole (index 10)
-        pts.push(new THREE.Vector3(0, -0.75, 0)); // bottom pole (index 11)
-        const g = new THREE.BufferGeometry();
-        // Build faces
-        const verts = [];
-        const addTri = (a,b,c) => { verts.push(pts[a].x,pts[a].y,pts[a].z, pts[b].x,pts[b].y,pts[b].z, pts[c].x,pts[c].y,pts[c].z); };
-        for (let i = 0; i < n; i++) {
-            const t = i*2, t1 = ((i+1)%n)*2;
-            addTri(10, t, t1);      // top cap
-            addTri(11, t1+1, t+1);  // bottom cap
-            addTri(t, t+1, t1);     // upper side
-            addTri(t1, t+1, t1+1);  // lower side
-        }
-        g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-        g.computeVertexNormals();
-        geo = g;
-    }
-    geo.computeVertexNormals();
-    const mat = MAT_OUTER.clone();
-    if (sides === 20)  mat.color.set(0xd4c9a8); // slight tint variation
-    if (sides === 100) mat.color.set(0xc8d4c0);
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.castShadow = true;
-    return mesh;
-}
-
-// ── Result label sprite ──────────────────────────────────────
-function makeResultSprite(text, isCrit, isFail) {
-    const c = document.createElement('canvas');
-    c.width = 256; c.height = 256;
-    const ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, 256, 256);
-    // Dark background circle so number is readable over any die colour
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
-    ctx.beginPath(); ctx.arc(128, 128, 110, 0, Math.PI*2); ctx.fill();
-    ctx.font = 'bold 130px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = isCrit ? '#4aff4a' : isFail ? '#e04040' : '#ffffff';
-    ctx.fillText(text, 128, 128);
-    const tex = new THREE.CanvasTexture(c);
-    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
-    const sprite = new THREE.Sprite(mat);
-    sprite.scale.set(3.5, 3.5, 1);
-    return sprite;
-}
-
-// ── Die pool state ───────────────────────────────────────────
-const diceObjects = []; // [{sides, mesh, body, sprite?}]
-
-// ── Resize handler ───────────────────────────────────────────
-function resize() {
-    const w = wrap.clientWidth, h = wrap.clientHeight;
-    renderer.setSize(w, h, false);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-}
-resize();
-new ResizeObserver(resize).observe(wrap);
-
-// ── Render loop ──────────────────────────────────────────────
-let animating = false;
-function startRender() {
-    if (animating) return;
-    animating = true;
-    (function loop() {
-        world.fixedStep();
-        diceObjects.forEach(d => {
-            d.mesh.position.copy(d.body.position);
-            d.mesh.quaternion.copy(d.body.quaternion);
-            if (d.sprite) {
-                d.sprite.position.set(d.body.position.x, d.body.position.y + 2.2, d.body.position.z);
-            }
-        });
-        renderer.render(scene, camera);
-        requestAnimationFrame(loop);
-    })();
-}
-
-// ── Public API ───────────────────────────────────────────────
-function engineAddDie(sides) {
-    let mesh;
-    if (sides === 6) {
-        mesh = D6_TEMPLATE.clone();
-    } else {
-        mesh = makePolyMesh(sides);
-    }
-    // Park off-screen until thrown
-    mesh.position.set(999, 999, 999);
-    scene.add(mesh);
-
-    const bodyRadius = sides === 6 ? null : 0.72;
-    const body = new CANNON.Body({
-        mass: 1,
-        shape: sides === 6
-            ? new CANNON.Box(new CANNON.Vec3(0.5, 0.5, 0.5))
-            : new CANNON.Sphere(bodyRadius * 0.9),
-        sleepTimeLimit: 0.15,
-        linearDamping:  0.04,
-        angularDamping: 0.04,
-    });
-    body.position.set(999, 999, 999);
-    body.allowSleep = true;
-    world.addBody(body);
-
-    diceObjects.push({ sides, mesh, body, sprite: null, settled: false });
-    startRender();
-}
-
-function engineRemoveOne(sides) {
-    const idx = diceObjects.map(d=>d.sides).lastIndexOf(sides);
-    if (idx === -1) return;
-    const d = diceObjects.splice(idx, 1)[0];
-    scene.remove(d.mesh);
-    world.removeBody(d.body);
-    if (d.sprite) scene.remove(d.sprite);
-}
-
-function engineClearAll() {
-    diceObjects.forEach(d => {
-        scene.remove(d.mesh);
-        world.removeBody(d.body);
-        if (d.sprite) scene.remove(d.sprite);
-    });
-    diceObjects.length = 0;
-}
-
-function engineThrowAll(rolls, onSettled) {
-    // Remove any result sprites from previous throw
-    diceObjects.forEach(d => { if (d.sprite) { scene.remove(d.sprite); d.sprite = null; } d.settled = false; });
-
-    // Assign results to dice in order
-    rolls.forEach((r, i) => { if (diceObjects[i]) diceObjects[i].result = r.result; });
-
-    const total = diceObjects.length;
-    let settledCount = 0;
-
-    diceObjects.forEach((d, i) => {
-        d.body.wakeUp();
-        d.body.velocity.setZero();
-        d.body.angularVelocity.setZero();
-
-        // Drop from above, scattered across the table
-        const startX = (Math.random() - 0.5) * 10;
-        const startZ = (Math.random() - 0.5) *  7;
-        d.body.position.set(startX, 7 + i * 0.6, startZ);
-        d.mesh.position.copy(d.body.position);
-
-        // Random initial orientation
-        d.mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
-        d.body.quaternion.copy(d.mesh.quaternion);
-
-        // Strong tumbling angular velocity so dice spin a lot on the way down
-        d.body.angularVelocity.set(
-            (Math.random()-0.5)*25,
-            (Math.random()-0.5)*25,
-            (Math.random()-0.5)*25
-        );
-
-        // Small horizontal nudge so dice drift a little
-        d.body.applyImpulse(
-            new CANNON.Vec3((Math.random()-0.5)*3, 0, (Math.random()-0.5)*3),
-            new CANNON.Vec3(0, 0, 0)
-        );
-        d.body.allowSleep = true;
-
-        // Sleep listener — show result when settled
-        const onSleep = () => {
-            if (d.settled) return;
-            d.settled = true;
-            d.body.removeEventListener('sleep', onSleep);
-
-            const isCrit = d.sides === 20 && d.result === 20;
-            const isFail = d.sides === 20 && d.result === 1;
-            const sprite = makeResultSprite(String(d.result), isCrit, isFail);
-            sprite.position.set(d.body.position.x, d.body.position.y + 2.2, d.body.position.z);
-            scene.add(sprite);
-            d.sprite = sprite;
-
-            settledCount++;
-            if (settledCount === total) onSettled();
-        };
-        d.body.addEventListener('sleep', onSleep);
-
-        // Safety timeout — if physics never sleeps, force-settle after 6s
-        setTimeout(() => {
-            if (!d.settled) {
-                d.body.sleep();
-                onSleep();
-            }
-        }, 6000);
-    });
-}
-
-window.DiceEngine = {
-    addDie:   engineAddDie,
-    removeOne: engineRemoveOne,
-    clearAll:  engineClearAll,
-    throwAll:  engineThrowAll,
-};
 </script>
 </body>
 </html>
