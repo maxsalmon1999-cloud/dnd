@@ -3319,18 +3319,18 @@ ${fullText.slice(0, 30000)}`;
             const tc = rolled ? p.text : p.textDim;
             ctx.clearRect(0, 0, 32, 32);
             const rot = [0, 1, 0, -1][f];
-            const rows = [
-                [5,10],[4,11],[3,12],[2,13],[2,13],
-                [2,13],[2,13],[2,13],[3,12],[3,12],
-                [4,11],[5,10]
+            // Pentagon: pointed top, flat bottom
+            const shape = [
+                [7,8],[5,10],[4,11],[3,12],
+                [2,13],[2,13],[2,13],[2,13],
+                [3,12],[4,11],[4,11],[4,11]
             ];
-            rows.forEach((r, i) => {
-                for (let x = r[0]; x <= r[1]; x++) px(ctx, x + rot, 2 + i, fc);
-                px(ctx, r[0] + rot, 2 + i, oc);
-                px(ctx, r[1] + rot, 2 + i, oc);
+            shape.forEach(([l, r], i) => {
+                const y = 2 + i;
+                const isFlat = i === 0 || i === shape.length - 1;
+                for (let x = l; x <= r; x++)
+                    px(ctx, x + rot, y, (isFlat || x === l || x === r) ? oc : fc);
             });
-            for (let x = rows[0][0]; x <= rows[0][1]; x++) px(ctx, x + rot, 2, oc);
-            for (let x = rows[11][0]; x <= rows[11][1]; x++) px(ctx, x + rot, 13, oc);
             if (rolled && value != null) drawPixelNum(ctx, value, 7 + rot, 7, tc);
         }
 
@@ -3343,19 +3343,19 @@ ${fullText.slice(0, 30000)}`;
             const hc = p.faceLight;
             ctx.clearRect(0, 0, 32, 32);
             const offY = [0, -1, 0, 1][f];
-            for (let row = 0; row < 12; row++) {
-                const half = Math.floor(row * 0.65);
-                for (let col = 7 - half; col <= 8 + half; col++)
-                    px(ctx, col, 2 + row + offY, row < 6 ? hc : fc);
-                px(ctx, 7 - half, 2 + row + offY, oc);
-                px(ctx, 8 + half, 2 + row + offY, oc);
-            }
-            for (let col = 1; col <= 14; col++) px(ctx, col, 13 + offY, oc);
-            for (let i = 0; i < 5; i++) {
-                px(ctx, 5 + i, 7 + offY, oc);
-                px(ctx, 11 - i, 7 + offY, oc);
-            }
-            if (rolled && value != null) drawPixelNum(ctx, value, 7, 9 + offY, tc);
+            // Octagon: flat top AND flat bottom — clearly not a triangle
+            const shape = [
+                [5,10],[3,12],
+                [2,13],[2,13],[2,13],[2,13],[2,13],[2,13],[2,13],[2,13],
+                [3,12],[5,10]
+            ];
+            shape.forEach(([l, r], i) => {
+                const y = 2 + i + offY;
+                const isFlat = i === 0 || i === shape.length - 1;
+                for (let x = l; x <= r; x++)
+                    px(ctx, x, y, (isFlat || x === l || x === r) ? oc : (i < 5 ? hc : fc));
+            });
+            if (rolled && value != null) drawPixelNum(ctx, value, 7, 7 + offY, tc);
         }
 
         function drawD100(ctx, frame, rolled, value, inv) {
