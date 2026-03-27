@@ -2857,7 +2857,31 @@
                 }
             });
 
-            return { key, name, cls, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities };
+            // Parse known spells (from "Known Spells" section)
+            const spells = [];
+            let inSpells = false;
+            let currentSpellLevel = '';
+            lines.forEach(line => {
+                if (/^[^\x00-\x7F]/.test(line)) {
+                    inSpells = /Known Spells/i.test(line);
+                    return;
+                }
+                if (!inSpells) return;
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                // Detect level headers like "Cantrips:", "1st Level:", "Spells Known:"
+                if (/^(Cantrips|(\d+)\w*\s+Level|Spells Known)/i.test(trimmed)) {
+                    currentSpellLevel = trimmed.replace(/:.*/, '').replace(/\s*\(.*\)/, '');
+                    return;
+                }
+                // Detect spell entries starting with bullet
+                if (/^[•\-]/.test(trimmed)) {
+                    const spellText = trimmed.replace(/^[•\-]\s*/, '');
+                    if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
+                }
+            });
+
+            return { key, name, cls, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells };
         }
 
         function ordinal(n) {
@@ -3151,6 +3175,21 @@ ${fullText.slice(0, 30000)}`;
                             statsHtml += '<div class="spell-slot-pip" data-char="' + key + '" data-slot="' + slot.key + '" data-idx="' + i + '" onclick="toggleSlot(this)"></div>';
                         }
                         statsHtml += '</div>';
+                    });
+                    statsHtml += '</div>';
+                }
+
+                // Known spells
+                const charSpells = c.spells || [];
+                if (charSpells.length > 0) {
+                    statsHtml += '<div class="ability-section"><div class="ability-section-label">Known Spells</div>';
+                    const levels = [];
+                    charSpells.forEach(s => { if (levels.indexOf(s.level) === -1) levels.push(s.level); });
+                    levels.forEach(lvl => {
+                        statsHtml += '<div style="font-size:8px;color:#8a6050;margin-top:3px;font-weight:bold">' + lvl + '</div>';
+                        charSpells.filter(s => s.level === lvl).forEach(s => {
+                            statsHtml += '<div style="font-size:9px;color:#c8b070;padding:1px 0 1px 6px">\u2022 ' + s.name + '</div>';
+                        });
                     });
                     statsHtml += '</div>';
                 }

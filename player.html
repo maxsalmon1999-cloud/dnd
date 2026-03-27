@@ -270,6 +270,19 @@
             background: linear-gradient(90deg, transparent, #4a2030, transparent);
         }
 
+        .spell-level-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #8a6050;
+            padding: 4px 0 2px;
+        }
+
+        .ability-chip.spell {
+            opacity: 0.8;
+            border-style: solid;
+            border-color: #3a2040;
+        }
+
         /* Ornate section divider */
         .section-divider {
             text-align: center;
@@ -1285,6 +1298,7 @@
                 stats: c.stats || {},
                 spellSlots: c.spellSlots || [],
                 abilities: c.abilities || [],
+                spells: c.spells || [],
             };
         });
 
@@ -1427,6 +1441,33 @@
                     row.appendChild(pip);
                 }
                 body.appendChild(row);
+            });
+
+            if (char.spells.length > 0 || activeAbils.length > 0) body.appendChild(makeDivider());
+        }
+
+        // Known spells
+        if (char.spells.length > 0) {
+            body.appendChild(makeSectionLabel('\u2728 Known Spells'));
+
+            const levels = [];
+            char.spells.forEach(s => { if (levels.indexOf(s.level) === -1) levels.push(s.level); });
+            levels.forEach(lvl => {
+                const lvlLabel = document.createElement('div');
+                lvlLabel.className = 'spell-level-label';
+                lvlLabel.textContent = lvl;
+                body.appendChild(lvlLabel);
+
+                const chips = document.createElement('div');
+                chips.className = 'ability-chips';
+                char.spells.filter(s => s.level === lvl).forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.className = 'ability-chip passive spell';
+                    btn.textContent = '\u2727 ' + s.name;
+                    btn.disabled = true;
+                    chips.appendChild(btn);
+                });
+                body.appendChild(chips);
             });
 
             if (activeAbils.length > 0) body.appendChild(makeDivider());
