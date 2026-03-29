@@ -71,7 +71,7 @@ Cutting Words
 Reaction — Subtract 1d6 from enemy's attack roll, ability check, or damage roll
 
 Jack of All Trades
-+1 to all non-proficient ability checks
+  +1 to all non-proficient ability checks
 
 Song of Rest
 During short rest, ally regains extra 1d6 HP

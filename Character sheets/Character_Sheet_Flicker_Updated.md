@@ -77,12 +77,12 @@ Action — Creatures in 10-ft cube make WIS save DC 13
 Charmed or Frightened until end of next turn
 
 Shapechanger (Changeling)
-Action — Change appearance and voice
-Form must be Medium humanoid
-Clothing/equipment not changed
+  Action — Change appearance and voice
+  Form must be Medium humanoid
+  Clothing/equipment not changed
 
 Changeling Instincts
-Proficiency in Deception and Insight
+  Proficiency in Deception and Insight
 
 Feywild Connection (Feylost Background)
 Advantage on checks to recall Feywild lore

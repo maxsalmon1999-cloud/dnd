@@ -60,14 +60,14 @@ Sneak Attack (2d6)
 Once per turn, extra damage with advantage or ally adjacent
 
 Cunning Action
-Bonus action: Dash, Disengage, or Hide
+  Bonus action: Dash, Disengage, or Hide
 
 Fast Hands (Thief)
-Bonus action: Use Object (ball bearings, caltrops, thieves' tools, etc.)
+  Bonus action: Use Object (ball bearings, caltrops, thieves' tools, etc.)
 
 Second-Story Work (Thief)
-Climbing costs no extra movement
-Running jump distance increases by 3 ft
+  Climbing costs no extra movement
+  Running jump distance increases by 3 ft
 
 Lucky (Halfling)
 Reroll natural 1s on attacks, ability checks, or saving throws
