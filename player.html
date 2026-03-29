@@ -703,6 +703,62 @@
             opacity: 0.7;
         }
 
+        .chip-info {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 6px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 1px solid #6b2a3a;
+            color: #6a5040;
+            font-size: 11px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .chip-info:hover {
+            border-color: #c4a44e;
+            color: #c8b070;
+        }
+
+        .ability-chip.passive {
+            cursor: default;
+        }
+
+        #ability-popup {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            background: #1a1018;
+            border: 1px solid #6b2a3a;
+            border-top-color: #9b3a5a;
+            border-left-color: #9b3a5a;
+            border-bottom-color: #3a1520;
+            border-right-color: #3a1520;
+            padding: 10px 14px;
+            max-width: 260px;
+            font-family: inherit;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
+
+        #ability-popup .popup-name {
+            font-size: 12px;
+            color: #c4a44e;
+            font-weight: bold;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        #ability-popup .popup-desc {
+            font-size: 12px;
+            color: #8a7060;
+            line-height: 1.5;
+        }
+
         /* ===================== INVENTORY ===================== */
         .inv-list {
             min-height: 16px;
@@ -1826,6 +1882,52 @@
         });
     }
 
+    const ABILITY_DESCRIPTIONS = {
+        'Bardic Inspiration': 'Bonus action — Give an ally within 60 ft a 1d6. They can add it to one attack roll, ability check, or saving throw. 3\u00d7 / Long Rest.',
+        'Cutting Words': "Reaction — When a creature within 60 ft makes an attack, check, or damage roll, subtract a Bardic Inspiration die (1d6) from the result.",
+        'Jack of All Trades': "Add +1 (half proficiency bonus) to any ability check you're not already proficient in.",
+        'Song of Rest': "During a short rest, allies who hear you play regain an extra 1d6 HP when spending Hit Dice.",
+        'Fey Ancestry': "Advantage on saving throws against being charmed. Immune to magical sleep.",
+        'Fey Presence': "Action — Creatures in a 10-ft cube make a WIS save DC 13. On fail: charmed or frightened (your choice) until end of your next turn. 1\u00d7 / Short Rest.",
+        'Shapechanger': "Action — Change appearance and voice to any Medium humanoid form. Clothing and equipment are not changed.",
+        'Changeling Instincts': "Proficiency in Deception and Insight.",
+        'Feywild Connection': "Advantage on checks to recall Feywild lore.",
+        'Sneak Attack 2d6': "Once per turn, deal +2d6 extra damage when you have advantage or an ally is within 5 ft of the target. Requires a finesse or ranged weapon.",
+        'Cunning Action': "Bonus action — Take the Dash, Disengage, or Hide action.",
+        'Fast Hands': "Bonus action — Use an object (thieves' tools, ball bearings, caltrops, etc.).",
+        'Second-Story Work': "Climbing costs no extra movement. Running jump distance increases by 3 ft.",
+        'Lucky': "When you roll a 1 on an attack, ability check, or saving throw, you can reroll the die and must use the new result.",
+        'Brave': "Advantage on saving throws against being frightened.",
+        'Naturally Stealthy': "Can attempt to hide even when obscured only by a creature one size larger than you.",
+    };
+
+    function showAbilityPopup(el, name, desc) {
+        const popup = document.getElementById('ability-popup');
+        popup.querySelector('.popup-name').textContent = name;
+        popup.querySelector('.popup-desc').textContent = desc || 'No description available.';
+        popup.style.display = 'block';
+        const rect = el.getBoundingClientRect();
+        let top = rect.bottom + 8;
+        let left = rect.left;
+        if (left + 274 > window.innerWidth) left = Math.max(4, window.innerWidth - 274);
+        if (top + 100 > window.innerHeight) top = rect.top - popup.offsetHeight - 8;
+        popup.style.top = top + 'px';
+        popup.style.left = left + 'px';
+    }
+
+    function hideAbilityPopup() {
+        const popup = document.getElementById('ability-popup');
+        if (popup) popup.style.display = 'none';
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.ability-chip') && !e.target.closest('.chip-info')) hideAbilityPopup();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') hideAbilityPopup();
+    });
+
     function buildSpecial() {
         const body = document.getElementById('specialBody');
         body.innerHTML = '';
@@ -1926,11 +2028,20 @@
                 const icon = abilityIcons[a.name] || '\u2726';
                 btn.textContent = icon + ' ' + a.name + ' ';
                 btn.appendChild(countSpan);
-                btn.onclick = () => {
+                const infoBtn = document.createElement('span');
+                infoBtn.className = 'chip-info';
+                infoBtn.textContent = '?';
+                const aDesc = ABILITY_DESCRIPTIONS[a.name] || '';
+                infoBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showAbilityPopup(btn, a.name, aDesc);
+                });
+                btn.appendChild(infoBtn);
+                btn.addEventListener('click', () => {
                     if (btn.classList.contains('used')) return;
                     const currentUsed = parseInt(btn.dataset.currentUsed || '0') + 1;
                     db.ref('characters/' + charKey + '/abilities/' + a.key).set(currentUsed);
-                };
+                });
                 chips.appendChild(btn);
             });
             group.appendChild(chips);
@@ -1948,8 +2059,8 @@
                 btn.className = 'ability-chip passive';
                 const icon = abilityIcons[a.name] || '\u25C8';
                 btn.textContent = icon + ' ' + a.name;
-                btn.title = a.desc || '';
-                btn.disabled = true;
+                const pDesc = ABILITY_DESCRIPTIONS[a.name] || a.desc || '';
+                btn.addEventListener('click', () => showAbilityPopup(btn, a.name, pDesc));
                 chips.appendChild(btn);
             });
             group.appendChild(chips);
@@ -2643,5 +2754,6 @@
     // =========================================================
     init();
 </script>
+<div id="ability-popup"><div class="popup-name"></div><div class="popup-desc"></div></div>
 </body>
 </html>
