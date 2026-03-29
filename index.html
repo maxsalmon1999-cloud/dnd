@@ -3806,22 +3806,37 @@ ${fullText.slice(0, 30000)}`;
         }
 
         const ABILITY_DESCRIPTIONS = {
+            // ── Akwan (Bard) ──────────────────────────────────────────────
             'Bardic Inspiration': 'Bonus action — Give an ally within 60 ft a 1d6. They can add it to one attack roll, ability check, or saving throw. 3\u00d7 / Long Rest.',
-            'Cutting Words': "Reaction — When a creature within 60 ft makes an attack, check, or damage roll, subtract a Bardic Inspiration die (1d6) from the result.",
-            'Jack of All Trades': "Add +1 (half proficiency bonus) to any ability check you're not already proficient in.",
-            'Song of Rest': "During a short rest, allies who hear you play regain an extra 1d6 HP when spending Hit Dice.",
-            'Fey Ancestry': "Advantage on saving throws against being charmed. Immune to magical sleep.",
-            'Fey Presence': "Action — Creatures in a 10-ft cube make a WIS save DC 13. On fail: charmed or frightened (your choice) until end of your next turn. 1\u00d7 / Short Rest.",
-            'Shapechanger': "Action — Change appearance and voice to any Medium humanoid form. Clothing and equipment are not changed.",
-            'Changeling Instincts': "Proficiency in Deception and Insight.",
-            'Feywild Connection': "Advantage on checks to recall Feywild lore.",
-            'Sneak Attack 2d6': "Once per turn, deal +2d6 extra damage when you have advantage or an ally is within 5 ft of the target. Requires a finesse or ranged weapon.",
+            'Cutting Words': "Reaction — When a creature you can see within 60 ft makes an attack roll, ability check, or damage roll, expend a Bardic Inspiration die and subtract the result from the roll.",
+            'Jack of All Trades': "Add +1 (half proficiency bonus) to any ability check you're not already proficient in — including initiative.",
+            '+1 to all non-proficient ability checks': "Jack of All Trades: add +1 (half proficiency bonus) to any ability check you aren't already proficient in.",
+            'Song of Rest': "During a short rest, allies who can hear you play or sing regain an extra 1d6 HP whenever they spend a Hit Die to recover HP.",
+            'Fey Ancestry': "You have advantage on saving throws against being charmed, and magic can't put you to sleep.",
+
+            // ── Flicker (Warlock) ─────────────────────────────────────────
+            'Fey Presence': "Action — Each creature in a 10-ft cube originating from you must succeed on a WIS save (DC 13) or be charmed or frightened by you (your choice) until the end of your next turn. 1\u00d7 / Short Rest.",
+            'Shapechanger': "Action — Change your appearance and voice to resemble any Medium humanoid. Clothing and equipment are unchanged. A creature that touches you or studies you closely can make an Insight check against your Deception to detect the transformation.",
+            'Shapechanger (Changeling)': "Action — Change your appearance and voice to resemble any Medium humanoid. Clothing and equipment are unchanged. A creature that touches you or studies you closely can make an Insight check against your Deception to detect the transformation.",
+            'Changeling Instincts': "Your shapeshifting nature grants proficiency in Deception and one other skill (Insight).",
+            'Feywild Connection': "Your link to the Feywild grants advantage on Intelligence checks to recall information about the Feywild, its creatures, and related lore.",
+            'Feywild Connection (Feylost Background)': "Your link to the Feywild grants advantage on Intelligence checks to recall information about the Feywild, its creatures, and related lore.",
+
+            // ── Fiel (Rogue / Thief) ──────────────────────────────────────
+            'Sneak Attack': "Once per turn, deal extra damage when you have advantage on the attack roll, or when an ally is within 5 ft of your target and you don't have disadvantage. Requires a finesse or ranged weapon.",
+            'Sneak Attack (2d6)': "Once per turn, deal +2d6 extra damage when you have advantage on the attack roll, or when an ally is within 5 ft of your target and you don't have disadvantage. Requires a finesse or ranged weapon.",
+            'Sneak Attack 2d6': "Once per turn, deal +2d6 extra damage when you have advantage on the attack roll, or when an ally is within 5 ft of your target and you don't have disadvantage. Requires a finesse or ranged weapon.",
             'Cunning Action': "Bonus action — Take the Dash, Disengage, or Hide action.",
-            'Fast Hands': "Bonus action — Use an object (thieves' tools, ball bearings, caltrops, etc.).",
-            'Second-Story Work': "Climbing costs no extra movement. Running jump distance increases by 3 ft.",
-            'Lucky': "When you roll a 1 on an attack, ability check, or saving throw, you can reroll the die and must use the new result.",
-            'Brave': "Advantage on saving throws against being frightened.",
-            'Naturally Stealthy': "Can attempt to hide even when obscured only by a creature one size larger than you.",
+            'Fast Hands': "Bonus action — Use an object action (thieves' tools to disarm a trap or pick a lock, apply a potion, throw caltrops, etc.).",
+            'Fast Hands (Thief)': "Bonus action — Use an object action (thieves' tools to disarm a trap or pick a lock, apply a potion, throw caltrops, etc.).",
+            'Second-Story Work': "You've developed particular skills with the help of agility. Climbing no longer costs extra movement. When you make a running jump, the distance increases by 3 ft.",
+            'Second-Story Work (Thief)': "You've developed particular skills with the help of agility. Climbing no longer costs extra movement. When you make a running jump, the distance increases by 3 ft.",
+            'Lucky': "When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the die and must use the new result.",
+            'Lucky (Halfling)': "When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the die and must use the new result.",
+            'Brave': "You have advantage on saving throws against being frightened.",
+            'Brave (Halfling)': "You have advantage on saving throws against being frightened.",
+            'Naturally Stealthy': "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you.",
+            'Naturally Stealthy (Lightfoot Halfling)': "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you.",
         };
 
         function showAbilityPopup(el, name, desc) {
