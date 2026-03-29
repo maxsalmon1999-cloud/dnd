@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combat Map</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Geneva', 'Chicago', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            background: #0e0a0c;
+            background-image:
+                radial-gradient(ellipse at center, #150e12 0%, #0e0a0c 60%),
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(80,30,40,0.03) 2px, rgba(80,30,40,0.03) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(80,30,40,0.03) 2px, rgba(80,30,40,0.03) 4px);
+            color: #b8a080;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: unset;
+        }
+
+        /* ── MENU BAR ── */
+        .menu-bar {
+            background: linear-gradient(180deg, #1a1018 0%, #120c10 100%);
+            border-bottom: 3px solid #4a2030;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(107,26,42,0.3);
+            padding: 2px 12px;
+            display: flex; align-items: center; gap: 16px;
+            height: 22px; flex-shrink: 0;
+            font-size: 12px; font-weight: bold; color: #c4a44e;
+        }
+        .menu-bar span { cursor: default; }
+        .menu-bar .sep { color: #4a2030; margin: 0 2px; }
+        .menu-bar .loading-dot { color: #5a4048; font-size: 10px; font-weight: normal; animation: blink 1s step-start infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* ── MAIN LAYOUT ── */
+        .main-area { display: flex; flex: 1; min-height: 0; padding: 4px; gap: 4px; }
+
+        /* ── MAC WINDOW CHROME ── */
+        .mac-window {
+            background: #1a1018; border: 3px solid #4a2030;
+            display: flex; flex-direction: column;
+            box-shadow: inset 0 0 0 1px #2a1520, 2px 2px 0 #000, 0 0 8px rgba(0,0,0,0.6);
+            position: relative;
+        }
+        .mac-window::before, .mac-window::after {
+            content: ''; position: absolute; width: 16px; height: 16px; z-index: 5; pointer-events: none;
+        }
+        .mac-window::before { top: -2px; left: -2px; border-top: 3px solid #6b2a3a; border-left: 3px solid #6b2a3a; }
+        .mac-window::after  { top: -2px; right: -2px; border-top: 3px solid #6b2a3a; border-right: 3px solid #6b2a3a; }
+
+        .window-title {
+            background: linear-gradient(180deg, #2a1520 0%, #1a1018 50%, #2a1520 100%);
+            border-bottom: 2px solid #4a2030; padding: 2px 6px;
+            display: flex; align-items: center; height: 22px; flex-shrink: 0;
+        }
+        .window-title .close-box {
+            width: 14px; height: 14px; border: 1.5px solid #6b2a3a; background: #1a1018;
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .window-title .close-box::after { content: '\2020'; font-size: 9px; color: #6b2a3a; line-height: 1; }
+        .window-title .close-box:hover { background: #4a2030; }
+        .window-title .stripes {
+            flex: 1; height: 10px; margin: 0 5px;
+            background: repeating-linear-gradient(90deg, transparent 0px, transparent 2px, #3a1828 2px, #3a1828 3px);
+        }
+        .window-title .title-text { font-weight: bold; font-size: 11px; color: #c4a44e; letter-spacing: 0.05em; white-space: nowrap; }
+
+        /* ── MAP PANEL ── */
+        .map-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .map-panel .window-content {
+            flex: 1; background: #080608; overflow: hidden;
+            display: flex; align-items: center; justify-content: center; position: relative;
+        }
+        canvas#mapCanvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+        /* ── TOOLBAR ── */
+        .toolbar {
+            display: flex; gap: 3px; padding: 4px 6px;
+            background: #120c10; border-bottom: 2px solid #4a2030;
+            align-items: center; flex-shrink: 0;
+        }
+        .tool-btn {
+            font-size: 10px; font-family: inherit; padding: 2px 8px; background: #1a1018;
+            border: 1.5px solid #4a2030;
+            border-top-color: #6b2a3a; border-left-color: #6b2a3a;
+            border-bottom-color: #2a1520; border-right-color: #2a1520;
+            color: #c8b070; cursor: pointer; white-space: nowrap; letter-spacing: 0.03em;
+        }
+        .tool-btn:hover { background: #2a1828; }
+        .tool-btn:active, .tool-btn.active {
+            border-top-color: #2a1520; border-left-color: #2a1520;
+            border-bottom-color: #6b2a3a; border-right-color: #6b2a3a;
+            background: #120c10; color: #c4a44e;
+        }
+        .tool-sep { width: 1px; height: 14px; background: #4a2030; margin: 0 3px; }
+        .tool-label { font-size: 10px; color: #5a4048; margin-left: 4px; letter-spacing: 0.05em; }
+
+        /* ── CHARACTER TRAY ── */
+        .tray-panel { width: 140px; flex-shrink: 0; display: flex; flex-direction: column; }
+        .tray-section { flex: 1; background: #100c0e; overflow-y: auto; padding: 4px; display: flex; flex-direction: column; gap: 2px; }
+        .tray-group-label {
+            font-size: 8px; font-weight: bold; color: #5a4048; text-transform: uppercase; letter-spacing: 0.1em;
+            padding: 5px 2px 2px; border-top: 1px dotted #4a2030; margin-top: 2px;
+        }
+        .tray-group-label:first-child { border-top: none; margin-top: 0; padding-top: 2px; }
+        .token {
+            display: flex; align-items: center; gap: 5px; padding: 3px 5px;
+            border: 1.5px solid #4a2030;
+            border-top-color: #6b2a3a; border-left-color: #6b2a3a;
+            border-bottom-color: #2a1520; border-right-color: #2a1520;
+            background: #1a1018; cursor: grab; color: #c8b070; font-size: 10px;
+        }
+        .token:hover { background: #2a1828; }
+        .token:active { cursor: grabbing; }
+        .token-pip { width: 10px; height: 10px; flex-shrink: 0; }
+        .token-pip.player { background: #3a6caa; border: 1px solid #6a9cda; }
+        .token-pip.enemy  { background: #aa2a2a; border: 1px solid #da6a6a; }
+        .token-pip.npc    { background: #2a7a3a; border: 1px solid #6aaa7a; }
+        .token-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+
+        /* ── ADD NPC FOOTER ── */
+        .tray-footer { background: #120c10; border-top: 2px solid #4a2030; padding: 4px; flex-shrink: 0; }
+        .add-npc-label { font-size: 8px; font-weight: bold; color: #5a4048; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+        .add-npc-row { display: flex; gap: 3px; }
+        .add-npc-input {
+            flex: 1; font-size: 10px; font-family: inherit; background: #0e0a0c; color: #c8b070;
+            border: 1.5px solid #4a2030;
+            border-top-color: #2a1520; border-left-color: #2a1520;
+            border-bottom-color: #6b2a3a; border-right-color: #6b2a3a;
+            padding: 2px 4px; min-width: 0;
+        }
+        .add-npc-input:focus { outline: none; }
+        .add-npc-input::placeholder { color: #3a2828; }
+        .add-npc-btn {
+            font-size: 10px; font-family: inherit; padding: 2px 6px; background: #1a1018;
+            border: 1.5px solid #4a2030;
+            border-top-color: #6b2a3a; border-left-color: #6b2a3a;
+            border-bottom-color: #2a1520; border-right-color: #2a1520;
+            color: #c8b070; cursor: pointer;
+        }
+        .add-npc-btn:hover { background: #2a1828; }
+        .add-npc-btn:active { border-top-color: #2a1520; border-left-color: #2a1520; border-bottom-color: #6b2a3a; border-right-color: #6b2a3a; background: #120c10; }
+
+        /* ── DRAG GHOST ── */
+        .drag-ghost {
+            position: fixed; pointer-events: none; z-index: 9999;
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Geneva', 'Monaco', monospace; font-size: 8px; font-weight: bold;
+            border: 1.5px solid; opacity: 0.85;
+        }
+        .drag-ghost.player { background: #1a3060; border-color: #6a9cda; color: #b0d0ff; }
+        .drag-ghost.enemy  { background: #601010; border-color: #da6a6a; color: #ffc0c0; }
+        .drag-ghost.npc    { background: #10501a; border-color: #6aaa7a; color: #b0ffb0; }
+
+        /* ── CONTEXT MENU ── */
+        .context-menu {
+            position: fixed; background: #1a1018;
+            border: 1.5px solid #6b2a3a;
+            border-bottom-color: #2a1520; border-right-color: #2a1520;
+            z-index: 10000; min-width: 110px; box-shadow: 2px 2px 0 #000; display: none;
+        }
+        .context-menu.visible { display: block; }
+        .context-menu-item { padding: 4px 12px; color: #c8b070; cursor: pointer; font-size: 11px; font-family: inherit; }
+        .context-menu-item:hover { background: #c4a44e; color: #000; }
+        .context-menu-item.danger { color: #c06060; }
+        .context-menu-item.danger:hover { background: #802020; color: #ffc0c0; }
+        .ctx-divider { height: 1px; background: #4a2030; margin: 2px 0; }
+
+        /* ── EXPORT MODAL ── */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+            display: none; align-items: center; justify-content: center; z-index: 20000;
+        }
+        .modal-overlay.visible { display: flex; }
+        .modal-window {
+            background: #1a1018; border: 3px solid #4a2030;
+            box-shadow: inset 0 0 0 1px #2a1520, 4px 4px 0 #000;
+            display: flex; flex-direction: column;
+            width: 560px; max-height: 70vh; position: relative;
+        }
+        .modal-window::before { content: ''; position: absolute; top: -2px; left: -2px; width: 16px; height: 16px; border-top: 3px solid #6b2a3a; border-left: 3px solid #6b2a3a; pointer-events: none; }
+        .modal-window::after  { content: ''; position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; border-top: 3px solid #6b2a3a; border-right: 3px solid #6b2a3a; pointer-events: none; }
+        .modal-body {
+            flex: 1; overflow: auto; padding: 8px;
+            background: #0a080c;
+        }
+        .modal-textarea {
+            width: 100%; height: 100%; min-height: 300px;
+            background: transparent; border: none; outline: none; resize: none;
+            font-family: 'Geneva', 'Monaco', 'Courier New', monospace;
+            font-size: 10px; color: #c8b070; line-height: 1.5;
+        }
+        .modal-footer {
+            display: flex; gap: 4px; padding: 6px 8px;
+            background: #120c10; border-top: 2px solid #4a2030;
+            justify-content: flex-end;
+        }
+        .modal-hint {
+            flex: 1; font-size: 9px; color: #5a4048; align-self: center; letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="menu-bar">
+        <span>&#63743;</span>
+        <span>Combat Map</span>
+        <span class="sep">|</span>
+        <span id="menuStatus" class="loading-dot">Loading...</span>
+    </div>
+
+    <div class="main-area">
+        <div class="mac-window map-panel">
+            <div class="window-title">
+                <div class="close-box" onclick="window.location='index.html'"></div>
+                <div class="stripes"></div>
+                <div class="title-text">Battle Grid</div>
+                <div class="stripes"></div>
+            </div>
+            <div class="toolbar">
+                <button class="tool-btn active" id="btnMove">Move</button>
+                <button class="tool-btn" id="btnDraw">Draw Wall</button>
+                <button class="tool-btn" id="btnErase">Erase</button>
+                <div class="tool-sep"></div>
+                <button class="tool-btn" id="btnGrid">Grid: ON</button>
+                <div class="tool-sep"></div>
+                <button class="tool-btn" id="btnClear">Clear</button>
+                <div class="tool-sep"></div>
+                <button class="tool-btn" id="btnExport">Export State</button>
+                <div class="tool-label" id="toolLabel">MOVE</div>
+            </div>
+            <div class="window-content">
+                <canvas id="mapCanvas"></canvas>
+            </div>
+        </div>
+
+        <div class="mac-window tray-panel">
+            <div class="window-title">
+                <div class="stripes"></div>
+                <div class="title-text">Tokens</div>
+                <div class="stripes"></div>
+            </div>
+            <div class="tray-section" id="traySection"></div>
+            <div class="tray-footer">
+                <div class="add-npc-label">Add NPC</div>
+                <div class="add-npc-row">
+                    <input class="add-npc-input" id="addNpcInput" type="text" placeholder="Name..." maxlength="24">
+                    <button class="add-npc-btn" id="addNpcBtn">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" id="ctxRename">Rename...</div>
+        <div class="ctx-divider"></div>
+        <div class="context-menu-item danger" id="ctxRemove">Remove Token</div>
+    </div>
+
+    <!-- Export modal -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="mac-window modal-window">
+            <div class="window-title">
+                <div class="close-box" id="exportClose"></div>
+                <div class="stripes"></div>
+                <div class="title-text">Combat State Export</div>
+                <div class="stripes"></div>
+            </div>
+            <div class="modal-body">
+                <textarea class="modal-textarea" id="exportText" readonly spellcheck="false"></textarea>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-hint">Paste into Claude or any LLM prompt</div>
+                <button class="tool-btn" id="exportCopy">Copy</button>
+                <button class="tool-btn" id="exportDone">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ─────────────────────────────────────────────────────────────────────
+    //  FIREBASE
+    // ─────────────────────────────────────────────────────────────────────
+    firebase.initializeApp({
+        apiKey: "AIzaSyDdZfJ1J0VL9j0UMW5GujimRJISFaun8ls",
+        authDomain: "dnd-host.firebaseapp.com",
+        databaseURL: "https://dnd-host-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "dnd-host",
+        storageBucket: "dnd-host.firebasestorage.app",
+        messagingSenderId: "89992538920",
+        appId: "1:89992538920:web:dnd"
+    });
+    const db = firebase.database();
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  CANVAS / CONSTANTS
+    // ─────────────────────────────────────────────────────────────────────
+    const canvas = document.getElementById('mapCanvas');
+    const ctx    = canvas.getContext('2d');
+    const CELL = 32, COLS = 39, ROWS = 27;
+    const FT_PER_SQUARE = 5;
+    canvas.width  = COLS * CELL;
+    canvas.height = ROWS * CELL;
+
+    // Range bands in squares (Chebyshev / D&D 5e RAW: diagonals = 5ft)
+    const RANGES = [
+        { label: 'Melee 5ft',   sq: 1,  fill: 'rgba(106,156,218,0.18)', line: 'rgba(106,156,218,0.7)' },
+        { label: 'Reach 10ft',  sq: 2,  fill: 'rgba(106,156,218,0.09)', line: 'rgba(106,156,218,0.4)' },
+        { label: '30ft',        sq: 6,  fill: 'rgba(196,164,78,0.10)',  line: 'rgba(196,164,78,0.7)'  },
+        { label: '60ft',        sq: 12, fill: 'rgba(218,106,106,0.07)', line: 'rgba(218,106,106,0.6)' },
+    ];
+
+    const C = {
+        floor: '#0c080e', floorAlt: '#0e0a10',
+        grid: '#3a1828',
+        wall: '#2a1520', wallTop: '#6b2a3a', wallShadow: '#1a1018',
+        player: { fill: '#1a3060', border: '#6a9cda', text: '#b0d0ff' },
+        enemy:  { fill: '#601010', border: '#da6a6a', text: '#ffc0c0' },
+        npc:    { fill: '#10501a', border: '#6aaa7a', text: '#b0ffb0' },
+        selected: '#c4a44e',
+    };
+
+    let showGrid = true, currentTool = 'move', isDrawing = false, lastCell = null;
+    const walls = new Set();
+    let placedTokens = [], tokenIdCounter = 0;
+    let selectedToken = null;
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  DISTANCE + LOS
+    // ─────────────────────────────────────────────────────────────────────
+    // D&D 5e RAW: Chebyshev distance — diagonals cost the same as orthogonal
+    function dist(c1, r1, c2, r2) {
+        return Math.max(Math.abs(c2 - c1), Math.abs(r2 - r1));
+    }
+
+    // Bresenham LOS — returns true if no wall interrupts the straight line
+    function hasLOS(c1, r1, c2, r2) {
+        let x = c1, y = r1;
+        const dx = Math.abs(c2 - c1), dy = Math.abs(r2 - r1);
+        const sx = c1 < c2 ? 1 : -1, sy = r1 < r2 ? 1 : -1;
+        let err = dx - dy;
+        while (!(x === c2 && y === r2)) {
+            const e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x += sx; }
+            if (e2 <  dx) { err += dx; y += sy; }
+            if (x === c2 && y === r2) break;
+            if (walls.has(`${x},${y}`)) return false;
+        }
+        return true;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  RENDER
+    // ─────────────────────────────────────────────────────────────────────
+    function render() {
+        // Floor
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                ctx.fillStyle = (r + c) % 2 === 0 ? C.floor : C.floorAlt;
+                ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+            }
+        }
+
+        // Range overlay (drawn before grid so it sits under everything)
+        // Only cells with clear LOS to the selected token are highlighted.
+        if (selectedToken) {
+            const { col: sc, row: sr } = selectedToken;
+
+            // Pre-compute which cells are reachable (in range AND have LOS)
+            const reachable = new Set();
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (c === sc && r === sr) continue;
+                    if (walls.has(`${c},${r}`)) continue;
+                    if (hasLOS(sc, sr, c, r)) reachable.add(`${c},${r}`);
+                }
+            }
+
+            // Fill each range band (largest first so smaller bands paint over)
+            for (let i = RANGES.length - 1; i >= 0; i--) {
+                const band = RANGES[i];
+                ctx.fillStyle = band.fill;
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (!reachable.has(`${c},${r}`)) continue;
+                        if (dist(sc, sr, c, r) <= band.sq) {
+                            ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+                        }
+                    }
+                }
+            }
+
+            // Boundary outlines — edge of each band, only along reachable cells
+            for (const band of RANGES) {
+                ctx.strokeStyle = band.line;
+                ctx.lineWidth = 1;
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        if (!reachable.has(`${c},${r}`)) continue;
+                        const d = dist(sc, sr, c, r);
+                        if (d !== band.sq) continue;
+                        const x = c * CELL, y = r * CELL;
+                        const neighborIn = (nc, nr) => reachable.has(`${nc},${nr}`) && dist(sc, sr, nc, nr) <= band.sq;
+                        if (r === 0 || !neighborIn(c, r-1)) { ctx.beginPath(); ctx.moveTo(x, y + 0.5); ctx.lineTo(x + CELL, y + 0.5); ctx.stroke(); }
+                        if (r === ROWS-1 || !neighborIn(c, r+1)) { ctx.beginPath(); ctx.moveTo(x, y + CELL - 0.5); ctx.lineTo(x + CELL, y + CELL - 0.5); ctx.stroke(); }
+                        if (c === 0 || !neighborIn(c-1, r)) { ctx.beginPath(); ctx.moveTo(x + 0.5, y); ctx.lineTo(x + 0.5, y + CELL); ctx.stroke(); }
+                        if (c === COLS-1 || !neighborIn(c+1, r)) { ctx.beginPath(); ctx.moveTo(x + CELL - 0.5, y); ctx.lineTo(x + CELL - 0.5, y + CELL); ctx.stroke(); }
+                    }
+                }
+            }
+        }
+
+        // Grid
+        if (showGrid) {
+            ctx.strokeStyle = C.grid;
+            ctx.lineWidth = 1;
+            for (let c = 0; c <= COLS; c++) { ctx.beginPath(); ctx.moveTo(c * CELL + 0.5, 0); ctx.lineTo(c * CELL + 0.5, canvas.height); ctx.stroke(); }
+            for (let r = 0; r <= ROWS; r++) { ctx.beginPath(); ctx.moveTo(0, r * CELL + 0.5); ctx.lineTo(canvas.width, r * CELL + 0.5); ctx.stroke(); }
+        }
+
+        // Walls
+        for (const key of walls) {
+            const [c, r] = key.split(',').map(Number);
+            const x = c * CELL, y = r * CELL;
+            ctx.fillStyle = C.wall; ctx.fillRect(x, y, CELL, CELL);
+            ctx.fillStyle = C.wallTop; ctx.fillRect(x, y, CELL, 2); ctx.fillRect(x, y, 2, CELL);
+            ctx.fillStyle = C.wallShadow; ctx.fillRect(x, y + CELL - 2, CELL, 2); ctx.fillRect(x + CELL - 2, y, 2, CELL);
+        }
+
+        // LOS lines from selected token to all others
+        if (selectedToken) {
+            const x1 = selectedToken.col * CELL + CELL / 2;
+            const y1 = selectedToken.row * CELL + CELL / 2;
+            for (const tok of placedTokens) {
+                if (tok.id === selectedToken.id) continue;
+                const x2 = tok.col * CELL + CELL / 2;
+                const y2 = tok.row * CELL + CELL / 2;
+                const clear = hasLOS(selectedToken.col, selectedToken.row, tok.col, tok.row);
+                // Pixel dashed line
+                ctx.setLineDash([3, 3]);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = clear ? 'rgba(140,200,100,0.6)' : 'rgba(200,80,80,0.6)';
+                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+                ctx.setLineDash([]);
+                // Distance label at midpoint
+                const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+                const d = dist(selectedToken.col, selectedToken.row, tok.col, tok.row);
+                const ft = d * FT_PER_SQUARE;
+                ctx.fillStyle = clear ? 'rgba(140,200,100,0.9)' : 'rgba(200,80,80,0.9)';
+                ctx.font = "bold 8px 'Geneva','Monaco',monospace";
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(`${ft}ft`, mx, my - 6);
+            }
+        }
+
+        // Tokens
+        for (const tok of placedTokens) renderToken(tok);
+
+        // Range legend (top-left of canvas, only when token selected)
+        if (selectedToken) {
+            const lx = 6, ly = 6;
+            ctx.fillStyle = 'rgba(10,6,12,0.82)';
+            ctx.fillRect(lx - 2, ly - 2, 74, RANGES.length * 12 + 6);
+            ctx.font = "8px 'Geneva','Monaco',monospace";
+            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+            RANGES.forEach((band, i) => {
+                ctx.fillStyle = band.line;
+                ctx.fillRect(lx, ly + i * 12 + 2, 8, 8);
+                ctx.fillStyle = '#a09060';
+                ctx.fillText(band.label, lx + 12, ly + i * 12 + 1);
+            });
+        }
+    }
+
+    function renderToken(tok) {
+        const x = tok.col * CELL, y = tok.row * CELL;
+        const pal = C[tok.type];
+        const pad = 4;
+        const isSelected = selectedToken && selectedToken.id === tok.id;
+        // Drop shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(x + pad + 1, y + pad + 1, CELL - pad*2, CELL - pad*2);
+        // Fill
+        ctx.fillStyle = pal.fill;
+        ctx.fillRect(x + pad, y + pad, CELL - pad*2, CELL - pad*2);
+        // Bevel border
+        ctx.fillStyle = isSelected ? C.selected : pal.border;
+        ctx.fillRect(x + pad, y + pad, CELL - pad*2, 2);
+        ctx.fillRect(x + pad, y + pad, 2, CELL - pad*2);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(x + pad, y + CELL - pad - 2, CELL - pad*2, 2);
+        ctx.fillRect(x + CELL - pad - 2, y + pad, 2, CELL - pad*2);
+        // Selection indicator: extra outer glow pixels
+        if (isSelected) {
+            ctx.fillStyle = C.selected;
+            ctx.fillRect(x + pad - 2, y + pad - 2, CELL - pad*2 + 4, 1);
+            ctx.fillRect(x + pad - 2, y + CELL - pad + 1, CELL - pad*2 + 4, 1);
+            ctx.fillRect(x + pad - 2, y + pad - 2, 1, CELL - pad*2 + 4);
+            ctx.fillRect(x + CELL - pad + 1, y + pad - 2, 1, CELL - pad*2 + 4);
+        }
+        // Label
+        ctx.fillStyle = isSelected ? C.selected : pal.text;
+        ctx.font = "bold 8px 'Geneva','Monaco',monospace";
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(tok.name.substring(0, 3).toUpperCase(), x + CELL / 2, y + CELL / 2);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  TOOLBAR
+    // ─────────────────────────────────────────────────────────────────────
+    function setTool(t) {
+        currentTool = t;
+        if (t !== 'move') { selectedToken = null; }
+        ['btnMove','btnDraw','btnErase'].forEach(id => document.getElementById(id).classList.remove('active'));
+        ({ move: 'btnMove', draw: 'btnDraw', erase: 'btnErase' })[t] &&
+            document.getElementById(({ move: 'btnMove', draw: 'btnDraw', erase: 'btnErase' })[t]).classList.add('active');
+        document.getElementById('toolLabel').textContent = t.toUpperCase();
+        canvas.style.cursor = t === 'move' ? 'default' : 'crosshair';
+        render();
+    }
+    document.getElementById('btnMove').addEventListener('click',  () => setTool('move'));
+    document.getElementById('btnDraw').addEventListener('click',  () => setTool('draw'));
+    document.getElementById('btnErase').addEventListener('click', () => setTool('erase'));
+    document.getElementById('btnGrid').addEventListener('click', () => {
+        showGrid = !showGrid;
+        document.getElementById('btnGrid').textContent = `Grid: ${showGrid ? 'ON' : 'OFF'}`;
+        render();
+    });
+    document.getElementById('btnClear').addEventListener('click', () => {
+        if (!confirm('Clear all walls and tokens?')) return;
+        walls.clear(); placedTokens = []; selectedToken = null; render();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  EXPORT STATE
+    // ─────────────────────────────────────────────────────────────────────
+    function exportState() {
+        const tokens = placedTokens.map(tok => ({
+            name: tok.name,
+            type: tok.type,
+            col:  tok.col,
+            row:  tok.row,
+            position_ft: { x: tok.col * FT_PER_SQUARE, y: tok.row * FT_PER_SQUARE },
+        }));
+
+        const wallList = [...walls].map(k => {
+            const [c, r] = k.split(',').map(Number);
+            return { col: c, row: r };
+        });
+
+        // Pairwise distances
+        const distances = [];
+        for (let i = 0; i < tokens.length; i++) {
+            for (let j = i + 1; j < tokens.length; j++) {
+                const a = tokens[i], b = tokens[j];
+                const squares = dist(a.col, a.row, b.col, b.row);
+                const feet    = squares * FT_PER_SQUARE;
+                const los     = hasLOS(a.col, a.row, b.col, b.row);
+                distances.push({
+                    from: a.name,
+                    to:   b.name,
+                    squares,
+                    feet,
+                    in_melee_range: squares <= 1,
+                    in_reach_range: squares <= 2,
+                    in_30ft_range:  squares <= 6,
+                    in_60ft_range:  squares <= 12,
+                    has_line_of_sight: los,
+                });
+            }
+        }
+
+        const state = {
+            note: "1 square = 5 feet. Distance uses D&D 5e RAW (Chebyshev: diagonals = 5ft). LOS blocked by walls.",
+            grid: { cols: COLS, rows: ROWS, ft_per_square: FT_PER_SQUARE },
+            tokens,
+            walls: wallList,
+            distances,
+        };
+
+        return JSON.stringify(state, null, 2);
+    }
+
+    document.getElementById('btnExport').addEventListener('click', () => {
+        document.getElementById('exportText').value = exportState();
+        document.getElementById('exportModal').classList.add('visible');
+    });
+    document.getElementById('exportClose').addEventListener('click', () => document.getElementById('exportModal').classList.remove('visible'));
+    document.getElementById('exportDone').addEventListener('click',  () => document.getElementById('exportModal').classList.remove('visible'));
+    document.getElementById('exportCopy').addEventListener('click', () => {
+        navigator.clipboard.writeText(document.getElementById('exportText').value).then(() => {
+            const btn = document.getElementById('exportCopy');
+            btn.textContent = 'Copied!'; btn.classList.add('active');
+            setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('active'); }, 1200);
+        });
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  WALL DRAWING
+    // ─────────────────────────────────────────────────────────────────────
+    function cellAt(e) {
+        const rect = canvas.getBoundingClientRect();
+        return { col: Math.floor((e.clientX - rect.left) / CELL), row: Math.floor((e.clientY - rect.top) / CELL) };
+    }
+    canvas.addEventListener('mousedown', e => {
+        if (e.button !== 0 || currentTool === 'move') return;
+        isDrawing = true; applyTool(cellAt(e));
+    });
+    canvas.addEventListener('mousemove', e => {
+        if (!isDrawing) return;
+        const c = cellAt(e);
+        if (lastCell && c.col === lastCell.col && c.row === lastCell.row) return;
+        lastCell = c; applyTool(c);
+    });
+    window.addEventListener('mouseup', () => { isDrawing = false; lastCell = null; });
+    function applyTool({ col, row }) {
+        if (col < 0 || row < 0 || col >= COLS || row >= ROWS) return;
+        const key = `${col},${row}`;
+        if (currentTool === 'draw') walls.add(key);
+        if (currentTool === 'erase') { walls.delete(key); placedTokens = placedTokens.filter(t => !(t.col === col && t.row === row)); }
+        render();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  DRAG TRAY → CANVAS
+    // ─────────────────────────────────────────────────────────────────────
+    let dragData = null, dragGhost = null;
+
+    function bindToken(el) {
+        el.addEventListener('mousedown', e => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            dragData = { name: el.dataset.name, type: el.dataset.type };
+            dragGhost = document.createElement('div');
+            dragGhost.className = `drag-ghost ${dragData.type}`;
+            dragGhost.textContent = dragData.name.substring(0, 3).toUpperCase();
+            document.body.appendChild(dragGhost);
+            posGhost(e);
+        });
+    }
+    function posGhost(e) {
+        if (!dragGhost) return;
+        dragGhost.style.left = (e.clientX - 18) + 'px';
+        dragGhost.style.top  = (e.clientY - 18) + 'px';
+    }
+    window.addEventListener('mousemove', e => { if (dragData) posGhost(e); });
+    window.addEventListener('mouseup', e => {
+        if (!dragData) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left, y = e.clientY - rect.top;
+        if (x >= 0 && y >= 0 && x < canvas.width && y < canvas.height) {
+            const col = Math.floor(x / CELL), row = Math.floor(y / CELL);
+            if (!walls.has(`${col},${row}`)) {
+                const tok = { id: tokenIdCounter++, name: dragData.name, type: dragData.type, col, row };
+                placedTokens.push(tok);
+                render();
+            }
+        }
+        if (dragGhost) { dragGhost.remove(); dragGhost = null; }
+        dragData = null;
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  MOVE / SELECT PLACED TOKENS
+    //  Click = select (shows ranges). Drag = reposition.
+    // ─────────────────────────────────────────────────────────────────────
+    let potentialDrag = null;   // { tok, startX, startY }
+    let movingToken = null, movingGhost = null;
+
+    canvas.addEventListener('mousedown', e => {
+        if (e.button !== 0 || currentTool !== 'move') return;
+        const { col, row } = cellAt(e);
+        const tok = [...placedTokens].reverse().find(t => t.col === col && t.row === row);
+        if (!tok) {
+            // Click on empty space → deselect
+            selectedToken = null;
+            render();
+            return;
+        }
+        e.preventDefault();
+        potentialDrag = { tok, startX: e.clientX, startY: e.clientY };
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (potentialDrag && !movingToken) {
+            const dx = e.clientX - potentialDrag.startX;
+            const dy = e.clientY - potentialDrag.startY;
+            if (Math.sqrt(dx*dx + dy*dy) > 5) {
+                // Threshold crossed → start moving
+                movingToken = potentialDrag.tok;
+                placedTokens = placedTokens.filter(t => t.id !== movingToken.id);
+                render();
+                movingGhost = document.createElement('div');
+                movingGhost.className = `drag-ghost ${movingToken.type}`;
+                movingGhost.textContent = movingToken.name.substring(0, 3).toUpperCase();
+                document.body.appendChild(movingGhost);
+            }
+        }
+        if (movingToken && movingGhost) {
+            movingGhost.style.left = (e.clientX - 18) + 'px';
+            movingGhost.style.top  = (e.clientY - 18) + 'px';
+        }
+    });
+
+    window.addEventListener('mouseup', e => {
+        if (movingToken) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left, y = e.clientY - rect.top;
+            if (x >= 0 && y >= 0 && x < canvas.width && y < canvas.height) {
+                const col = Math.floor(x / CELL), row = Math.floor(y / CELL);
+                if (!walls.has(`${col},${row}`)) { movingToken.col = col; movingToken.row = row; }
+            }
+            placedTokens.push(movingToken);
+            // Keep selection on the moved token
+            if (selectedToken && selectedToken.id === movingToken.id) selectedToken = movingToken;
+            if (movingGhost) { movingGhost.remove(); movingGhost = null; }
+            movingToken = null;
+            render();
+        } else if (potentialDrag) {
+            // Was a click, not a drag → select / deselect
+            if (selectedToken && selectedToken.id === potentialDrag.tok.id) {
+                selectedToken = null;
+            } else {
+                selectedToken = potentialDrag.tok;
+            }
+            render();
+        }
+        potentialDrag = null;
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  RIGHT-CLICK MENU
+    // ─────────────────────────────────────────────────────────────────────
+    let contextToken = null;
+    const contextMenu = document.getElementById('contextMenu');
+    canvas.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        const { col, row } = cellAt(e);
+        const tok = [...placedTokens].reverse().find(t => t.col === col && t.row === row);
+        if (!tok) { contextMenu.classList.remove('visible'); return; }
+        contextToken = tok;
+        contextMenu.style.left = e.clientX + 'px';
+        contextMenu.style.top  = e.clientY + 'px';
+        contextMenu.classList.add('visible');
+    });
+    document.getElementById('ctxRename').addEventListener('click', () => {
+        if (!contextToken) return;
+        const name = prompt('Token name:', contextToken.name);
+        if (name && name.trim()) contextToken.name = name.trim();
+        contextMenu.classList.remove('visible'); render();
+    });
+    document.getElementById('ctxRemove').addEventListener('click', () => {
+        if (!contextToken) return;
+        if (selectedToken && selectedToken.id === contextToken.id) selectedToken = null;
+        placedTokens = placedTokens.filter(t => t.id !== contextToken.id);
+        contextMenu.classList.remove('visible'); contextToken = null; render();
+    });
+    document.addEventListener('mousedown', e => {
+        if (!contextMenu.contains(e.target)) contextMenu.classList.remove('visible');
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  TRAY BUILDER
+    // ─────────────────────────────────────────────────────────────────────
+    function makeTokenEl(name, type) {
+        const el = document.createElement('div');
+        el.className = 'token';
+        el.dataset.name = name;
+        el.dataset.type = type;
+        el.innerHTML = `<div class="token-pip ${type}"></div><div class="token-name">${name}</div>`;
+        bindToken(el);
+        return el;
+    }
+
+    function buildTray(players, enemies, npcs) {
+        const tray = document.getElementById('traySection');
+        tray.innerHTML = '';
+        const addGroup = (label, items, type) => {
+            if (!items.length) return;
+            const lbl = document.createElement('div');
+            lbl.className = 'tray-group-label';
+            lbl.textContent = label;
+            tray.appendChild(lbl);
+            items.forEach(name => tray.appendChild(makeTokenEl(name, type)));
+        };
+        addGroup('Players', players, 'player');
+        addGroup('Enemies', enemies, 'enemy');
+        addGroup('NPCs', npcs, 'npc');
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  ADD NPC
+    // ─────────────────────────────────────────────────────────────────────
+    function addCustomNpc(name) {
+        name = name.trim();
+        if (!name) return;
+        const tray = document.getElementById('traySection');
+        let npcHeader = [...tray.querySelectorAll('.tray-group-label')].find(el => el.textContent === 'NPCs');
+        if (!npcHeader) {
+            npcHeader = document.createElement('div');
+            npcHeader.className = 'tray-group-label';
+            npcHeader.textContent = 'NPCs';
+            tray.appendChild(npcHeader);
+        }
+        tray.appendChild(makeTokenEl(name, 'npc'));
+    }
+
+    const addNpcInput = document.getElementById('addNpcInput');
+    document.getElementById('addNpcBtn').addEventListener('click', () => { addCustomNpc(addNpcInput.value); addNpcInput.value = ''; addNpcInput.focus(); });
+    addNpcInput.addEventListener('keydown', e => { if (e.key === 'Enter') { addCustomNpc(addNpcInput.value); addNpcInput.value = ''; } });
+
+    // ─────────────────────────────────────────────────────────────────────
+    //  FIREBASE LOAD
+    // ─────────────────────────────────────────────────────────────────────
+    const PLACEHOLDER_PLAYERS = ['Fighter', 'Wizard', 'Rogue', 'Cleric'];
+    const PLACEHOLDER_ENEMIES = ['Goblin', 'Orc', 'Troll'];
+    const PLACEHOLDER_NPCS    = ['Merchant', 'Guard'];
+
+    async function loadTrayData() {
+        try {
+            const [charSnap, campSnap] = await Promise.all([
+                db.ref('characterSheets').once('value'),
+                db.ref('campaign').once('value'),
+            ]);
+            const chars = charSnap.val();
+            const camp  = campSnap.val();
+
+            let players = chars ? Object.values(chars).map(c => c.name.split(' ')[0]) : PLACEHOLDER_PLAYERS;
+
+            let enemies = PLACEHOLDER_ENEMIES;
+            if (camp && camp.encounters) {
+                const fromCamp = [...new Set(Object.values(camp.encounters).flatMap(e => e.enemies || []))];
+                if (fromCamp.length) enemies = fromCamp;
+            }
+
+            let npcs = PLACEHOLDER_NPCS;
+            if (camp && camp.npcs) {
+                const fromCamp = Object.values(camp.npcs).map(n => n.name).filter(Boolean);
+                if (fromCamp.length) npcs = fromCamp;
+            }
+
+            const hasCampaign = !!(camp && camp.meta);
+            const charCount   = chars ? Object.keys(chars).length : 0;
+            const parts = [];
+            if (charCount) parts.push(`${charCount} character${charCount > 1 ? 's' : ''}`);
+            if (hasCampaign) parts.push(camp.meta.name || 'campaign loaded');
+            const statusEl = document.getElementById('menuStatus');
+            statusEl.style.animation = 'none';
+            statusEl.textContent = parts.length ? parts.join(' \u00B7 ') : 'No data \u2014 placeholders';
+
+            buildTray(players, enemies, npcs);
+        } catch (err) {
+            const statusEl = document.getElementById('menuStatus');
+            statusEl.style.animation = 'none';
+            statusEl.textContent = 'Offline \u2014 placeholders';
+            buildTray(PLACEHOLDER_PLAYERS, PLACEHOLDER_ENEMIES, PLACEHOLDER_NPCS);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    render();
+    loadTrayData();
+    </script>
+</body>
+</html>
