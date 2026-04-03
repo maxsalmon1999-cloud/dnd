@@ -2627,6 +2627,7 @@
         if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         const WORKER_URL = 'https://dnd-anthropic-proxy.max-salmon1999.workers.dev';
         const API_MODEL = 'claude-opus-4-6';
+        const AI_ASSISTANT_NAME = 'The abominable intelligence';
         const API_PRICING = {
             'claude-opus-4-6': {
                 inputPerMillionUsd: 5,
@@ -4377,7 +4378,7 @@ ${fullText.slice(0, 30000)}`;
 
             const loadingEl = document.createElement('div');
             loadingEl.className = 'story-entry assistant';
-            loadingEl.innerHTML = '<div class="label">Dungeon Master</div><div class="text">…</div>';
+            loadingEl.innerHTML = '<div class="label">' + escapeHtml(AI_ASSISTANT_NAME) + '</div><div class="text">…</div>';
             storyDisplay.appendChild(loadingEl);
             storyDisplay.scrollTop = storyDisplay.scrollHeight;
 
@@ -4412,7 +4413,7 @@ ${fullText.slice(0, 30000)}`;
                 // Check for dice automation request
                 const diceRequest = parseDiceRequest(reply);
                 const cleanReply = stripDiceRequest(reply);
-                addStoryEntry('assistant', 'Dungeon Master', cleanReply, currentMode);
+                addStoryEntry('assistant', AI_ASSISTANT_NAME, cleanReply, currentMode);
 
                 if (diceRequest) {
                     if (diceRequest.confirmations && diceRequest.confirmations.length > 0) {
@@ -4423,7 +4424,7 @@ ${fullText.slice(0, 30000)}`;
                 }
             } catch (err) {
                 loadingEl.remove();
-                addStoryEntry('assistant', 'Dungeon Master', `[Error: ${err.message}]`, currentMode);
+                addStoryEntry('assistant', AI_ASSISTANT_NAME, `[Error: ${err.message}]`, currentMode);
             }
         }
 
