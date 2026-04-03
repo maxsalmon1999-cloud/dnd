@@ -2188,12 +2188,23 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
             padding: 4px 6px;
             background: #1a1018;
             border: 1px solid #2a1520;
             font-size: 10px;
             color: #b8a080;
         }
+        .char-delete-confirm {
+            flex: 0 0 100%;
+            display: none;
+            align-items: center;
+            gap: 4px;
+            padding-top: 4px;
+            font-size: 9px;
+            color: #a04040;
+        }
+        .char-delete-confirm.visible { display: flex; }
         .setup-char-row .char-info { flex: 1; }
         .setup-char-row .char-info strong { color: #c4a44e; }
         .setup-char-row .char-info small { color: #8a6050; margin-left: 6px; }
@@ -3223,15 +3234,19 @@ ${fullText.slice(0, 30000)}`;
             const row = document.querySelector('.setup-char-row[data-key="' + escapeCssValue(key) + '"]');
             if (!row) return;
             let confirm = row.querySelector('.char-delete-confirm');
-            if (confirm) { confirm.style.display = 'flex'; return; }
+            if (confirm) {
+                confirm.classList.add('visible');
+                confirm.querySelector('input').value = '';
+                confirm.querySelector('.setup-btn.danger').disabled = true;
+                return;
+            }
             confirm = document.createElement('div');
-            confirm.className = 'char-delete-confirm';
-            confirm.style.cssText = 'display:flex;align-items:center;gap:4px;margin-top:4px;font-size:9px;color:#a04040';
+            confirm.className = 'char-delete-confirm visible';
             confirm.innerHTML =
-                '<span>Type "delete":</span>' +
+                '<span>Type \u201cdelete\u201d:</span>' +
                 '<input type="text" class="setup-delete-input" oninput="this.nextElementSibling.disabled=this.value.trim().toLowerCase()!==\'delete\'">' +
                 '<button class="setup-btn danger" disabled onclick="executeCharDelete()">Confirm</button>' +
-                '<button class="setup-btn" onclick="this.parentElement.style.display=\'none\'">Cancel</button>';
+                '<button class="setup-btn" onclick="this.parentElement.classList.remove(\'visible\')">Cancel</button>';
             row.appendChild(confirm);
         }
 
