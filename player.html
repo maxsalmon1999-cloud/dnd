@@ -2704,8 +2704,8 @@
 
         if (!char.spells || char.spells.length === 0) return;
 
-        const cantrips = char.spells.filter(s => String(s.level).toLowerCase() === 'cantrip');
-        const spellList = char.spells.filter(s => String(s.level).toLowerCase() !== 'cantrip');
+        const cantrips = char.spells.filter(s => String(s.level).toLowerCase().startsWith('cantrip'));
+        const spellList = char.spells.filter(s => !String(s.level).toLowerCase().startsWith('cantrip'));
 
         const wrapper = document.createElement('div');
         wrapper.className = 'sheet-section-group';

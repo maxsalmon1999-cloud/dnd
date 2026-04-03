@@ -2973,7 +2973,7 @@
             }
 
             function isSectionHeader(line) {
-                return /^[^\x00-\x7F]/.test(line);
+                return /^[^\x00-\x7F]/.test(line) || /^#{1,3}\s+\S/.test(line);
             }
 
             // Parse abilities (look for "Xn / Y Rest" patterns)
@@ -3025,7 +3025,8 @@
             lines.forEach(line => {
                 if (isSectionHeader(line)) {
                     if (inSpecial) flushFeatureBlock();
-                    inSpecial = /Special Features/i.test(line);
+                    inSpecial = /(features?|traits?|invocations?|pact\s+boon|maneuvers?|fighting\s+style|expertise)/i.test(line)
+                                && !/\b(saving|proficiency|ability\s+(mod|score))\b/i.test(line);
                     return;
                 }
                 if (!inSpecial) return;
@@ -3038,26 +3039,28 @@
             });
             flushFeatureBlock();
 
-            // Parse known spells (from "Known Spells" section)
+            // Parse known spells — any section whose header contains "spell"
+            // but not "slot", "attack", or "save" (those are stat lines)
             const spells = [];
             let inSpells = false;
             let currentSpellLevel = '';
             lines.forEach(line => {
                 if (isSectionHeader(line)) {
-                    inSpells = /Known Spells/i.test(line);
+                    inSpells = /\bspells?\b/i.test(line) && !/\b(slot|attack|save)\b/i.test(line);
                     return;
                 }
                 if (!inSpells) return;
                 const trimmed = line.trim();
                 if (!trimmed) return;
-                // Detect level headers like "Cantrips:", "1st Level:", "Spells Known:"
-                if (/^(Cantrips|(\d+)\w*\s+Level|Spells Known)/i.test(trimmed)) {
-                    currentSpellLevel = trimmed.replace(/:.*/, '').replace(/\s*\(.*\)/, '');
+                // Detect level sub-headers: "Cantrips:", "1st Level:", "Spells Known:", "Prepared:", etc.
+                if (/^(Cantrips?|(\d+)\w*\s+Level|Spells?\s+Known|Known\s+Spells?|Prepared|At.?Will)/i.test(trimmed)) {
+                    const raw = trimmed.replace(/:.*/, '').replace(/\s*\(.*\)/, '').trim();
+                    currentSpellLevel = /^cantrip/i.test(raw) ? 'cantrip' : raw;
                     return;
                 }
                 // Detect spell entries starting with bullet
-                if (/^[•\-]/.test(trimmed)) {
-                    const spellText = trimmed.replace(/^[•\-]\s*/, '');
+                if (/^[•\-\*]/.test(trimmed)) {
+                    const spellText = trimmed.replace(/^[•\-\*]\s*/, '');
                     if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
                 }
             });
