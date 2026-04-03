@@ -806,10 +806,14 @@
 
         .inv-remove:active { color: #e04040; }
 
-        .inv-add {
-            display: flex;
-            gap: 4px;
-        }
+    .inv-add {
+        display: flex;
+        gap: 4px;
+    }
+
+    .sheet-special {
+        margin-top: 14px;
+    }
 
         .inv-input {
             flex: 1;
@@ -2687,36 +2691,41 @@
         if (activeAbils.length > 0) {
             const group = makeSectionGroup('\u2694 Abilities');
 
-            const chips = document.createElement('div');
-            chips.className = 'ability-chips';
+            const rows = document.createElement('div');
+            rows.className = 'spell-cast-list';
             activeAbils.forEach(a => {
+                const row = document.createElement('div');
+                row.className = 'spell-cast-row';
+
                 const btn = document.createElement('button');
-                btn.className = 'ability-chip';
+                btn.className = 'ability-chip passive spell spell-name-btn';
                 btn.dataset.abilityKey = a.key;
-                btn.dataset.abilityMax = a.max;
                 const countSpan = document.createElement('span');
                 countSpan.className = 'chip-count';
                 countSpan.textContent = a.max + '/' + a.max;
                 const icon = abilityIcons[a.name] || '\u2726';
                 btn.textContent = icon + ' ' + a.name + ' ';
                 btn.appendChild(countSpan);
-                const infoBtn = document.createElement('span');
-                infoBtn.className = 'chip-info';
-                infoBtn.textContent = '?';
                 const aDesc = getAbilityDescription(a.name, a.desc || '');
-                infoBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                btn.addEventListener('click', () => {
                     showAbilityPopup(btn, a.name, aDesc);
                 });
-                btn.appendChild(infoBtn);
-                btn.addEventListener('click', () => {
-                    if (btn.classList.contains('used')) return;
-                    const currentUsed = parseInt(btn.dataset.currentUsed || '0') + 1;
+
+                const castBtn = document.createElement('button');
+                castBtn.className = 'spell-cast-btn';
+                castBtn.dataset.abilityKey = a.key;
+                castBtn.dataset.abilityMax = a.max;
+                castBtn.textContent = 'Cast';
+                castBtn.addEventListener('click', () => {
+                    if (castBtn.disabled) return;
+                    const currentUsed = parseInt(castBtn.dataset.currentUsed || '0') + 1;
                     db.ref('characters/' + charKey + '/abilities/' + a.key).set(currentUsed);
                 });
-                chips.appendChild(btn);
+                row.appendChild(btn);
+                row.appendChild(castBtn);
+                rows.appendChild(row);
             });
-            group.appendChild(chips);
+            group.appendChild(rows);
             body.appendChild(group);
         }
 
@@ -3704,12 +3713,18 @@
         charRef.child('abilities').on('value', snap => {
             const abilities = snap.val() || {};
             Object.entries(abilities).forEach(([key, used]) => {
-                const btn = document.querySelector('[data-ability-key="' + key + '"]');
-                if (!btn) return;
-                const max = parseInt(btn.dataset.abilityMax);
-                btn.dataset.currentUsed = String(used);
-                btn.querySelector('.chip-count').textContent = (max - used) + '/' + max;
-                btn.classList.toggle('used', used >= max);
+                document.querySelectorAll('[data-ability-key="' + key + '"]').forEach(el => {
+                    const max = parseInt(el.dataset.abilityMax || '0');
+                    if (max) {
+                        el.dataset.currentUsed = String(used);
+                        el.classList.toggle('used', used >= max);
+                        if (el.classList.contains('spell-cast-btn')) {
+                            el.disabled = used >= max;
+                        }
+                    }
+                    const count = el.querySelector('.chip-count');
+                    if (count && max) count.textContent = (max - used) + '/' + max;
+                });
             });
         });
 

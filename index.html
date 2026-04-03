@@ -393,16 +393,12 @@
             border: 1.5px solid #6b2a3a;
             background: #c4a44e;
             box-shadow: inset 0 0 2px rgba(196,164,78,0.4);
-            cursor: pointer;
+            cursor: default;
         }
 
         .spell-slot-pip.spent {
             background: #0e0a0c;
             box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
-        }
-
-        .spell-slot-pip:hover {
-            border-color: #c8b070;
         }
 
         /* ========== REST BUTTONS ========== */
@@ -3693,7 +3689,7 @@ ${fullText.slice(0, 30000)}`;
                     c.spellSlots.forEach(slot => {
                         statsHtml += '<div class="spell-slot-row"><span class="spell-slot-label">' + escapeHtml(slot.shortLabel || slot.key) + '</span>';
                         for (let i = 0; i < slot.count; i++) {
-                            statsHtml += '<div class="spell-slot-pip" data-char="' + safeKeyAttr + '" data-slot="' + escapeHtml(slot.key) + '" data-idx="' + i + '" onclick="toggleSlot(this)"></div>';
+                            statsHtml += '<div class="spell-slot-pip" data-char="' + safeKeyAttr + '" data-slot="' + escapeHtml(slot.key) + '" data-idx="' + i + '"></div>';
                         }
                         statsHtml += '</div>';
                     });
@@ -3721,7 +3717,7 @@ ${fullText.slice(0, 30000)}`;
                     statsHtml += '<div class="ability-section"><div class="ability-section-label">Abilities</div><div class="ability-grid">';
                     activeAbils.forEach(a => {
                         const aDesc = escapeHtml(getAbilityDescription(a.name, a.desc || ''));
-                        statsHtml += '<button class="ability-btn" data-char="' + safeKeyAttr + '" data-rest="' + escapeHtml((a.rest || 'long').toLowerCase()) + '" data-max="' + a.max + '" data-used="0" data-ability="' + escapeHtml(a.key) + '" data-name="' + escapeHtml(a.name) + '" data-desc="' + aDesc + '" onclick="useAbility(this)">' + escapeHtml(a.name) + ' <span class="ability-count">' + a.max + '/' + a.max + '</span><span class="ability-info-btn" onclick="event.stopPropagation();showAbilityPopup(this.parentElement,this.parentElement.dataset.name,this.parentElement.dataset.desc)">?</span></button>';
+                        statsHtml += '<button class="ability-btn" data-char="' + safeKeyAttr + '" data-rest="' + escapeHtml((a.rest || 'long').toLowerCase()) + '" data-max="' + a.max + '" data-used="0" data-ability="' + escapeHtml(a.key) + '" data-name="' + escapeHtml(a.name) + '" data-desc="' + aDesc + '" onclick="showAbilityPopup(this,this.dataset.name,this.dataset.desc)">' + escapeHtml(a.name) + ' <span class="ability-count">' + a.max + '/' + a.max + '</span></button>';
                     });
                     statsHtml += '</div></div>';
                 }
@@ -4261,14 +4257,6 @@ ${fullText.slice(0, 30000)}`;
         }
 
         // =========================================================
-        // ABILITY / SPELL SLOT TRACKING
-        // =========================================================
-        function toggleSlot(pip) {
-            pip.classList.toggle('spent');
-            firebaseDb.ref('characters/' + pip.dataset.char + '/slots/' + pip.dataset.slot + '_' + pip.dataset.idx)
-                .set(pip.classList.contains('spent'));
-        }
-
         const ABILITY_DESCRIPTIONS = {
             // ── Akwan (Bard) ──────────────────────────────────────────────
             'Bardic Inspiration': 'Bonus action — Give an ally within 60 ft a 1d6. They can add it to one attack roll, ability check, or saving throw. 3\u00d7 / Long Rest.',
@@ -4337,18 +4325,6 @@ ${fullText.slice(0, 30000)}`;
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') hideAbilityPopup();
         });
-
-        function useAbility(btn) {
-            if (btn.classList.contains('used')) return;
-            let used = parseInt(btn.dataset.used) + 1;
-            const max = parseInt(btn.dataset.max);
-            btn.dataset.used = used;
-            btn.querySelector('.ability-count').textContent = (max - used) + '/' + max;
-            if (used >= max) btn.classList.add('used');
-            if (btn.dataset.char && btn.dataset.ability) {
-                firebaseDb.ref('characters/' + btn.dataset.char + '/abilities/' + btn.dataset.ability).set(used);
-            }
-        }
 
         function doRest(type) {
             const updates = {};
