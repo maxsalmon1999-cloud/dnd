@@ -2731,12 +2731,32 @@
             return group;
         }
 
-        // Active abilities
+        // Active abilities — collapsible
         if (activeAbils.length > 0) {
-            const group = makeSectionGroup('\u2694 Abilities');
+            const group = document.createElement('div');
+            group.className = 'sheet-section-group';
+
+            const abilHeader = document.createElement('div');
+            abilHeader.className = 'section-label';
+            abilHeader.style.cursor = 'pointer';
+            abilHeader.style.userSelect = 'none';
+            abilHeader.innerHTML = '<span>\u2694 Abilities</span>';
+
+            const abilAccordion = document.createElement('div');
+            abilAccordion.className = 'accordion-body';
+
+            let abilOpen = false;
+            abilHeader.addEventListener('click', () => {
+                abilOpen = !abilOpen;
+                abilAccordion.classList.toggle('open', abilOpen);
+            });
+
+            group.appendChild(abilHeader);
+            group.appendChild(abilAccordion);
 
             const rows = document.createElement('div');
             rows.className = 'spell-cast-list';
+            rows.style.paddingTop = '6px';
             activeAbils.forEach(a => {
                 const row = document.createElement('div');
                 row.className = 'spell-cast-row';
@@ -2779,7 +2799,7 @@
                 row.appendChild(castBtn);
                 rows.appendChild(row);
             });
-            group.appendChild(rows);
+            abilAccordion.appendChild(rows);
             body.appendChild(group);
         }
 
