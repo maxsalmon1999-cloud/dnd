@@ -3164,6 +3164,16 @@
                 const trimmed = line.trim();
                 if (!trimmed) continue;
 
+                // Bullet spell entry — check FIRST because • is non-ASCII and would
+                // otherwise trip the section-header guard below
+                if (/^[•\-\*]/.test(trimmed)) {
+                    if (inSpells) {
+                        const spellText = trimmed.replace(/^[•\-\*]\s*/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+                        if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
+                    }
+                    continue;
+                }
+
                 // Any line that contains "Known Spells" or "Spells Known" enters spell section
                 if (/known\s+spells?|spells?\s+known/i.test(trimmed)) {
                     inSpells = true;
@@ -3184,12 +3194,6 @@
                     const raw = trimmed.replace(/[:(].*/, '').trim();
                     currentSpellLevel = /^cantrip/i.test(raw) ? 'cantrip' : raw;
                     continue;
-                }
-
-                // Bullet spell entry
-                if (/^[•\-\*]/.test(trimmed)) {
-                    const spellText = trimmed.replace(/^[•\-\*]\s*/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
-                    if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
                 }
             }
 
