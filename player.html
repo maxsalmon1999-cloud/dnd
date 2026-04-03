@@ -1580,6 +1580,67 @@
                 font-size: 7px;
             }
         }
+        /* ===================== SPELL CAST ROW ===================== */
+        .spell-cast-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 6px;
+        }
+
+        .spell-cast-row {
+            display: flex;
+            align-items: stretch;
+            gap: 4px;
+        }
+
+        .spell-name-btn {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            text-align: left;
+        }
+
+        .spell-cast-btn {
+            flex-shrink: 0;
+            background: #1a1018;
+            border: 1.5px solid #6b2a3a;
+            box-shadow: inset 1px 1px 0 rgba(107,42,58,0.3), inset -1px -1px 0 #0e0a0c;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 6px 10px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            touch-action: manipulation;
+        }
+
+        .spell-cast-btn:not(:disabled):active { background: #6b1a2a; color: #d4b45e; }
+        .spell-cast-btn:disabled { opacity: 0.3; cursor: default; border-color: #2a1520; }
+
+        /* ===================== NOTES ===================== */
+        .notes-textarea {
+            width: 100%;
+            min-height: 140px;
+            background: #0e0a0c;
+            border: none;
+            border-top: 1px solid #2a1520;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 13px;
+            padding: 10px;
+            resize: vertical;
+            outline: none;
+            line-height: 1.7;
+            display: block;
+        }
+
+        .notes-textarea::placeholder { color: #3a2030; }
+        .notes-textarea:focus { background: #120a0e; }
+
         /* ===================== GOLD ===================== */
         .gold-row {
             display: flex;
@@ -1930,6 +1991,17 @@
                             <div class="die-sym" data-sides="20"></div>
                             <div class="die-sym" data-sides="100"></div>
                         </div>
+
+                        <!-- Notes -->
+                        <div class="dice-panel" style="margin-top:8px;margin-bottom:0">
+                            <div class="dice-panel-header" id="notesHeader" style="cursor:pointer;user-select:none">
+                                <span class="dice-panel-label">&#9998; Notes</span>
+                                <span id="notesArrow" style="font-size:10px;color:#4a2030;transition:transform 0.2s">&#9660;</span>
+                            </div>
+                            <div id="notesBody" style="display:none">
+                                <textarea id="notesTextarea" class="notes-textarea" placeholder="&#8226; Session notes...&#10;&#8226; Important clues...&#10;&#8226; NPCs met..."></textarea>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1971,6 +2043,7 @@
     let saveProficiencies = [];
     let skillProficiencies = [];
     let currentGold = 0;
+    let currentSlots = {};
 
     // =========================================================
     // INIT — load characters from Firebase, then proceed
@@ -2056,6 +2129,7 @@
         buildSkills();
         renderGold();
         initDiceStrip();
+        initNotesPanel();
         startFirebaseSync();
     }
 
@@ -2594,19 +2668,19 @@
             accordionBody.classList.toggle('open', isOpen);
         });
 
-        function makeSpellGroup(title, list) {
-            if (list.length === 0) return;
+        // Cantrips — click for description, no slot cost
+        if (cantrips.length > 0) {
             const lbl = document.createElement('div');
             lbl.className = 'spell-level-label';
             lbl.style.marginTop = '6px';
             lbl.style.marginBottom = '4px';
-            lbl.textContent = title;
+            lbl.textContent = 'Cantrips';
             accordionBody.appendChild(lbl);
 
             const chips = document.createElement('div');
             chips.className = 'ability-chips';
             chips.style.marginBottom = '6px';
-            list.forEach(s => {
+            cantrips.forEach(s => {
                 const btn = document.createElement('button');
                 btn.className = 'ability-chip passive spell';
                 btn.textContent = '\u2727 ' + s.name;
@@ -2617,12 +2691,134 @@
             accordionBody.appendChild(chips);
         }
 
-        makeSpellGroup('Cantrips', cantrips);
-        makeSpellGroup('Spells', spellList);
+        // Levelled spells — click for description, Cast button consumes a slot
+        if (spellList.length > 0) {
+            const lbl = document.createElement('div');
+            lbl.className = 'spell-level-label';
+            lbl.style.marginTop = '6px';
+            lbl.style.marginBottom = '4px';
+            lbl.textContent = 'Spells';
+            accordionBody.appendChild(lbl);
+
+            const rows = document.createElement('div');
+            rows.className = 'spell-cast-list';
+            spellList.forEach(s => {
+                const row = document.createElement('div');
+                row.className = 'spell-cast-row';
+
+                const nameBtn = document.createElement('button');
+                nameBtn.className = 'ability-chip passive spell spell-name-btn';
+                nameBtn.textContent = '\u2727 ' + s.name;
+                const desc = SPELL_DESCRIPTIONS[s.name] || '';
+                nameBtn.addEventListener('click', () => showAbilityPopup(nameBtn, s.name, desc || 'No description available.'));
+
+                const castBtn = document.createElement('button');
+                castBtn.className = 'spell-cast-btn';
+                castBtn.textContent = 'Cast';
+                castBtn.disabled = !hasSlotsAvailable();
+                castBtn.addEventListener('click', () => {
+                    if (castSpell()) {
+                        castBtn.textContent = 'Cast \u2726';
+                        setTimeout(() => { castBtn.textContent = 'Cast'; }, 700);
+                    }
+                });
+
+                row.appendChild(nameBtn);
+                row.appendChild(castBtn);
+                rows.appendChild(row);
+            });
+            accordionBody.appendChild(rows);
+        }
+
+        // Spell slot display (below spell list, within accordion)
+        if (char.spellSlots && char.spellSlots.length > 0) {
+            const slotLbl = document.createElement('div');
+            slotLbl.className = 'spell-level-label';
+            slotLbl.style.marginTop = '10px';
+            slotLbl.style.marginBottom = '6px';
+            slotLbl.textContent = 'Spell Slots';
+            accordionBody.appendChild(slotLbl);
+
+            const slotDisplay = document.createElement('div');
+            slotDisplay.id = 'spellSlotDisplay';
+            accordionBody.appendChild(slotDisplay);
+        }
 
         wrapper.appendChild(header);
         wrapper.appendChild(accordionBody);
         body.appendChild(wrapper);
+
+        refreshSpellSlotDisplay();
+    }
+
+    function hasSlotsAvailable() {
+        if (!char.spellSlots || char.spellSlots.length === 0) return false;
+        return char.spellSlots.some(slotType => {
+            for (let i = 0; i < slotType.count; i++) {
+                if (!currentSlots[slotType.key + '_' + i]) return true;
+            }
+            return false;
+        });
+    }
+
+    function castSpell() {
+        if (!char.spellSlots) return false;
+        for (const slotType of char.spellSlots) {
+            for (let i = 0; i < slotType.count; i++) {
+                const slotKey = slotType.key + '_' + i;
+                if (!currentSlots[slotKey]) {
+                    currentSlots[slotKey] = true;
+                    db.ref('characters/' + charKey + '/slots/' + slotKey).set(true);
+                    refreshSpellCastButtons();
+                    refreshSpellSlotDisplay();
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function refreshSpellCastButtons() {
+        const canCast = hasSlotsAvailable();
+        document.querySelectorAll('.spell-cast-btn').forEach(btn => {
+            btn.disabled = !canCast;
+        });
+    }
+
+    function refreshSpellSlotDisplay() {
+        const display = document.getElementById('spellSlotDisplay');
+        if (!display || !char.spellSlots) return;
+        display.innerHTML = '';
+        char.spellSlots.forEach(slot => {
+            const row = document.createElement('div');
+            row.className = 'slot-row';
+            row.style.marginBottom = '10px';
+
+            const lbl = document.createElement('span');
+            lbl.className = 'slot-level-label';
+            lbl.textContent = slot.shortLabel || slot.label;
+            row.appendChild(lbl);
+
+            const pips = document.createElement('div');
+            pips.className = 'slot-pips';
+            for (let i = 0; i < slot.count; i++) {
+                const slotKey = slot.key + '_' + i;
+                const pip = document.createElement('div');
+                pip.className = 'slot-pip';
+                if (currentSlots[slotKey]) pip.classList.add('spent');
+                pip.title = 'Click to toggle';
+                pip.addEventListener('click', () => {
+                    const spent = !pip.classList.contains('spent');
+                    currentSlots[slotKey] = spent;
+                    db.ref('characters/' + charKey + '/slots/' + slotKey).set(spent);
+                    refreshSpellCastButtons();
+                    refreshSpellSlotDisplay();
+                });
+                pips.appendChild(pip);
+            }
+            row.appendChild(pips);
+            display.appendChild(row);
+        });
     }
 
     // =========================================================
@@ -3230,11 +3426,15 @@
 
         // Live slot updates (DM or rest changes sync here)
         charRef.child('slots').on('value', snap => {
-            const slots = snap.val() || {};
-            Object.entries(slots).forEach(([key, spent]) => {
-                const pip = document.querySelector('[data-slot-key="' + key + '"]');
-                if (pip) pip.classList.toggle('spent', spent);
+            currentSlots = snap.val() || {};
+            // Update buildSpecial() pips (they use data-slot-key)
+            Object.entries(currentSlots).forEach(([key, spent]) => {
+                document.querySelectorAll('[data-slot-key="' + key + '"]').forEach(pip => {
+                    pip.classList.toggle('spent', spent);
+                });
             });
+            refreshSpellCastButtons();
+            refreshSpellSlotDisplay();
         });
 
         // Live ability updates
@@ -3281,6 +3481,36 @@
             currentGold = snap.val() || 0;
             const el = document.getElementById('goldValue');
             if (el) el.textContent = currentGold;
+        });
+
+        // Notes — debounced save, don't overwrite while actively typing
+        let notesDebounce = null;
+        const notesTextarea = document.getElementById('notesTextarea');
+        if (notesTextarea) {
+            notesTextarea.addEventListener('input', () => {
+                clearTimeout(notesDebounce);
+                notesDebounce = setTimeout(() => {
+                    db.ref('characters/' + charKey + '/notes').set(notesTextarea.value || null);
+                }, 800);
+            });
+        }
+        charRef.child('notes').on('value', snap => {
+            const notes = snap.val() || '';
+            if (notesTextarea && document.activeElement !== notesTextarea) {
+                notesTextarea.value = notes;
+            }
+        });
+    }
+
+    function initNotesPanel() {
+        const header = document.getElementById('notesHeader');
+        if (!header) return;
+        let open = false;
+        header.addEventListener('click', () => {
+            open = !open;
+            document.getElementById('notesBody').style.display = open ? 'block' : 'none';
+            const arrow = document.getElementById('notesArrow');
+            if (arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
         });
     }
 
