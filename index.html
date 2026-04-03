@@ -2884,7 +2884,7 @@
                     '<div class="char-info"><strong>' + escapeHtml(c.name || '') + '</strong><small>' + escapeHtml(c.cls || '') + '</small></div>' +
                     '<div class="setup-char-actions">' +
                     '<button class="setup-btn" onclick="exportCharacter(' + keyJs + ')">Export</button>' +
-                    '<button class="setup-btn danger" onclick="deleteCharacter(this, ' + keyJs + ')">Delete</button>' +
+                    '<button class="setup-btn danger" onclick="deleteCharacter(this,' + keyJs + ')">Delete</button>' +
                     '</div>';
                 list.appendChild(row);
             });
@@ -3349,15 +3349,20 @@ ${fullText.slice(0, 30000)}`;
 
         let pendingDeleteCharKey = null;
 
-        function deleteCharacter(btn, key) {
+        function deleteCharacter(trigger, key) {
             pendingDeleteCharKey = key;
-            const row = btn.closest('.setup-char-row');
+            const row = trigger && trigger.closest
+                ? trigger.closest('.setup-char-row')
+                : document.querySelector('.setup-char-row[data-key="' + escapeCssValue(key) + '"]');
             if (!row) return;
             let confirm = row.querySelector('.char-delete-confirm');
             if (confirm) {
                 confirm.classList.add('visible');
-                confirm.querySelector('input').value = '';
-                confirm.querySelector('.setup-btn.danger').disabled = true;
+                const input = confirm.querySelector('input');
+                const confirmBtn = confirm.querySelector('.setup-btn.danger');
+                input.value = '';
+                confirmBtn.disabled = true;
+                input.focus();
                 return;
             }
             confirm = document.createElement('div');
@@ -3368,6 +3373,7 @@ ${fullText.slice(0, 30000)}`;
                 '<button class="setup-btn danger" disabled onclick="executeCharDelete()">Confirm</button>' +
                 '<button class="setup-btn" onclick="this.parentElement.classList.remove(\'visible\')">Cancel</button>';
             row.appendChild(confirm);
+            confirm.querySelector('input').focus();
         }
 
         async function executeCharDelete() {
