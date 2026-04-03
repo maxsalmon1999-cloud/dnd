@@ -3160,34 +3160,38 @@
             let inSpells = false;
             let currentSpellLevel = '';
 
-            function isSectionHeader(line) {
-                return /^[^\x00-\x7F]/.test(line);
-            }
-
-            lines.forEach(line => {
-                const trimmedLine = line.trim();
-                if (isSectionHeader(trimmedLine)) {
-                    inSpells = /\bspells?\b/i.test(trimmedLine) && !/\b(slot|attack|save)\b/i.test(trimmedLine);
-                    return;
-                }
-                // Fallback: plain-text "Known Spells" header (no emoji)
-                if (/^Known\s+Spells?\s*:?$/i.test(trimmedLine)) {
-                    inSpells = true;
-                    return;
-                }
-                if (!inSpells) return;
+            for (const line of lines) {
                 const trimmed = line.trim();
-                if (!trimmed) return;
-                if (/^(Cantrips?|(\d+)\w*\s+Level|Spells?\s+Known|Known\s+Spells?|Prepared|At.?Will)/i.test(trimmed)) {
-                    const raw = trimmed.replace(/:.*/, '').replace(/\s*\(.*\)/, '').trim();
-                    currentSpellLevel = /^cantrip/i.test(raw) ? 'cantrip' : raw;
-                    return;
+                if (!trimmed) continue;
+
+                // Any line that contains "Known Spells" or "Spells Known" enters spell section
+                if (/known\s+spells?|spells?\s+known/i.test(trimmed)) {
+                    inSpells = true;
+                    continue;
                 }
+
+                // A non-ASCII leading character (emoji) means a new section header
+                if (/^[^\x00-\x7F]/.test(trimmed)) {
+                    inSpells = false;
+                    continue;
+                }
+
+                if (!inSpells) continue;
+
+                // Sub-section header (Cantrips, 1st Level, 2nd Level, etc.)
+                if (/^(Cantrips?|(\d+)\w*\s+Level|Prepared|At.?Will)\s*[:(]/i.test(trimmed) ||
+                    /^(Cantrips?|(\d+)\w*\s+Level|Prepared|At.?Will)\s*$/i.test(trimmed)) {
+                    const raw = trimmed.replace(/[:(].*/, '').trim();
+                    currentSpellLevel = /^cantrip/i.test(raw) ? 'cantrip' : raw;
+                    continue;
+                }
+
+                // Bullet spell entry
                 if (/^[•\-\*]/.test(trimmed)) {
                     const spellText = trimmed.replace(/^[•\-\*]\s*/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
                     if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
                 }
-            });
+            }
 
             return spells;
         }
