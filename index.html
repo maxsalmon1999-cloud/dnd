@@ -3062,7 +3062,85 @@
                 }
             });
 
-            return { name, cls, level, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells };
+            // Parse inventory from equipment section + combat action stats
+            // Step 1: collect weapon/armour stats from Combat Actions
+            const weaponStatMap = {};
+            let inCombatActions = false;
+            let pendingWeaponName = null;
+            lines.forEach(line => {
+                if (isSectionHeader(line)) {
+                    inCombatActions = /Combat Actions/i.test(line);
+                    pendingWeaponName = null;
+                    return;
+                }
+                if (!inCombatActions) return;
+                const trimmed = line.trim();
+                if (!trimmed) { pendingWeaponName = null; return; }
+                // Attack line: "Name — +X to hit"
+                const m = trimmed.match(/^(.+?)\s*[—–\-]{1,2}\s*([+-]?\d+)\s+to\s+hit/i);
+                if (m) {
+                    pendingWeaponName = m[1].trim().toLowerCase();
+                    weaponStatMap[pendingWeaponName] = m[2] + ' to hit';
+                    return;
+                }
+                // Damage/property line following an attack line
+                if (pendingWeaponName && /\dd\d/.test(trimmed)) {
+                    weaponStatMap[pendingWeaponName] += ', ' + trimmed;
+                    pendingWeaponName = null;
+                }
+            });
+
+            // Step 2: parse equipment items and categorise
+            const ARMOUR_KW  = ['armor','armour','leather','chain','plate','shield','breastplate','mail','hide','padded','scale','splint','studded'];
+            const WEAPON_KW  = ['sword','dagger','bow','crossbow','axe','mace','staff','spear','hammer','rapier','scimitar','blade','knife','club','flail','pike','lance','halberd','glaive','trident','javelin','dart','sling','whip','quarterstaff','handaxe','morningstar','maul','battleaxe','warhammer'];
+            const TOOL_KW    = ['tool','kit','instrument','thieves','disguise','forgery','herbalism','poisoner','navigator','cartographer'];
+            const CONSUME_KW = ['potion','scroll','arrow','bolt','ration','torch','oil','antitoxin','healer'];
+
+            function catFromName(n) {
+                const l = n.toLowerCase();
+                if (ARMOUR_KW.some(k => l.includes(k)))  return 'armour';
+                if (WEAPON_KW.some(k => l.includes(k)))  return 'weapons';
+                if (TOOL_KW.some(k => l.includes(k)))    return 'tools';
+                if (CONSUME_KW.some(k => l.includes(k))) return 'consumables';
+                return 'other';
+            }
+
+            const inventory = {};
+            let inEquipment = false;
+            lines.forEach(line => {
+                if (isSectionHeader(line)) {
+                    inEquipment = /Equipment|Inventory/i.test(line);
+                    return;
+                }
+                if (!inEquipment) return;
+                const trimmed = line.trim().replace(/^[•\-\*]\s*/, '');
+                if (!trimmed || trimmed.length > 100) return;
+                if (/^(AC|HP|Speed|Init|Prof|Spell|XP|STR|DEX|CON|INT|WIS|CHA)/i.test(trimmed)) return;
+
+                const itemName = trimmed;
+                const category = catFromName(itemName);
+                const nameLower = itemName.toLowerCase();
+
+                // Match against combat action stats
+                let itemStats = null;
+                for (const [wKey, wStats] of Object.entries(weaponStatMap)) {
+                    if (nameLower.includes(wKey) || wKey.includes(nameLower)) {
+                        itemStats = wStats;
+                        break;
+                    }
+                }
+
+                const baseKey = nameLower.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'item';
+                let itemKey = baseKey;
+                let suffix = 0;
+                while (inventory[itemKey]) { suffix++; itemKey = baseKey + '_' + suffix; }
+
+                const entry = { name: itemName, amount: 1, category };
+                if (itemStats) entry.stats = itemStats;
+                inventory[itemKey] = entry;
+            });
+
+            return { name, cls, level, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells, inventory };
         }
 
         function ordinal(n) {
@@ -3115,6 +3193,14 @@
                         const abilSnap = await firebaseDb.ref('characters/' + key + '/abilities').once('value');
                         if (!abilSnap.val()) {
                             activeAbils.forEach(a => { initUpdates['characters/' + key + '/abilities/' + a.key] = 0; });
+                        }
+                    }
+                    if (parsed.inventory && Object.keys(parsed.inventory).length > 0) {
+                        const invSnap = await firebaseDb.ref('characters/' + key + '/inventory').once('value');
+                        if (!invSnap.val()) {
+                            Object.entries(parsed.inventory).forEach(([k, v]) => {
+                                initUpdates['characters/' + key + '/inventory/' + k] = v;
+                            });
                         }
                     }
                     if (Object.keys(initUpdates).length > 0) await firebaseDb.ref().update(initUpdates);
