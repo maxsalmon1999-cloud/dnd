@@ -2761,8 +2761,18 @@
                 castBtn.textContent = 'Cast';
                 castBtn.addEventListener('click', () => {
                     if (castBtn.disabled) return;
-                    const currentUsed = parseInt(castBtn.dataset.currentUsed || '0') + 1;
-                    db.ref('characters/' + charKey + '/abilities/' + a.key).set(currentUsed);
+                    const used = parseInt(castBtn.dataset.currentUsed || '0') + 1;
+                    const max = parseInt(castBtn.dataset.abilityMax || '0');
+                    // Optimistic local update
+                    castBtn.dataset.currentUsed = String(used);
+                    if (used >= max) castBtn.disabled = true;
+                    const countSpan = btn.querySelector('.chip-count');
+                    if (countSpan) countSpan.textContent = (max - used) + '/' + max;
+                    // Flash feedback
+                    castBtn.textContent = 'Cast \u2726';
+                    setTimeout(() => { castBtn.textContent = 'Cast'; }, 700);
+                    // Persist
+                    db.ref('characters/' + charKey + '/abilities/' + a.key).set(used);
                 });
                 row.appendChild(btn);
                 row.appendChild(castBtn);
