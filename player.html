@@ -265,7 +265,7 @@
         }
 
         .sheet-section-group + .sheet-section-group::before {
-            content: '\2014 \u2726 \u2014';
+            content: '\2014 \2726 \2014';
             display: block;
             text-align: center;
             font-size: 10px;
@@ -2772,12 +2772,29 @@
             body.appendChild(group);
         }
 
-        // Passive abilities
+        // Passive features — collapsible
         if (passiveAbils.length > 0) {
-            const group = makeSectionGroup('\u25C9 Passive Features');
+            const group = document.createElement('div');
+            group.className = 'sheet-section-group';
+
+            const header = document.createElement('div');
+            header.className = 'section-label';
+            header.style.cursor = 'pointer';
+            header.style.userSelect = 'none';
+            header.innerHTML = '<span>\u25C9 Features</span>';
+
+            const accordionBody = document.createElement('div');
+            accordionBody.className = 'accordion-body';
+
+            let isOpen = false;
+            header.addEventListener('click', () => {
+                isOpen = !isOpen;
+                accordionBody.classList.toggle('open', isOpen);
+            });
 
             const chips = document.createElement('div');
             chips.className = 'ability-chips';
+            chips.style.paddingTop = '6px';
             passiveAbils.forEach(a => {
                 const btn = document.createElement('button');
                 btn.className = 'ability-chip passive';
@@ -2787,7 +2804,9 @@
                 btn.addEventListener('click', () => showAbilityPopup(btn, a.name, pDesc));
                 chips.appendChild(btn);
             });
-            group.appendChild(chips);
+            accordionBody.appendChild(chips);
+            group.appendChild(header);
+            group.appendChild(accordionBody);
             body.appendChild(group);
         }
     }
