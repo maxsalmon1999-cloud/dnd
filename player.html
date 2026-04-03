@@ -2264,6 +2264,7 @@
             if (rawSpells.length === 0 && spells.length > 0) {
                 spellBackfillUpdates['characterSheets/' + key + '/spells'] = spells;
             }
+            const mdSnippet = c.rawMarkdown ? c.rawMarkdown.slice(0, 600) : '(none)';
             CHARS[key] = {
                 name: c.name,
                 cls: c.cls || '',
@@ -2277,7 +2278,7 @@
                 spellSlots: c.spellSlots || [],
                 abilities: c.abilities || [],
                 spells,
-                _dbg: { hasRawMarkdown, rawSpellCount: rawSpells.length, parsedCount: spells.length },
+                _dbg: { hasRawMarkdown, rawSpellCount: rawSpells.length, parsedCount: spells.length, mdSnippet },
             };
         });
         if (Object.keys(spellBackfillUpdates).length > 0) {
@@ -2852,7 +2853,7 @@
         const dbg = document.createElement('div');
         dbg.style.cssText = 'font-size:9px;color:#ff0;background:#300;padding:4px;margin-bottom:4px;word-break:break-all';
         const d = char._dbg || {};
-        dbg.textContent = 'hasRawMd=' + d.hasRawMarkdown + ' | rawSpells=' + d.rawSpellCount + ' | parsed=' + d.parsedCount + ' | final=' + char.spells.length;
+        dbg.textContent = 'hasRawMd=' + d.hasRawMarkdown + ' | rawSpells=' + d.rawSpellCount + ' | parsed=' + d.parsedCount + ' | final=' + char.spells.length + ' | md=' + (d.mdSnippet || '');
         body.appendChild(dbg);
 
         if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
