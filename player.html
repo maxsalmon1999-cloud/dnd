@@ -1664,6 +1664,33 @@
         .spell-cast-btn:not(:disabled):active { background: #6b1a2a; color: #d4b45e; }
         .spell-cast-btn:disabled { opacity: 0.3; cursor: default; border-color: #2a1520; }
 
+        .cast-slot-popup {
+            position: fixed;
+            background: #1a1018;
+            border: 1.5px solid #6b2a3a;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.75);
+            z-index: 2000;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 170px;
+        }
+        .cast-slot-option {
+            background: #120d10;
+            border: 1px solid #3a1a22;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 7px 10px;
+            cursor: pointer;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            touch-action: manipulation;
+        }
+        .cast-slot-option:active { background: #6b1a2a; color: #d4b45e; }
+
         /* ===================== NOTES ===================== */
         .notes-textarea {
             width: 100%;
@@ -2856,6 +2883,92 @@
         'Mass Healing Word': 'Bonus action, 60 ft. Up to 6 creatures regain 1d4 + spellcasting modifier HP.',
     };
 
+    // --- Spell slot helpers ---
+
+    function getSpellLevel(spell) {
+        if (String(spell.level).toLowerCase().startsWith('cantrip')) return 0;
+        return parseInt(spell.level) || 1;
+    }
+
+    function getSlotLevel(slot) {
+        if (/^\d+$/.test(slot.key)) return parseInt(slot.key);
+        // Warlock / non-numeric keys: parse from shortLabel e.g. "2nd" → 2
+        const m = String(slot.shortLabel || slot.label || '').match(/(\d+)/);
+        return m ? parseInt(m[1]) : 1;
+    }
+
+    function getSlotsRemaining(slot) {
+        let used = 0;
+        for (let i = 0; i < slot.count; i++) {
+            if (currentSlots[slot.key + '_' + i]) used++;
+        }
+        return slot.count - used;
+    }
+
+    function getAvailableSlotTypes(minLevel) {
+        if (!char.spellSlots) return [];
+        return char.spellSlots
+            .filter(slot => getSlotLevel(slot) >= minLevel && getSlotsRemaining(slot) > 0)
+            .sort((a, b) => getSlotLevel(a) - getSlotLevel(b));
+    }
+
+    function hasSlotsAvailable() {
+        return (char.spellSlots || []).some(slot => getSlotsRemaining(slot) > 0);
+    }
+
+    function consumeSlot(slotKey) {
+        const slot = (char.spellSlots || []).find(s => s.key === slotKey);
+        if (!slot) return false;
+        for (let i = 0; i < slot.count; i++) {
+            const key = slot.key + '_' + i;
+            if (!currentSlots[key]) {
+                currentSlots[key] = true;
+                db.ref('characters/' + charKey + '/slots/' + key).set(true);
+                refreshSpellCastButtons();
+                refreshSpellSlotDisplay();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    let activeCastPopup = null;
+
+    function hideCastPopup() {
+        if (activeCastPopup) { activeCastPopup.remove(); activeCastPopup = null; }
+    }
+
+    function showCastPopup(anchor, availableSlots, onSelect) {
+        hideCastPopup();
+        const popup = document.createElement('div');
+        popup.className = 'cast-slot-popup';
+        availableSlots.forEach(slot => {
+            const remaining = getSlotsRemaining(slot);
+            const btn = document.createElement('button');
+            btn.className = 'cast-slot-option';
+            btn.textContent = slot.label + ' \u2014 ' + remaining + ' left';
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                hideCastPopup();
+                onSelect(slot.key);
+            });
+            popup.appendChild(btn);
+        });
+        document.body.appendChild(popup);
+        const rect = anchor.getBoundingClientRect();
+        popup.style.top = (rect.bottom + 4) + 'px';
+        popup.style.left = Math.max(4, rect.right - popup.offsetWidth) + 'px';
+        activeCastPopup = popup;
+        setTimeout(() => document.addEventListener('click', hideCastPopup, { once: true }), 0);
+    }
+
+    function refreshSpellCastButtons() {
+        document.querySelectorAll('.spell-cast-btn[data-min-slot-level]').forEach(btn => {
+            const minLevel = parseInt(btn.dataset.minSlotLevel) || 1;
+            btn.disabled = getAvailableSlotTypes(minLevel).length === 0;
+        });
+    }
+
     function buildSpells() {
         const body = document.getElementById('spellsBody');
         if (!body) return;
@@ -2863,8 +2976,16 @@
 
         if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
 
-        const cantrips = char.spells.filter(s => String(s.level).toLowerCase().startsWith('cantrip'));
-        const spellList = char.spells.filter(s => !String(s.level).toLowerCase().startsWith('cantrip'));
+        const cantrips = (char.spells || []).filter(s => getSpellLevel(s) === 0);
+        const levelledSpells = (char.spells || []).filter(s => getSpellLevel(s) > 0);
+
+        // Group levelled spells by their integer level
+        const byLevel = {};
+        levelledSpells.forEach(s => {
+            const lvl = getSpellLevel(s);
+            if (!byLevel[lvl]) byLevel[lvl] = { label: s.level, spells: [] };
+            byLevel[lvl].spells.push(s);
+        });
 
         const wrapper = document.createElement('div');
         wrapper.className = 'sheet-section-group';
@@ -2877,15 +2998,15 @@
         header.innerHTML = '<span>\u2727 Spells</span>';
 
         const accordionBody = document.createElement('div');
-        accordionBody.className = 'accordion-body open';
+        accordionBody.className = 'accordion-body'; // collapsed by default
 
-        let isOpen = true;
+        let isOpen = false;
         header.addEventListener('click', () => {
             isOpen = !isOpen;
             accordionBody.classList.toggle('open', isOpen);
         });
 
-        // Cantrips — click for description, no slot cost
+        // Cantrips — no slot cost
         if (cantrips.length > 0) {
             const lbl = document.createElement('div');
             lbl.className = 'spell-level-label';
@@ -2909,18 +3030,21 @@
             accordionBody.appendChild(chips);
         }
 
-        // Levelled spells — click for description, Cast button consumes a slot
-        if (spellList.length > 0) {
+        // Levelled spells — grouped by level, sorted ascending
+        Object.keys(byLevel).sort((a, b) => a - b).forEach(lvl => {
+            const { label, spells: spellsAtLevel } = byLevel[lvl];
+            const spellLvl = parseInt(lvl);
+
             const lbl = document.createElement('div');
             lbl.className = 'spell-level-label';
             lbl.style.marginTop = '6px';
             lbl.style.marginBottom = '4px';
-            lbl.textContent = 'Spells';
+            lbl.textContent = label; // e.g. "1st Level"
             accordionBody.appendChild(lbl);
 
             const rows = document.createElement('div');
             rows.className = 'spell-cast-list';
-            spellList.forEach(s => {
+            spellsAtLevel.forEach(s => {
                 const row = document.createElement('div');
                 row.className = 'spell-cast-row';
 
@@ -2933,12 +3057,22 @@
 
                 const castBtn = document.createElement('button');
                 castBtn.className = 'spell-cast-btn';
+                castBtn.dataset.minSlotLevel = spellLvl;
                 castBtn.textContent = 'Cast';
-                castBtn.disabled = !hasSlotsAvailable();
+                castBtn.disabled = getAvailableSlotTypes(spellLvl).length === 0;
+
                 castBtn.addEventListener('click', () => {
-                    if (castSpell()) {
+                    const available = getAvailableSlotTypes(spellLvl);
+                    if (available.length === 0) return;
+                    const docast = key => {
+                        consumeSlot(key);
                         castBtn.textContent = 'Cast \u2726';
                         setTimeout(() => { castBtn.textContent = 'Cast'; }, 700);
+                    };
+                    if (available.length === 1) {
+                        docast(available[0].key);
+                    } else {
+                        showCastPopup(castBtn, available, docast);
                     }
                 });
 
@@ -2947,9 +3081,9 @@
                 rows.appendChild(row);
             });
             accordionBody.appendChild(rows);
-        }
+        });
 
-        // Spell slot display (below spell list, within accordion)
+        // Spell slot display
         if (char.spellSlots && char.spellSlots.length > 0) {
             const slotLbl = document.createElement('div');
             slotLbl.className = 'spell-level-label';
@@ -2968,40 +3102,6 @@
         body.appendChild(wrapper);
 
         refreshSpellSlotDisplay();
-    }
-
-    function hasSlotsAvailable() {
-        if (!char.spellSlots || char.spellSlots.length === 0) return false;
-        return char.spellSlots.some(slotType => {
-            for (let i = 0; i < slotType.count; i++) {
-                if (!currentSlots[slotType.key + '_' + i]) return true;
-            }
-            return false;
-        });
-    }
-
-    function castSpell() {
-        if (!char.spellSlots) return false;
-        for (const slotType of char.spellSlots) {
-            for (let i = 0; i < slotType.count; i++) {
-                const slotKey = slotType.key + '_' + i;
-                if (!currentSlots[slotKey]) {
-                    currentSlots[slotKey] = true;
-                    db.ref('characters/' + charKey + '/slots/' + slotKey).set(true);
-                    refreshSpellCastButtons();
-                    refreshSpellSlotDisplay();
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    function refreshSpellCastButtons() {
-        const canCast = hasSlotsAvailable();
-        document.querySelectorAll('.spell-cast-btn').forEach(btn => {
-            btn.disabled = !canCast;
-        });
     }
 
     function refreshSpellSlotDisplay() {
