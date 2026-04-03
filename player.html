@@ -2744,11 +2744,12 @@
 
             const abilAccordion = document.createElement('div');
             abilAccordion.className = 'accordion-body';
+            abilAccordion.style.display = 'none';
 
             let abilOpen = false;
             abilHeader.addEventListener('click', () => {
                 abilOpen = !abilOpen;
-                abilAccordion.classList.toggle('open', abilOpen);
+                abilAccordion.style.display = abilOpen ? 'block' : 'none';
             });
 
             group.appendChild(abilHeader);
