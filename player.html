@@ -2225,8 +2225,14 @@
         }
 
         lines.forEach(line => {
-            if (isSectionHeader(line)) {
-                inSpells = /\bspells?\b/i.test(line) && !/\b(slot|attack|save)\b/i.test(line);
+            const trimmedLine = line.trim();
+            if (isSectionHeader(trimmedLine)) {
+                inSpells = /\bspells?\b/i.test(trimmedLine) && !/\b(slot|attack|save)\b/i.test(trimmedLine);
+                return;
+            }
+            // Fallback: plain-text "Known Spells" header (no emoji)
+            if (/^Known\s+Spells?\s*:?$/i.test(trimmedLine)) {
+                inSpells = true;
                 return;
             }
             if (!inSpells) return;
@@ -2256,7 +2262,6 @@
         CHARS = {};
         const spellBackfillUpdates = {};
         Object.entries(sheets).forEach(([key, c]) => {
-            const hasRawMarkdown = !!c.rawMarkdown;
             const rawSpells = Array.isArray(c.spells) ? c.spells : (c.spells ? Object.values(c.spells) : []);
             const spells = rawSpells.length > 0
                 ? rawSpells
@@ -2264,11 +2269,6 @@
             if (rawSpells.length === 0 && spells.length > 0) {
                 spellBackfillUpdates['characterSheets/' + key + '/spells'] = spells;
             }
-            const md = c.rawMarkdown || '';
-            const knownSpellsIdx = md.toLowerCase().indexOf('known spells');
-            const mdSnippet = knownSpellsIdx >= 0
-                ? md.slice(Math.max(0, knownSpellsIdx - 10), knownSpellsIdx + 200)
-                : '(known spells not found in rawMarkdown)';
             CHARS[key] = {
                 name: c.name,
                 cls: c.cls || '',
@@ -2282,7 +2282,6 @@
                 spellSlots: c.spellSlots || [],
                 abilities: c.abilities || [],
                 spells,
-                _dbg: { hasRawMarkdown, rawSpellCount: rawSpells.length, parsedCount: spells.length, mdSnippet },
             };
         });
         if (Object.keys(spellBackfillUpdates).length > 0) {
@@ -2852,13 +2851,6 @@
         const body = document.getElementById('spellsBody');
         if (!body) return;
         body.innerHTML = '';
-
-        // DEBUG — remove once spells confirmed working
-        const dbg = document.createElement('div');
-        dbg.style.cssText = 'font-size:9px;color:#ff0;background:#300;padding:4px;margin-bottom:4px;word-break:break-all';
-        const d = char._dbg || {};
-        dbg.textContent = 'parsed=' + d.parsedCount + ' | snippet: ' + (d.mdSnippet || '');
-        body.appendChild(dbg);
 
         if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
 

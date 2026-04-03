@@ -3165,8 +3165,14 @@
             }
 
             lines.forEach(line => {
-                if (isSectionHeader(line)) {
-                    inSpells = /\bspells?\b/i.test(line) && !/\b(slot|attack|save)\b/i.test(line);
+                const trimmedLine = line.trim();
+                if (isSectionHeader(trimmedLine)) {
+                    inSpells = /\bspells?\b/i.test(trimmedLine) && !/\b(slot|attack|save)\b/i.test(trimmedLine);
+                    return;
+                }
+                // Fallback: plain-text "Known Spells" header (no emoji)
+                if (/^Known\s+Spells?\s*:?$/i.test(trimmedLine)) {
+                    inSpells = true;
                     return;
                 }
                 if (!inSpells) return;
