@@ -951,9 +951,98 @@
         .prompt-area {
             padding: 1px 3px;
             display: flex;
-            gap: 3px;
+            flex-direction: column;
+            gap: 4px;
             background: #100c0e;
             flex-shrink: 0;
+        }
+
+        .prompt-budget {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding: 4px 5px 0;
+        }
+
+        .prompt-budget-header,
+        .prompt-budget-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 9px;
+        }
+
+        .prompt-budget-label {
+            color: #c4a44e;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .prompt-budget-note,
+        .prompt-budget-text {
+            color: #8a6050;
+        }
+
+        .prompt-budget-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #8a6050;
+            white-space: nowrap;
+        }
+
+        .prompt-budget-controls label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .prompt-budget-controls input {
+            width: 70px;
+            background: #1a1018;
+            border: 1.5px solid #4a2030;
+            color: #c4a44e;
+            padding: 2px 4px;
+            font-family: inherit;
+            font-size: 9px;
+            outline: none;
+        }
+
+        .prompt-budget-controls button {
+            background: #1a1018;
+            border: 1.5px solid #4a2030;
+            color: #8a6050;
+            padding: 2px 6px;
+            font-family: inherit;
+            font-size: 9px;
+            cursor: pointer;
+        }
+
+        .prompt-budget-controls button:hover {
+            background: #2a1828;
+            color: #c4a44e;
+        }
+
+        .prompt-budget-bar {
+            height: 9px;
+            border: 1.5px solid #4a2030;
+            background: #1a1018;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .prompt-budget-fill {
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 0%;
+            background: linear-gradient(90deg, #2a6a38 0%, #c4a44e 75%, #9a4028 100%);
+        }
+
+        .prompt-input-row {
+            display: flex;
+            gap: 3px;
         }
 
         .prompt-area textarea {
@@ -2257,17 +2346,6 @@
             font-size: 8px;
         }
 
-        /* Ornate section dividers */
-        .rest-buttons::before {
-            content: '\2500\2500\2500 \2666 \2500\2500\2500';
-            display: block;
-            text-align: center;
-            color: #4a2030;
-            font-size: 8px;
-            margin-bottom: 2px;
-            letter-spacing: 2px;
-        }
-
         .music-section::before {
             content: '';
             display: block;
@@ -2283,7 +2361,7 @@
     <!-- Classic Mac Menu Bar -->
     <div class="menu-bar">
         <span class="apple"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:middle"><circle cx="8" cy="8" r="4" stroke="#c4a44e" stroke-width="1.5" fill="none"/><line x1="8" y1="0" x2="8" y2="3" stroke="#c4a44e" stroke-width="1.2"/><line x1="8" y1="13" x2="8" y2="16" stroke="#c4a44e" stroke-width="1.2"/><line x1="0" y1="8" x2="3" y2="8" stroke="#c4a44e" stroke-width="1.2"/><line x1="13" y1="8" x2="16" y2="8" stroke="#c4a44e" stroke-width="1.2"/><line x1="2.3" y1="2.3" x2="4.4" y2="4.4" stroke="#c4a44e" stroke-width="1.2"/><line x1="11.6" y1="11.6" x2="13.7" y2="13.7" stroke="#c4a44e" stroke-width="1.2"/><line x1="2.3" y1="13.7" x2="4.4" y2="11.6" stroke="#c4a44e" stroke-width="1.2"/><line x1="11.6" y1="4.4" x2="13.7" y2="2.3" stroke="#c4a44e" stroke-width="1.2"/><line x1="5" y1="14" x2="11" y2="2" stroke="#c4a44e" stroke-width="1.5"/><line x1="7" y1="1.5" x2="11" y2="2" stroke="#c4a44e" stroke-width="1"/><line x1="11" y1="2" x2="10" y2="5.5" stroke="#c4a44e" stroke-width="1"/></svg></span>
-        <span class="menu-campaign" id="menuCampaignName">The Delian Tomb</span>
+        <span class="menu-campaign" id="menuCampaignName">No campaign loaded</span>
         <button class="menu-setup-btn" onclick="toggleGameSetup()">&#9881; Setup</button>
         <button class="menu-end-session" onclick="endSession()">End Session</button>
         <button class="menu-reset-session" onclick="showResetModal()">&#10005;</button>
@@ -2382,8 +2460,24 @@
                 <button class="prompt-tab" data-mode="rules" onclick="setMode(this)">Rules</button>
             </div>
             <div class="prompt-area">
-                <textarea id="promptInput" placeholder="Describe what happens next..." onkeydown="handleKey(event)"></textarea>
-                <button class="mac-btn" onclick="sendPrompt()">Send</button>
+                <div class="prompt-budget">
+                    <div class="prompt-budget-header">
+                        <span class="prompt-budget-label">Claude Budget</span>
+                        <span class="prompt-budget-note">Estimated from API token usage</span>
+                    </div>
+                    <div class="prompt-budget-bar"><div class="prompt-budget-fill" id="promptBudgetFill"></div></div>
+                    <div class="prompt-budget-meta">
+                        <span class="prompt-budget-text" id="promptBudgetText">Waiting for usage data…</span>
+                        <div class="prompt-budget-controls">
+                            <label>$ <input id="promptBudgetInput" type="number" min="0" step="0.01" value="10"></label>
+                            <button type="button" onclick="resetPromptBudget()">Reset</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="prompt-input-row">
+                    <textarea id="promptInput" placeholder="Describe what happens next..." onkeydown="handleKey(event)"></textarea>
+                    <button class="mac-btn" onclick="sendPrompt()">Send</button>
+                </div>
             </div>
         </div>
 
@@ -2496,9 +2590,75 @@
         if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         const WORKER_URL = 'https://dnd-anthropic-proxy.max-salmon1999.workers.dev';
         const API_MODEL = 'claude-opus-4-6';
+        const API_PRICING = {
+            'claude-opus-4-6': {
+                inputPerMillionUsd: 5,
+                outputPerMillionUsd: 25,
+            },
+        };
+        const PROMPT_BUDGET_STORAGE_KEY = 'dnd_prompt_budget_v1';
+        const DEFAULT_PROMPT_BUDGET_USD = 10;
         let conversationHistory = [];
         let dmPrompts = null;
         let pendingDiceRequest = null;
+
+        function loadPromptBudgetState() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(PROMPT_BUDGET_STORAGE_KEY) || '{}');
+                return {
+                    limitUsd: Number(raw.limitUsd) > 0 ? Number(raw.limitUsd) : DEFAULT_PROMPT_BUDGET_USD,
+                    spentUsd: Number(raw.spentUsd) > 0 ? Number(raw.spentUsd) : 0,
+                };
+            } catch (e) {
+                return { limitUsd: DEFAULT_PROMPT_BUDGET_USD, spentUsd: 0 };
+            }
+        }
+
+        let promptBudgetState = loadPromptBudgetState();
+
+        function savePromptBudgetState() {
+            localStorage.setItem(PROMPT_BUDGET_STORAGE_KEY, JSON.stringify(promptBudgetState));
+        }
+
+        function estimateRequestCost(model, usage) {
+            if (!usage) return null;
+            const pricing = API_PRICING[model];
+            if (!pricing) return null;
+            const inputTokens = Number(usage.input_tokens) || 0;
+            const outputTokens = Number(usage.output_tokens) || 0;
+            if (!inputTokens && !outputTokens) return null;
+            return (inputTokens / 1000000) * pricing.inputPerMillionUsd +
+                (outputTokens / 1000000) * pricing.outputPerMillionUsd;
+        }
+
+        function renderPromptBudget() {
+            const fill = document.getElementById('promptBudgetFill');
+            const text = document.getElementById('promptBudgetText');
+            const input = document.getElementById('promptBudgetInput');
+            if (!fill || !text || !input) return;
+            input.value = promptBudgetState.limitUsd.toFixed(2).replace(/\.00$/, '');
+            const limit = Math.max(0, promptBudgetState.limitUsd || 0);
+            const spent = Math.max(0, promptBudgetState.spentUsd || 0);
+            const remaining = Math.max(0, limit - spent);
+            const percent = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
+            fill.style.width = percent + '%';
+            text.textContent = '$' + remaining.toFixed(2) + ' remaining of $' + limit.toFixed(2) +
+                ' budget · $' + spent.toFixed(2) + ' used';
+        }
+
+        function recordPromptUsage(data) {
+            const cost = estimateRequestCost(API_MODEL, data && data.usage);
+            if (cost == null) return;
+            promptBudgetState.spentUsd += cost;
+            savePromptBudgetState();
+            renderPromptBudget();
+        }
+
+        function resetPromptBudget() {
+            promptBudgetState.spentUsd = 0;
+            savePromptBudgetState();
+            renderPromptBudget();
+        }
 
         // =========================================================
         // FIREBASE — Real-time player screen sync
@@ -2776,6 +2936,10 @@
                 CAMPAIGN_NPCS.enemies = LOADED_CAMPAIGN.encounters
                     ? [...new Set(Object.values(LOADED_CAMPAIGN.encounters).flatMap(e => e.enemies || []))]
                     : [];
+            } else {
+                document.getElementById('menuCampaignName').textContent = 'No campaign loaded';
+                CAMPAIGN_NPCS.npcs = [];
+                CAMPAIGN_NPCS.enemies = [];
             }
 
             buildCharSidebar();
@@ -3303,6 +3467,7 @@ ${fullText.slice(0, 30000)}`;
 
                 if (!res.ok) throw new Error('API error: ' + res.status);
                 const data = await res.json();
+                recordPromptUsage(data);
                 const responseText = data.content[0].text;
 
                 // Parse JSON from response
@@ -3343,7 +3508,7 @@ ${fullText.slice(0, 30000)}`;
                 await firebaseDb.ref('campaign').remove();
                 LOADED_CAMPAIGN = null;
                 dmPrompts = null;
-                document.getElementById('menuCampaignName').textContent = 'No Campaign';
+                document.getElementById('menuCampaignName').textContent = 'No campaign loaded';
             }
             hideDeleteConfirm(type);
             await loadGameData();
@@ -3870,6 +4035,7 @@ ${fullText.slice(0, 30000)}`;
                 }
 
                 const data = await res.json();
+                recordPromptUsage(data);
                 const summary = data.content?.[0]?.text || '';
                 document.getElementById('sessionSummaryText').value = summary;
                 document.getElementById('sessionSummaryText').readOnly = false;
@@ -3988,6 +4154,19 @@ ${fullText.slice(0, 30000)}`;
                 if (welcome) welcome.insertAdjacentElement('afterend', el);
                 else storyDisplay.prepend(el);
             } catch (e) {}
+        });
+
+        window.addEventListener('load', () => {
+            const budgetInput = document.getElementById('promptBudgetInput');
+            if (!budgetInput) return;
+            budgetInput.value = promptBudgetState.limitUsd.toFixed(2).replace(/\.00$/, '');
+            budgetInput.addEventListener('change', function() {
+                const parsed = Number(this.value);
+                promptBudgetState.limitUsd = parsed > 0 ? parsed : DEFAULT_PROMPT_BUDGET_USD;
+                savePromptBudgetState();
+                renderPromptBudget();
+            });
+            renderPromptBudget();
         });
 
         // =========================================================
@@ -4188,6 +4367,7 @@ ${fullText.slice(0, 30000)}`;
                 }
 
                 const data = await res.json();
+                recordPromptUsage(data);
                 const reply = data.content?.[0]?.text || '(No response)';
                 conversationHistory.push({ role: 'assistant', content: reply });
                 loadingEl.remove();
