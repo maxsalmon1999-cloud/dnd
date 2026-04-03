@@ -2962,7 +2962,7 @@
             LOADED_CHARS = charSnap.val() || {};
             const spellBackfillUpdates = {};
             Object.entries(LOADED_CHARS).forEach(([key, c]) => {
-                if ((!Array.isArray(c.spells) || c.spells.length === 0) && c.rawMarkdown) {
+                if (c.rawMarkdown) {
                     const parsedSpells = parseSpellsFromRawMarkdown(c.rawMarkdown);
                     if (parsedSpells.length > 0) {
                         c.spells = parsedSpells;

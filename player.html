@@ -2266,11 +2266,12 @@
         CHARS = {};
         const spellBackfillUpdates = {};
         Object.entries(sheets).forEach(([key, c]) => {
-            const rawSpells = Array.isArray(c.spells) ? c.spells : (c.spells ? Object.values(c.spells) : []);
-            const spells = rawSpells.length > 0
-                ? rawSpells
-                : parseSpellsFromRawMarkdown(c.rawMarkdown);
-            if (rawSpells.length === 0 && spells.length > 0) {
+            // Always re-parse from rawMarkdown if available — it's the ground truth.
+            // Only fall back to stored spells if there's no markdown.
+            const spells = c.rawMarkdown
+                ? parseSpellsFromRawMarkdown(c.rawMarkdown)
+                : (Array.isArray(c.spells) ? c.spells : (c.spells ? Object.values(c.spells) : []));
+            if (spells.length > 0) {
                 spellBackfillUpdates['characterSheets/' + key + '/spells'] = spells;
             }
             CHARS[key] = {
