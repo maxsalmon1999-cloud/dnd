@@ -2264,7 +2264,11 @@
             if (rawSpells.length === 0 && spells.length > 0) {
                 spellBackfillUpdates['characterSheets/' + key + '/spells'] = spells;
             }
-            const mdSnippet = c.rawMarkdown ? c.rawMarkdown.slice(0, 600) : '(none)';
+            const md = c.rawMarkdown || '';
+            const knownSpellsIdx = md.toLowerCase().indexOf('known spells');
+            const mdSnippet = knownSpellsIdx >= 0
+                ? md.slice(Math.max(0, knownSpellsIdx - 10), knownSpellsIdx + 200)
+                : '(known spells not found in rawMarkdown)';
             CHARS[key] = {
                 name: c.name,
                 cls: c.cls || '',
@@ -2853,8 +2857,7 @@
         const dbg = document.createElement('div');
         dbg.style.cssText = 'font-size:9px;color:#ff0;background:#300;padding:4px;margin-bottom:4px;word-break:break-all';
         const d = char._dbg || {};
-        const nlCount = (d.mdSnippet || '').split('\n').length;
-        dbg.textContent = 'nlCount=' + nlCount + ' | parsed=' + d.parsedCount + ' | final=' + char.spells.length;
+        dbg.textContent = 'parsed=' + d.parsedCount + ' | snippet: ' + (d.mdSnippet || '');
         body.appendChild(dbg);
 
         if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
