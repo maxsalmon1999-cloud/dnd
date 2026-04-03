@@ -2853,7 +2853,8 @@
         const dbg = document.createElement('div');
         dbg.style.cssText = 'font-size:9px;color:#ff0;background:#300;padding:4px;margin-bottom:4px;word-break:break-all';
         const d = char._dbg || {};
-        dbg.textContent = 'hasRawMd=' + d.hasRawMarkdown + ' | rawSpells=' + d.rawSpellCount + ' | parsed=' + d.parsedCount + ' | final=' + char.spells.length + ' | md=' + (d.mdSnippet || '');
+        const nlCount = (d.mdSnippet || '').split('\n').length;
+        dbg.textContent = 'nlCount=' + nlCount + ' | parsed=' + d.parsedCount + ' | final=' + char.spells.length;
         body.appendChild(dbg);
 
         if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
