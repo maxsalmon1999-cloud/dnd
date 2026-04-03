@@ -2884,7 +2884,7 @@
                     '<div class="char-info"><strong>' + escapeHtml(c.name || '') + '</strong><small>' + escapeHtml(c.cls || '') + '</small></div>' +
                     '<div class="setup-char-actions">' +
                     '<button class="setup-btn" onclick="exportCharacter(' + keyJs + ')">Export</button>' +
-                    '<button class="setup-btn danger" onclick="deleteCharacter(' + keyJs + ')">Delete</button>' +
+                    '<button class="setup-btn danger" onclick="deleteCharacter(this, ' + keyJs + ')">Delete</button>' +
                     '</div>';
                 list.appendChild(row);
             });
@@ -3263,9 +3263,9 @@ ${fullText.slice(0, 30000)}`;
 
         let pendingDeleteCharKey = null;
 
-        function deleteCharacter(key) {
+        function deleteCharacter(btn, key) {
             pendingDeleteCharKey = key;
-            const row = document.querySelector('.setup-char-row[data-key="' + escapeCssValue(key) + '"]');
+            const row = btn.closest('.setup-char-row');
             if (!row) return;
             let confirm = row.querySelector('.char-delete-confirm');
             if (confirm) {
