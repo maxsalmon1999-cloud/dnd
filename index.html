@@ -2867,6 +2867,8 @@
             const proficiency = parseInt(extract(/Proficiency:\s*\+?(\d+)/)) || 2;
             const spellSaveDC = parseInt(extract(/Spell Save DC:\s*(\d+)/)) || null;
             const spellAttack = extract(/Spell Attack:\s*(\+?\d+)/);
+            const levelRaw = extract(/\(Level\s+(\d+)\)/i) || extract(/^Level\s*[:\s]\s*(\d+)/i);
+            const level = parseInt(levelRaw) || 1;
 
             // Parse ability mods
             const stats = {};
@@ -2949,7 +2951,7 @@
                 }
             });
 
-            return { name, cls, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells };
+            return { name, cls, level, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells };
         }
 
         function ordinal(n) {
