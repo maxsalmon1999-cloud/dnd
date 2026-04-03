@@ -2974,6 +2974,24 @@
                 await firebaseDb.ref().update(spellBackfillUpdates);
             }
 
+            // Migration: re-parse spells for characters uploaded before spell parsing was added
+            const spellMigrations = Object.entries(LOADED_CHARS).filter(([, c]) =>
+                c.rawMarkdown && (!c.spells || c.spells.length === 0)
+            );
+            if (spellMigrations.length > 0) {
+                spellMigrations.forEach(([key, c]) => {
+                    const parsed = parseCharacterSheet(c.rawMarkdown);
+                    if (parsed.spells && parsed.spells.length > 0) {
+                        firebaseDb.ref('characterSheets/' + key + '/spells').set(parsed.spells);
+                        LOADED_CHARS[key].spells = parsed.spells;
+                    }
+                    if (parsed.abilities && parsed.abilities.length > 0 && (!c.abilities || c.abilities.length === 0)) {
+                        firebaseDb.ref('characterSheets/' + key + '/abilities').set(parsed.abilities);
+                        LOADED_CHARS[key].abilities = parsed.abilities;
+                    }
+                });
+            }
+
             LOADED_CAMPAIGN = campSnap.val();
             if (LOADED_CAMPAIGN) {
                 if (LOADED_CAMPAIGN.meta && LOADED_CAMPAIGN.meta.name) {
