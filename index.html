@@ -2879,12 +2879,11 @@
                 const row = document.createElement('div');
                 row.className = 'setup-char-row';
                 row.dataset.key = key;
-                const keyJs = escapeJsAttr(key);
                 row.innerHTML =
                     '<div class="char-info"><strong>' + escapeHtml(c.name || '') + '</strong><small>' + escapeHtml(c.cls || '') + '</small></div>' +
                     '<div class="setup-char-actions">' +
-                    '<button class="setup-btn" onclick="exportCharacter(' + keyJs + ')">Export</button>' +
-                    '<button class="setup-btn danger" onclick="deleteCharacter(this,' + keyJs + ')">Delete</button>' +
+                    '<button class="setup-btn" data-setup-action="export">Export</button>' +
+                    '<button class="setup-btn danger" data-setup-action="delete">Delete</button>' +
                     '</div>';
                 list.appendChild(row);
             });
@@ -3378,6 +3377,21 @@ ${fullText.slice(0, 30000)}`;
             row.appendChild(confirm);
             confirm.querySelector('input').focus();
         }
+
+        document.addEventListener('click', function(e) {
+            const actionBtn = e.target.closest('#setupCharList [data-setup-action]');
+            if (!actionBtn) return;
+            const row = actionBtn.closest('.setup-char-row');
+            const key = row && row.dataset ? row.dataset.key : null;
+            if (!key) return;
+            if (actionBtn.dataset.setupAction === 'export') {
+                exportCharacter(key);
+                return;
+            }
+            if (actionBtn.dataset.setupAction === 'delete') {
+                deleteCharacter(actionBtn, key);
+            }
+        });
 
         async function executeCharDelete() {
             if (!pendingDeleteCharKey) return;
