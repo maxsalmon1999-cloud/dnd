@@ -2418,6 +2418,16 @@
                     </div>
                 </div>
 
+                <div class="meta-section" id="goldReqSection">
+                    <div class="meta-header" onclick="this.parentElement.classList.toggle('open')">
+                        <span>Gold Requests <span class="inv-req-badge" id="goldReqBadge" style="display:none"></span></span>
+                        <span class="character-arrow">&#9654;</span>
+                    </div>
+                    <div class="meta-list" id="goldReqList">
+                        <div class="meta-empty">No pending requests</div>
+                    </div>
+                </div>
+
                 <div class="notes-section" id="notesSection">
                     <div class="notes-header" onclick="this.parentElement.classList.toggle('open')">
                         <span>Story Notes</span>
@@ -2552,10 +2562,66 @@
             await firebaseDb.ref('inventoryRequests/' + charKey + '/' + reqKey).remove();
         }
 
+        // GOLD REQUESTS
+        // =========================================================
+        function syncGoldRequests() {
+            firebaseDb.ref('goldRequests').on('value', snap => {
+                const allReqs = snap.val() || {};
+                const list  = document.getElementById('goldReqList');
+                const badge = document.getElementById('goldReqBadge');
+
+                const entries = [];
+                Object.entries(allReqs).forEach(([charKey, charReqs]) => {
+                    Object.entries(charReqs).forEach(([reqKey, req]) => {
+                        entries.push({ reqKey, charKey, ...req });
+                    });
+                });
+
+                entries.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+                badge.style.display = entries.length ? '' : 'none';
+                badge.textContent = '(' + entries.length + ')';
+
+                if (!entries.length) {
+                    list.innerHTML = '<div class="meta-empty">No pending requests</div>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                entries.forEach(req => {
+                    const sign = req.delta >= 0 ? '+' : '';
+                    const newGold = (req.currentGold || 0) + req.delta;
+                    const charFirst = (req.charName || req.charKey).split(' ')[0];
+                    const row = document.createElement('div');
+                    row.className = 'inv-req-row';
+                    row.innerHTML =
+                        '<span class="inv-req-text"><strong>' + escapeHtml(charFirst) + '</strong>: ' +
+                        req.currentGold + 'gp <span class="inv-req-delta">(' + sign + req.delta + ')</span> → ' + Math.max(0, newGold) + 'gp</span>' +
+                        '<button class="inv-req-btn approve" title="Approve">&#10003;</button>' +
+                        '<button class="inv-req-btn reject" title="Reject">&#10007;</button>';
+                    row.querySelector('.approve').onclick = () =>
+                        approveGoldRequest(req.reqKey, req.charKey, Math.max(0, newGold));
+                    row.querySelector('.reject').onclick = () =>
+                        rejectGoldRequest(req.reqKey, req.charKey);
+                    list.appendChild(row);
+                });
+            });
+        }
+
+        async function approveGoldRequest(reqKey, charKey, newGold) {
+            await firebaseDb.ref('characters/' + charKey + '/gold').set(newGold);
+            await firebaseDb.ref('goldRequests/' + charKey + '/' + reqKey).remove();
+        }
+
+        async function rejectGoldRequest(reqKey, charKey) {
+            await firebaseDb.ref('goldRequests/' + charKey + '/' + reqKey).remove();
+        }
+
         async function initFirebaseSync() {
             // Load all game data from Firebase first
             await loadGameData();
             syncInvRequests();
+            syncGoldRequests();
 
             // Initialise HP for each character if not yet in Firebase
             Object.entries(LOADED_CHARS).forEach(([key, c]) => {

@@ -841,6 +841,7 @@
 
         .inv-add-btn:active { background: #c4a44e; color: #0e0a0c; }
 
+        .inv-cat-section { }
         .inv-cat-header {
             font-size: 11px;
             color: #6b2a3a;
@@ -850,7 +851,45 @@
             margin-top: 2px;
             border-top: 1px solid #2a1520;
         }
-        .inv-cat-header:first-child { border-top: none; padding-top: 4px; }
+        .inv-cat-section:first-child .inv-cat-header { border-top: none; padding-top: 4px; }
+        .inv-cat-header.accordion-style {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+        .inv-cat-header.accordion-style:hover { color: #c4a44e; }
+        .inv-cat-arrow { font-size: 10px; transition: transform 0.1s; }
+        .inv-cat-body { display: none; }
+        .inv-cat-section.open .inv-cat-body { display: block; }
+        .gold-input-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 6px 6px;
+        }
+        .gold-amt-input {
+            width: 70px;
+            background: #1a1018;
+            border: 1px solid #4a2030;
+            color: #e8d0b0;
+            font-family: inherit;
+            font-size: 12px;
+            padding: 2px 4px;
+            text-align: center;
+        }
+        .gold-confirm-btn, .gold-cancel-btn {
+            background: #1a1018;
+            border: 1px solid #4a2030;
+            color: #e8d0b0;
+            font-family: inherit;
+            font-size: 13px;
+            padding: 2px 6px;
+            cursor: pointer;
+        }
+        .gold-confirm-btn:hover { background: #2a7a40; border-color: #3a9a50; }
+        .gold-cancel-btn:hover { background: #7a2030; border-color: #9a3040; }
         .inv-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .inv-amount-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
         .inv-amt-btn {
@@ -1913,9 +1952,6 @@
                 <div class="tab-panel" id="tab-inventory">
                     <div class="desktop-panel-title">&#8862; Character</div>
                     <div class="win-body">
-                        <div class="sheet-special" id="specialBody"></div>
-                        <div id="spellsBody"></div>
-                        <div id="skillsBody"></div>
                         <div id="goldDisplay"></div>
                         <div id="invList">
                             <div class="inv-empty">&#9871; Your pack is empty &#9871;</div>
@@ -1933,6 +1969,9 @@
                             </select>
                             <button class="inv-add-btn" onclick="addItem()">+</button>
                         </div>
+                        <div class="sheet-special" id="specialBody"></div>
+                        <div id="spellsBody"></div>
+                        <div id="skillsBody"></div>
                     </div>
                 </div>
 
@@ -2039,6 +2078,7 @@
     let currentHp = null;
     let rollHistory = [];
     let pendingRequests = {};
+    let pendingGoldRequests = {};
     let activeConditions = {};
     let saveProficiencies = [];
     let skillProficiencies = [];
@@ -2958,27 +2998,96 @@
         const minusBtn = document.createElement('button');
         minusBtn.className = 'inv-amt-btn';
         minusBtn.textContent = '\u2212';
-        minusBtn.onclick = () => adjustGold(-1);
 
         const valEl = document.createElement('span');
         valEl.className = 'gold-value';
         valEl.id = 'goldValue';
         valEl.textContent = currentGold;
 
+        // Show pending gold delta if any
+        const pendingEntries = Object.values(pendingGoldRequests);
+        if (pendingEntries.length) {
+            const totalPending = pendingEntries.reduce((s, r) => s + r.delta, 0);
+            const sign = totalPending >= 0 ? '+' : '';
+            const pendEl = document.createElement('span');
+            pendEl.className = 'inv-delta';
+            pendEl.textContent = ' (' + sign + totalPending + ')';
+            valEl.appendChild(pendEl);
+        }
+
         const plusBtn = document.createElement('button');
         plusBtn.className = 'inv-amt-btn';
         plusBtn.textContent = '+';
-        plusBtn.onclick = () => adjustGold(+1);
+
+        // Inline input row
+        const inputRow = document.createElement('div');
+        inputRow.className = 'gold-input-row';
+        inputRow.style.display = 'none';
+
+        const amtInput = document.createElement('input');
+        amtInput.type = 'number';
+        amtInput.className = 'gold-amt-input';
+        amtInput.min = '1';
+        amtInput.max = '99999';
+        amtInput.placeholder = 'Amount...';
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'gold-confirm-btn';
+        confirmBtn.textContent = '\u2714';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'gold-cancel-btn';
+        cancelBtn.textContent = '\u00D7';
+
+        inputRow.appendChild(amtInput);
+        inputRow.appendChild(confirmBtn);
+        inputRow.appendChild(cancelBtn);
+
+        let pendingSign = 1;
+
+        function showInput(sign) {
+            pendingSign = sign;
+            amtInput.value = '';
+            inputRow.style.display = 'flex';
+            amtInput.focus();
+        }
+
+        function hideInput() {
+            inputRow.style.display = 'none';
+        }
+
+        function submitGold() {
+            const amt = Math.max(1, parseInt(amtInput.value) || 0);
+            if (!amt) return;
+            requestGoldChange(pendingSign * amt);
+            hideInput();
+        }
+
+        minusBtn.onclick = () => showInput(-1);
+        plusBtn.onclick = () => showInput(+1);
+        confirmBtn.onclick = submitGold;
+        cancelBtn.onclick = hideInput;
+        amtInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') submitGold();
+            if (e.key === 'Escape') hideInput();
+        });
 
         row.appendChild(label);
         row.appendChild(minusBtn);
         row.appendChild(valEl);
         row.appendChild(plusBtn);
         el.appendChild(row);
+        el.appendChild(inputRow);
     }
 
-    function adjustGold(delta) {
-        db.ref('characters/' + charKey + '/gold').transaction(g => Math.max(0, (g || 0) + delta));
+    function requestGoldChange(delta) {
+        db.ref('goldRequests/' + charKey).push({
+            charKey,
+            charName: char.name,
+            currentGold,
+            delta,
+            timestamp: Date.now(),
+        });
     }
 
     function setTab(name) {
@@ -3479,8 +3588,13 @@
         // Live gold sync
         charRef.child('gold').on('value', snap => {
             currentGold = snap.val() || 0;
-            const el = document.getElementById('goldValue');
-            if (el) el.textContent = currentGold;
+            renderGold();
+        });
+
+        // Gold requests (pending DM approval)
+        db.ref('goldRequests/' + charKey).on('value', snap => {
+            pendingGoldRequests = snap.val() || {};
+            renderGold();
         });
 
         // Notes — debounced save, don't overwrite while actively typing
@@ -3574,14 +3688,34 @@
             pendingByItem[req.itemKey] = { reqKey, delta: req.delta, currentAmount: req.currentAmount };
         });
 
+        let anyRendered = false;
         INV_CATEGORIES.forEach(cat => {
             const catItems = Object.entries(normalized).filter(([, v]) => (v.category || 'other') === cat.key);
             if (!catItems.length) return;
+            anyRendered = true;
+
+            // Accordion section
+            const section = document.createElement('div');
+            section.className = 'inv-cat-section open';
 
             const header = document.createElement('div');
-            header.className = 'inv-cat-header';
-            header.textContent = cat.label;
-            list.appendChild(header);
+            header.className = 'inv-cat-header accordion-style';
+            const headerLabel = document.createElement('span');
+            headerLabel.textContent = cat.label;
+            const arrow = document.createElement('span');
+            arrow.className = 'inv-cat-arrow';
+            arrow.textContent = '\u25BE'; // down triangle
+            header.appendChild(headerLabel);
+            header.appendChild(arrow);
+            header.onclick = () => {
+                section.classList.toggle('open');
+                arrow.textContent = section.classList.contains('open') ? '\u25BE' : '\u25B8';
+            };
+            section.appendChild(header);
+
+            const body = document.createElement('div');
+            body.className = 'inv-cat-body';
+            section.appendChild(body);
 
             catItems.forEach(([key, item]) => {
                 const pending = pendingByItem[key];
@@ -3651,9 +3785,15 @@
                 removeBtn.onclick = () => removeItem(key);
                 row.appendChild(removeBtn);
 
-                list.appendChild(row);
+                body.appendChild(row);
             });
+
+            list.appendChild(section);
         });
+
+        if (!anyRendered) {
+            list.innerHTML = '<div class="inv-empty">\u2694 Your pack is empty \u2694</div>';
+        }
     }
 
     function adjustAmount(itemKey, itemName, currentAmount, delta) {
