@@ -2845,6 +2845,12 @@
         if (!body) return;
         body.innerHTML = '';
 
+        // DEBUG — remove once spells confirmed working
+        const dbg = document.createElement('div');
+        dbg.style.cssText = 'font-size:9px;color:#ff0;background:#300;padding:4px;margin-bottom:4px;word-break:break-all';
+        dbg.textContent = 'spells: ' + JSON.stringify(char.spells) + ' | slots: ' + JSON.stringify(char.spellSlots);
+        body.appendChild(dbg);
+
         if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
 
         const cantrips = char.spells.filter(s => String(s.level).toLowerCase().startsWith('cantrip'));
