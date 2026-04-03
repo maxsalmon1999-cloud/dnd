@@ -1719,21 +1719,146 @@
             flex: none;
         }
 
-        .inv-stats-input {
-            background: none;
-            border: none;
-            border-bottom: 1px dotted #3a2030;
-            color: #6b5040;
-            font-family: inherit;
+        .inv-name-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .inv-name-row .inv-item-name { flex: 1; }
+        .inv-stat-badge {
+            flex-shrink: 0;
+            background: #120a10;
+            border: 1px solid #6b2a3a;
+            color: #c4a44e;
             font-size: 10px;
-            padding: 2px 0;
+            padding: 2px 6px;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .inv-item-notes {
+            font-size: 10px;
+            color: #6b5040;
+            margin-top: 3px;
+            line-height: 1.4;
+        }
+        /* Item stats modal */
+        #item-stats-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(0,0,0,0.75);
+            align-items: center;
+            justify-content: center;
+        }
+        #item-stats-modal.open { display: flex; }
+        .item-stats-box {
+            background: #1a1018;
+            border: 1.5px solid #6b2a3a;
+            border-top-color: #9b3a5a;
+            border-left-color: #9b3a5a;
+            border-bottom-color: #3a1520;
+            border-right-color: #3a1520;
+            padding: 16px;
+            width: 90%;
+            max-width: 300px;
+            font-family: inherit;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.9);
+        }
+        .item-stats-title {
+            font-size: 12px;
+            color: #c4a44e;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 14px;
+        }
+        .item-stats-field-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+        .item-stats-field-label {
+            font-size: 10px;
+            color: #8a7060;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            width: 56px;
+            flex-shrink: 0;
+        }
+        .item-stats-num {
+            background: #0e0a0c;
+            border: 1.5px solid #4a2030;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 13px;
+            padding: 6px 6px;
+            outline: none;
+            width: 48px;
+            text-align: center;
+        }
+        .item-stats-num:focus { border-color: #8c2a3a; }
+        .item-stats-sel {
+            background: #0e0a0c;
+            border: 1.5px solid #4a2030;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 12px;
+            padding: 6px 4px;
+            outline: none;
+            flex: 1;
+        }
+        .item-stats-sel:focus { border-color: #8c2a3a; }
+        .item-stats-notes {
+            background: #0e0a0c;
+            border: 1.5px solid #4a2030;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 12px;
+            padding: 6px 8px;
             outline: none;
             width: 100%;
-            margin-top: 2px;
+            resize: vertical;
+            min-height: 56px;
+            box-sizing: border-box;
+            margin-bottom: 12px;
         }
-
-        .inv-stats-input:focus { border-bottom-color: #8a6050; color: #8a7060; }
-        .inv-stats-input::placeholder { color: #3a2030; }
+        .item-stats-notes:focus { border-color: #8c2a3a; }
+        .item-stats-notes::placeholder { color: #4a2030; }
+        .item-stats-notes-label {
+            font-size: 10px;
+            color: #8a7060;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 5px;
+        }
+        .item-stats-btns { display: flex; gap: 8px; justify-content: flex-end; }
+        .item-stats-confirm-btn {
+            background: #1a1018;
+            border: 1.5px solid #4a6030;
+            color: #c4a44e;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 8px 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .item-stats-confirm-btn:active { background: #2a5020; }
+        .item-stats-cancel-btn {
+            background: none;
+            border: 1.5px solid #3a2030;
+            color: #6b5040;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 8px 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .item-stats-cancel-btn:active { color: #c4a44e; }
 
         /* ===================== CONDITIONS ===================== */
         .accordion-body {
@@ -3712,6 +3837,9 @@
                 const nameWrap = document.createElement('div');
                 nameWrap.className = 'inv-item-wrap';
 
+                const nameRow = document.createElement('div');
+                nameRow.className = 'inv-name-row';
+
                 const nameEl = document.createElement('span');
                 nameEl.className = 'inv-item-name' + (pending ? ' inv-pending' : '');
 
@@ -3722,18 +3850,31 @@
                 } else {
                     nameEl.textContent = item.name;
                 }
-                nameWrap.appendChild(nameEl);
+                nameRow.appendChild(nameEl);
 
-                if (!pending && cat.hasStats) {
-                    const statsInput = document.createElement('input');
-                    statsInput.type = 'text';
-                    statsInput.className = 'inv-stats-input';
-                    statsInput.placeholder = item.category === 'armour' ? 'AC, properties...' : 'damage, to-hit...';
-                    statsInput.value = item.stats || '';
-                    statsInput.addEventListener('change', () => {
-                        db.ref('characters/' + charKey + '/inventory/' + key + '/stats').set(statsInput.value.trim() || null);
-                    });
-                    nameWrap.appendChild(statsInput);
+                if (cat.hasStats) {
+                    let badgeText = '';
+                    if (item.category === 'weapons' && item.damageDice) {
+                        badgeText = item.damageDice + ' ' + (item.damageType || '');
+                    } else if (item.category === 'armour' && item.ac != null) {
+                        badgeText = 'AC ' + item.ac;
+                    } else if (item.stats) {
+                        badgeText = item.stats; // legacy fallback
+                    }
+                    if (badgeText) {
+                        const badge = document.createElement('span');
+                        badge.className = 'inv-stat-badge';
+                        badge.textContent = badgeText;
+                        nameRow.appendChild(badge);
+                    }
+                }
+                nameWrap.appendChild(nameRow);
+
+                if (cat.hasStats && item.notes) {
+                    const notesEl = document.createElement('div');
+                    notesEl.className = 'inv-item-notes';
+                    notesEl.textContent = item.notes;
+                    nameWrap.appendChild(notesEl);
                 }
 
                 row.appendChild(nameWrap);
@@ -3815,10 +3956,113 @@
         const name = input.value.trim();
         if (!name) return;
         const amount = Math.max(1, parseInt(amtInput.value) || 1);
-        db.ref('characters/' + charKey + '/inventory').push({ name, amount, category: catSelect.value });
-        input.value = '';
-        amtInput.value = '1';
-        input.focus();
+        const category = catSelect.value;
+        if (category === 'weapons' || category === 'armour') {
+            showItemStatsModal(name, amount, category);
+        } else {
+            db.ref('characters/' + charKey + '/inventory').push({ name, amount, category });
+            input.value = '';
+            amtInput.value = '1';
+            input.focus();
+        }
+    }
+
+    function showItemStatsModal(name, amount, category) {
+        const modal = document.getElementById('item-stats-modal');
+        document.getElementById('itemStatsTitle').textContent = '\u2726 ' + name;
+        const fields = document.getElementById('itemStatsFields');
+        fields.innerHTML = '';
+
+        if (category === 'weapons') {
+            // Damage row: [count] [die] [type]
+            const dmgRow = document.createElement('div');
+            dmgRow.className = 'item-stats-field-row';
+            const dmgLbl = document.createElement('span');
+            dmgLbl.className = 'item-stats-field-label';
+            dmgLbl.textContent = 'Damage';
+            const countIn = document.createElement('input');
+            countIn.type = 'number';
+            countIn.className = 'item-stats-num';
+            countIn.id = 'isDiceCount';
+            countIn.value = '1'; countIn.min = '1'; countIn.max = '20';
+            const dieSelect = document.createElement('select');
+            dieSelect.className = 'item-stats-sel';
+            dieSelect.id = 'isDieType';
+            ['d4','d6','d8','d10','d12','d20'].forEach(d => {
+                const o = document.createElement('option');
+                o.value = o.textContent = d;
+                if (d === 'd6') o.selected = true;
+                dieSelect.appendChild(o);
+            });
+            dmgRow.appendChild(dmgLbl); dmgRow.appendChild(countIn); dmgRow.appendChild(dieSelect);
+            fields.appendChild(dmgRow);
+
+            const typeRow = document.createElement('div');
+            typeRow.className = 'item-stats-field-row';
+            const typeLbl = document.createElement('span');
+            typeLbl.className = 'item-stats-field-label';
+            typeLbl.textContent = 'Type';
+            const typeSelect = document.createElement('select');
+            typeSelect.className = 'item-stats-sel';
+            typeSelect.id = 'isDmgType';
+            ['slashing','piercing','bludgeoning','fire','cold','lightning','acid','poison','necrotic','radiant','psychic','thunder','force'].forEach(t => {
+                const o = document.createElement('option');
+                o.value = o.textContent = t;
+                typeSelect.appendChild(o);
+            });
+            typeRow.appendChild(typeLbl); typeRow.appendChild(typeSelect);
+            fields.appendChild(typeRow);
+        } else {
+            const acRow = document.createElement('div');
+            acRow.className = 'item-stats-field-row';
+            const acLbl = document.createElement('span');
+            acLbl.className = 'item-stats-field-label';
+            acLbl.textContent = 'AC';
+            const acIn = document.createElement('input');
+            acIn.type = 'number';
+            acIn.className = 'item-stats-num';
+            acIn.id = 'isAC';
+            acIn.value = '10'; acIn.min = '1'; acIn.max = '30';
+            acRow.appendChild(acLbl); acRow.appendChild(acIn);
+            fields.appendChild(acRow);
+        }
+
+        const notesLbl = document.createElement('div');
+        notesLbl.className = 'item-stats-notes-label';
+        notesLbl.textContent = 'Other info';
+        const notesArea = document.createElement('textarea');
+        notesArea.className = 'item-stats-notes';
+        notesArea.id = 'isNotes';
+        notesArea.placeholder = category === 'weapons'
+            ? 'Range, finesse, thrown, two-handed...'
+            : 'Stealth disadvantage, STR requirement...';
+        fields.appendChild(notesLbl);
+        fields.appendChild(notesArea);
+
+        document.getElementById('itemStatsConfirmBtn').onclick = () => {
+            const itemData = { name, amount, category };
+            if (category === 'weapons') {
+                const count = document.getElementById('isDiceCount').value || '1';
+                const die = document.getElementById('isDieType').value;
+                itemData.damageDice = count + die;
+                itemData.damageType = document.getElementById('isDmgType').value;
+            } else {
+                itemData.ac = parseInt(document.getElementById('isAC').value) || 10;
+            }
+            const notes = document.getElementById('isNotes').value.trim();
+            if (notes) itemData.notes = notes;
+            db.ref('characters/' + charKey + '/inventory').push(itemData);
+            document.getElementById('invInput').value = '';
+            document.getElementById('invAmtInput').value = '1';
+            hideItemStatsModal();
+            document.getElementById('invInput').focus();
+        };
+
+        modal.classList.add('open');
+    }
+
+    function hideItemStatsModal() {
+        document.getElementById('item-stats-modal').classList.remove('open');
     }
 
     document.getElementById('invInput').addEventListener('keydown', e => {
@@ -3880,5 +4124,15 @@
     init();
 </script>
 <div id="ability-popup"><div class="popup-name"></div><div class="popup-desc"></div></div>
+<div id="item-stats-modal">
+    <div class="item-stats-box">
+        <div class="item-stats-title" id="itemStatsTitle"></div>
+        <div id="itemStatsFields"></div>
+        <div class="item-stats-btns">
+            <button class="item-stats-cancel-btn" onclick="hideItemStatsModal()">Cancel</button>
+            <button class="item-stats-confirm-btn" id="itemStatsConfirmBtn">Add</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
