@@ -3285,31 +3285,7 @@
             });
             flushFeatureBlock();
 
-            // Parse known spells — any section whose header contains "spell"
-            // but not "slot", "attack", or "save" (those are stat lines)
-            const spells = [];
-            let inSpells = false;
-            let currentSpellLevel = '';
-            lines.forEach(line => {
-                if (isSectionHeader(line)) {
-                    inSpells = /\bspells?\b/i.test(line) && !/\b(slot|attack|save)\b/i.test(line);
-                    return;
-                }
-                if (!inSpells) return;
-                const trimmed = line.trim();
-                if (!trimmed) return;
-                // Detect level sub-headers: "Cantrips:", "1st Level:", "Spells Known:", "Prepared:", etc.
-                if (/^(Cantrips?|(\d+)\w*\s+Level|Spells?\s+Known|Known\s+Spells?|Prepared|At.?Will)/i.test(trimmed)) {
-                    const raw = trimmed.replace(/:.*/, '').replace(/\s*\(.*\)/, '').trim();
-                    currentSpellLevel = /^cantrip/i.test(raw) ? 'cantrip' : raw;
-                    return;
-                }
-                // Detect spell entries starting with bullet
-                if (/^[•\-\*]/.test(trimmed)) {
-                    const spellText = trimmed.replace(/^[•\-\*]\s*/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
-                    if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
-                }
-            });
+            const spells = parseSpellsFromRawMarkdown(text);
 
             // Parse inventory from equipment section + combat action stats
             // Step 1: collect weapon/armour stats from Combat Actions
