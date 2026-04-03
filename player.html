@@ -273,6 +273,7 @@
             line-height: 1;
             margin-bottom: 8px;
         }
+        .sheet-section-group.no-divider::before { content: none; }
 
         /* Section label — ornate divider lines */
         .section-label {
@@ -2785,7 +2786,7 @@
         // Passive features — collapsible
         if (passiveAbils.length > 0) {
             const group = document.createElement('div');
-            group.className = 'sheet-section-group';
+            group.className = 'sheet-section-group no-divider';
 
             const header = document.createElement('div');
             header.className = 'section-label';
