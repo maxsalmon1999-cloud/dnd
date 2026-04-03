@@ -2972,6 +2972,10 @@
                 spellSlots.push({ label: '2nd (Short Rest)', shortLabel: '2nd', count: parseInt(warlockSlot), key: 'w' });
             }
 
+            function isSectionHeader(line) {
+                return /^[^\x00-\x7F]/.test(line);
+            }
+
             // Parse abilities (look for "Xn / Y Rest" patterns)
             const abilities = [];
             const abilPattern = /^([A-Z][\w\s]+?)\s*\((\d+)x?\s*\/\s*(Short|Long)\s+Rest\)/;
@@ -2989,27 +2993,57 @@
                 }
             });
 
-            // Parse passive features (lines under Special Features that don't have usage)
-            // Section headers start with non-ASCII (emoji) — use them to track current section
+            // Parse Special Features as blocks separated by blank lines.
             let inSpecial = false;
-            lines.forEach(line => {
-                if (/^[^\x00-\x7F]/.test(line)) { inSpecial = /Special Features/i.test(line); return; }
-                if (inSpecial && /^[^\s]/.test(line) && !/^(STR|DEX|CON|INT|WIS|CHA)/.test(line)) {
-                    const trimmed = line.trim();
-                    if (trimmed && !abilPattern.test(trimmed) && !/^\d/.test(trimmed) && !/^[•\-]/.test(trimmed) && !/^(AC|HP|Speed|Init|Prof|Spell|XP)/i.test(trimmed)) {
-                        if (!abilities.find(a => a.name === trimmed) && trimmed.length > 2 && trimmed.length < 40) {
-                            abilities.push({ name: trimmed, passive: true, desc: '' });
-                        }
-                    }
+            let featureBlock = [];
+
+            function flushFeatureBlock() {
+                if (!featureBlock.length) return;
+                const [featureName, ...descLines] = featureBlock;
+                if (!featureName || abilities.find(a => a.name === featureName)) {
+                    featureBlock = [];
+                    return;
                 }
+                const desc = descLines.join(' ').trim();
+                const usageMatch = featureName.match(abilPattern);
+                if (usageMatch) {
+                    const existing = abilities.find(a => a.name === usageMatch[1].trim() && !a.passive);
+                    if (existing && desc && !existing.desc) existing.desc = desc;
+                } else if (
+                    featureName.length > 2 &&
+                    featureName.length < 60 &&
+                    !/^\d/.test(featureName) &&
+                    !/^[•\-]/.test(featureName) &&
+                    !/^(AC|HP|Speed|Init|Prof|Spell|XP)/i.test(featureName) &&
+                    !/^(STR|DEX|CON|INT|WIS|CHA)/.test(featureName)
+                ) {
+                    abilities.push({ name: featureName, passive: true, desc });
+                }
+                featureBlock = [];
+            }
+
+            lines.forEach(line => {
+                if (isSectionHeader(line)) {
+                    if (inSpecial) flushFeatureBlock();
+                    inSpecial = /Special Features/i.test(line);
+                    return;
+                }
+                if (!inSpecial) return;
+                const trimmed = line.trim();
+                if (!trimmed) {
+                    flushFeatureBlock();
+                    return;
+                }
+                featureBlock.push(trimmed);
             });
+            flushFeatureBlock();
 
             // Parse known spells (from "Known Spells" section)
             const spells = [];
             let inSpells = false;
             let currentSpellLevel = '';
             lines.forEach(line => {
-                if (/^[^\x00-\x7F]/.test(line)) {
+                if (isSectionHeader(line)) {
                     inSpells = /Known Spells/i.test(line);
                     return;
                 }
@@ -3353,7 +3387,7 @@ ${fullText.slice(0, 30000)}`;
                 if (activeAbils.length > 0) {
                     statsHtml += '<div class="ability-section"><div class="ability-section-label">Abilities</div><div class="ability-grid">';
                     activeAbils.forEach(a => {
-                        const aDesc = (ABILITY_DESCRIPTIONS[a.name] || '').replace(/"/g, '&quot;');
+                        const aDesc = escapeHtml(getAbilityDescription(a.name, a.desc || ''));
                         statsHtml += '<button class="ability-btn" data-char="' + safeKeyAttr + '" data-rest="' + escapeHtml((a.rest || 'long').toLowerCase()) + '" data-max="' + a.max + '" data-used="0" data-ability="' + escapeHtml(a.key) + '" data-name="' + escapeHtml(a.name) + '" data-desc="' + aDesc + '" onclick="useAbility(this)">' + escapeHtml(a.name) + ' <span class="ability-count">' + a.max + '/' + a.max + '</span><span class="ability-info-btn" onclick="event.stopPropagation();showAbilityPopup(this.parentElement,this.parentElement.dataset.name,this.parentElement.dataset.desc)">?</span></button>';
                     });
                     statsHtml += '</div></div>';
@@ -3364,7 +3398,7 @@ ${fullText.slice(0, 30000)}`;
                 if (passiveAbils.length > 0) {
                     statsHtml += '<div class="ability-section"><div class="ability-section-label">Passive Features</div><div class="ability-grid">';
                     passiveAbils.forEach(a => {
-                        const pDesc = (ABILITY_DESCRIPTIONS[a.name] || a.desc || '').replace(/"/g, '&quot;');
+                        const pDesc = escapeHtml(getAbilityDescription(a.name, a.desc || ''));
                         statsHtml += '<button class="ability-btn" style="opacity:0.7" data-name="' + escapeHtml(a.name) + '" data-desc="' + pDesc + '" onclick="showAbilityPopup(this,this.dataset.name,this.dataset.desc)">' + escapeHtml(a.name) + '</button>';
                     });
                     statsHtml += '</div></div>';
@@ -3921,6 +3955,14 @@ ${fullText.slice(0, 30000)}`;
             'Naturally Stealthy': "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you.",
             'Naturally Stealthy (Lightfoot Halfling)': "You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you.",
         };
+
+        function getAbilityDescription(name, fallback) {
+            const normalized = String(name || '')
+                .replace(/\s+\([^)]*\)/g, '')
+                .replace(/\s+\d+d\d+\b/gi, '')
+                .trim();
+            return ABILITY_DESCRIPTIONS[name] || ABILITY_DESCRIPTIONS[normalized] || fallback || '';
+        }
 
         function showAbilityPopup(el, name, desc) {
             const popup = document.getElementById('ability-popup');

@@ -2432,20 +2432,38 @@
         'Bardic Inspiration': 'Bonus action — Give an ally within 60 ft a 1d6. They can add it to one attack roll, ability check, or saving throw. 3\u00d7 / Long Rest.',
         'Cutting Words': "Reaction — When a creature within 60 ft makes an attack, check, or damage roll, subtract a Bardic Inspiration die (1d6) from the result.",
         'Jack of All Trades': "Add +1 (half proficiency bonus) to any ability check you're not already proficient in.",
+        '+1 to all non-proficient ability checks': "Jack of All Trades: add +1 (half proficiency bonus) to any ability check you aren't already proficient in.",
         'Song of Rest': "During a short rest, allies who hear you play regain an extra 1d6 HP when spending Hit Dice.",
         'Fey Ancestry': "Advantage on saving throws against being charmed. Immune to magical sleep.",
         'Fey Presence': "Action — Creatures in a 10-ft cube make a WIS save DC 13. On fail: charmed or frightened (your choice) until end of your next turn. 1\u00d7 / Short Rest.",
         'Shapechanger': "Action — Change appearance and voice to any Medium humanoid form. Clothing and equipment are not changed.",
+        'Shapechanger (Changeling)': "Action — Change appearance and voice to any Medium humanoid form. Clothing and equipment are not changed.",
         'Changeling Instincts': "Proficiency in Deception and Insight.",
         'Feywild Connection': "Advantage on checks to recall Feywild lore.",
+        'Feywild Connection (Feylost Background)': "Advantage on checks to recall Feywild lore.",
+        'Sneak Attack': "Once per turn, deal extra damage when you have advantage or an ally is within 5 ft of the target. Requires a finesse or ranged weapon.",
+        'Sneak Attack (2d6)': "Once per turn, deal +2d6 extra damage when you have advantage or an ally is within 5 ft of the target. Requires a finesse or ranged weapon.",
         'Sneak Attack 2d6': "Once per turn, deal +2d6 extra damage when you have advantage or an ally is within 5 ft of the target. Requires a finesse or ranged weapon.",
         'Cunning Action': "Bonus action — Take the Dash, Disengage, or Hide action.",
         'Fast Hands': "Bonus action — Use an object (thieves' tools, ball bearings, caltrops, etc.).",
+        'Fast Hands (Thief)': "Bonus action — Use an object (thieves' tools, ball bearings, caltrops, etc.).",
         'Second-Story Work': "Climbing costs no extra movement. Running jump distance increases by 3 ft.",
+        'Second-Story Work (Thief)': "Climbing costs no extra movement. Running jump distance increases by 3 ft.",
         'Lucky': "When you roll a 1 on an attack, ability check, or saving throw, you can reroll the die and must use the new result.",
+        'Lucky (Halfling)': "When you roll a 1 on an attack, ability check, or saving throw, you can reroll the die and must use the new result.",
         'Brave': "Advantage on saving throws against being frightened.",
+        'Brave (Halfling)': "Advantage on saving throws against being frightened.",
         'Naturally Stealthy': "Can attempt to hide even when obscured only by a creature one size larger than you.",
+        'Naturally Stealthy (Lightfoot Halfling)': "Can attempt to hide even when obscured only by a creature one size larger than you.",
     };
+
+    function getAbilityDescription(name, fallback) {
+        const normalized = String(name || '')
+            .replace(/\s+\([^)]*\)/g, '')
+            .replace(/\s+\d+d\d+\b/gi, '')
+            .trim();
+        return ABILITY_DESCRIPTIONS[name] || ABILITY_DESCRIPTIONS[normalized] || fallback || '';
+    }
 
     function showAbilityPopup(el, name, desc) {
         const popup = document.getElementById('ability-popup');
@@ -2551,7 +2569,7 @@
                 const infoBtn = document.createElement('span');
                 infoBtn.className = 'chip-info';
                 infoBtn.textContent = '?';
-                const aDesc = ABILITY_DESCRIPTIONS[a.name] || '';
+                const aDesc = getAbilityDescription(a.name, a.desc || '');
                 infoBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     showAbilityPopup(btn, a.name, aDesc);
@@ -2579,7 +2597,7 @@
                 btn.className = 'ability-chip passive';
                 const icon = abilityIcons[a.name] || '\u25C8';
                 btn.textContent = icon + ' ' + a.name;
-                const pDesc = ABILITY_DESCRIPTIONS[a.name] || a.desc || '';
+                const pDesc = getAbilityDescription(a.name, a.desc || '');
                 btn.addEventListener('click', () => showAbilityPopup(btn, a.name, pDesc));
                 chips.appendChild(btn);
             });
