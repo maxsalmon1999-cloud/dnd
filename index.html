@@ -845,6 +845,43 @@
             border-left: 2px solid #4a2030;
         }
 
+        .story-entry .text h2,
+        .story-entry .text h3,
+        .story-entry .text h4 {
+            color: #c4a44e;
+            margin: 0 0 6px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .story-entry .text p {
+            margin: 0 0 8px;
+        }
+
+        .story-entry .text p:last-child,
+        .story-entry .text ul:last-child {
+            margin-bottom: 0;
+        }
+
+        .story-entry .text ul {
+            margin: 0 0 8px 16px;
+            padding: 0;
+        }
+
+        .story-entry .text li {
+            margin: 0 0 4px;
+        }
+
+        .story-entry .text strong {
+            color: #d8c07a;
+        }
+
+        .story-entry .text em {
+            color: #b89a88;
+            font-style: italic;
+        }
+
         /* ========== UNDO / REDO ========== */
         .story-exchange {
             position: relative;
@@ -4398,7 +4435,7 @@ ${fullText.slice(0, 30000)}`;
             const entry = document.createElement('div');
             entry.className = `story-entry ${role}`;
             const badge = mode ? `<span class="mode-badge mode-${mode}">${modeLabels[mode]}</span>` : '';
-            entry.innerHTML = `<div class="label">${escapeHtml(label)}${badge}</div><div class="text">${escapeHtml(text)}</div>`;
+            entry.innerHTML = `<div class="label">${escapeHtml(label)}${badge}</div><div class="text">${renderStoryText(role, text)}</div>`;
 
             if (role === 'user') {
                 // Start a new exchange wrapper
@@ -4429,6 +4466,70 @@ ${fullText.slice(0, 30000)}`;
             const div = document.createElement('div');
             div.textContent = str == null ? '' : String(str);
             return div.innerHTML;
+        }
+
+        function applyInlineMarkdown(text) {
+            return text
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+        }
+
+        function renderAssistantMarkdown(text) {
+            const escaped = escapeHtml(text).replace(/\r\n?/g, '\n');
+            const lines = escaped.split('\n');
+            const blocks = [];
+            let paragraph = [];
+            let listItems = [];
+
+            function flushParagraph() {
+                if (!paragraph.length) return;
+                blocks.push('<p>' + applyInlineMarkdown(paragraph.join(' ')) + '</p>');
+                paragraph = [];
+            }
+
+            function flushList() {
+                if (!listItems.length) return;
+                blocks.push('<ul>' + listItems.map(item => '<li>' + applyInlineMarkdown(item) + '</li>').join('') + '</ul>');
+                listItems = [];
+            }
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) {
+                    flushParagraph();
+                    flushList();
+                    return;
+                }
+
+                const headingMatch = trimmed.match(/^(#{2,4})\s+(.+)$/);
+                if (headingMatch) {
+                    flushParagraph();
+                    flushList();
+                    const level = Math.min(4, headingMatch[1].length);
+                    blocks.push(`<h${level}>${applyInlineMarkdown(headingMatch[2])}</h${level}>`);
+                    return;
+                }
+
+                const listMatch = trimmed.match(/^[*-]\s+(.+)$/);
+                if (listMatch) {
+                    flushParagraph();
+                    listItems.push(listMatch[1]);
+                    return;
+                }
+
+                flushList();
+                paragraph.push(trimmed);
+            });
+
+            flushParagraph();
+            flushList();
+            return blocks.join('');
+        }
+
+        function renderStoryText(role, text) {
+            return role === 'assistant'
+                ? renderAssistantMarkdown(text)
+                : escapeHtml(text).replace(/\n/g, '<br>');
         }
 
         function escapeJsAttr(str) {
