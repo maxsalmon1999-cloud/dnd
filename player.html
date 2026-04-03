@@ -2275,7 +2275,6 @@
             const spells = c.rawMarkdown
                 ? parseSpellsFromRawMarkdown(c.rawMarkdown)
                 : (Array.isArray(c.spells) ? c.spells : (c.spells ? Object.values(c.spells) : []));
-            console.log('[init] key=' + key + ' hasRawMarkdown=' + !!c.rawMarkdown + ' spells=' + JSON.stringify(spells));
             if (spells.length > 0) {
                 spellBackfillUpdates['characterSheets/' + key + '/spells'] = spells;
             }
@@ -2861,9 +2860,6 @@
         const body = document.getElementById('spellsBody');
         if (!body) return;
         body.innerHTML = '';
-
-        console.log('[spells] char.spells:', JSON.stringify(char.spells));
-        console.log('[spells] char.spellSlots:', JSON.stringify(char.spellSlots));
 
         if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
 
