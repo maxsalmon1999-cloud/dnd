@@ -3850,7 +3850,7 @@
 
             // Accordion section
             const section = document.createElement('div');
-            section.className = 'inv-cat-section open';
+            section.className = 'inv-cat-section';
 
             const header = document.createElement('div');
             header.className = 'inv-cat-header accordion-style';
@@ -3858,7 +3858,7 @@
             headerLabel.textContent = cat.label;
             const arrow = document.createElement('span');
             arrow.className = 'inv-cat-arrow';
-            arrow.textContent = '\u25BE'; // down triangle
+            arrow.textContent = '\u25B8'; // right triangle
             header.appendChild(headerLabel);
             header.appendChild(arrow);
             header.onclick = () => {
