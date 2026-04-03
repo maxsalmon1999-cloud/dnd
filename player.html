@@ -2495,7 +2495,6 @@
     function buildSpecial() {
         const body = document.getElementById('specialBody');
         body.innerHTML = '';
-        const hasSlots = char.spellSlots.length > 0;
         const activeAbils = char.abilities.filter(a => !a.passive);
         const passiveAbils = char.abilities.filter(a => a.passive);
         const abilityIcons = {
@@ -2515,38 +2514,6 @@
             group.className = 'sheet-section-group';
             group.appendChild(makeSectionLabel(text));
             return group;
-        }
-
-        // Spell slots section
-        if (hasSlots) {
-            const group = makeSectionGroup('\u2726 Spell Slots');
-
-            char.spellSlots.forEach(slot => {
-                const row = document.createElement('div');
-                row.className = 'slot-row';
-                const isSecondLevelSlot = slot.key === '2' || /^2nd\b/i.test(slot.label || '');
-                const lbl = document.createElement('span');
-                lbl.className = 'slot-level-label';
-                lbl.innerHTML = '\u2726 ' + slot.label;
-                row.appendChild(lbl);
-                const pips = document.createElement('div');
-                pips.className = 'slot-pips';
-                for (let i = 0; i < slot.count; i++) {
-                    const pip = document.createElement('div');
-                    pip.className = 'slot-pip';
-                    if (isSecondLevelSlot) pip.classList.add('level-2');
-                    pip.dataset.slotKey = slot.key + '_' + i;
-                    pip.onclick = () => {
-                        const spent = !pip.classList.contains('spent');
-                        pip.classList.toggle('spent', spent);
-                        db.ref('characters/' + charKey + '/slots/' + pip.dataset.slotKey).set(spent);
-                    };
-                    pips.appendChild(pip);
-                }
-                row.appendChild(pips);
-                group.appendChild(row);
-            });
-            body.appendChild(group);
         }
 
         // Active abilities
@@ -2702,7 +2669,7 @@
         if (!body) return;
         body.innerHTML = '';
 
-        if (!char.spells || char.spells.length === 0) return;
+        if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
 
         const cantrips = char.spells.filter(s => String(s.level).toLowerCase().startsWith('cantrip'));
         const spellList = char.spells.filter(s => !String(s.level).toLowerCase().startsWith('cantrip'));
