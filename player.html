@@ -2741,9 +2741,10 @@
             cantrips.forEach(s => {
                 const btn = document.createElement('button');
                 btn.className = 'ability-chip passive spell';
-                btn.textContent = '\u2727 ' + s.name;
-                const desc = SPELL_DESCRIPTIONS[s.name] || '';
-                btn.addEventListener('click', () => showAbilityPopup(btn, s.name, desc || 'No description available.'));
+                const baseName = s.name.replace(/\s*\(.*\)$/, '').trim();
+                btn.textContent = '\u2727 ' + baseName;
+                const desc = SPELL_DESCRIPTIONS[baseName] || '';
+                btn.addEventListener('click', () => showAbilityPopup(btn, baseName, desc || 'No description available.'));
                 chips.appendChild(btn);
             });
             accordionBody.appendChild(chips);
@@ -2766,9 +2767,10 @@
 
                 const nameBtn = document.createElement('button');
                 nameBtn.className = 'ability-chip passive spell spell-name-btn';
-                nameBtn.textContent = '\u2727 ' + s.name;
-                const desc = SPELL_DESCRIPTIONS[s.name] || '';
-                nameBtn.addEventListener('click', () => showAbilityPopup(nameBtn, s.name, desc || 'No description available.'));
+                const baseName = s.name.replace(/\s*\(.*\)$/, '').trim();
+                nameBtn.textContent = '\u2727 ' + baseName;
+                const desc = SPELL_DESCRIPTIONS[baseName] || '';
+                nameBtn.addEventListener('click', () => showAbilityPopup(nameBtn, baseName, desc || 'No description available.'));
 
                 const castBtn = document.createElement('button');
                 castBtn.className = 'spell-cast-btn';

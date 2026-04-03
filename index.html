@@ -3059,7 +3059,7 @@
                 }
                 // Detect spell entries starting with bullet
                 if (/^[•\-\*]/.test(trimmed)) {
-                    const spellText = trimmed.replace(/^[•\-\*]\s*/, '');
+                    const spellText = trimmed.replace(/^[•\-\*]\s*/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
                     if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
                 }
             });
