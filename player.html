@@ -1580,6 +1580,204 @@
                 font-size: 7px;
             }
         }
+        /* ===================== GOLD ===================== */
+        .gold-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 6px;
+            border-bottom: 2px solid #2a1520;
+            margin-bottom: 4px;
+        }
+
+        .gold-label {
+            font-size: 11px;
+            font-weight: bold;
+            color: #8a6050;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            flex: 1;
+        }
+
+        .gold-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #c4a44e;
+            min-width: 48px;
+            text-align: center;
+        }
+
+        /* ===================== ITEM STATS ===================== */
+        .inv-item-wrap {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .inv-item-wrap .inv-item-name {
+            flex: none;
+        }
+
+        .inv-stats-input {
+            background: none;
+            border: none;
+            border-bottom: 1px dotted #3a2030;
+            color: #6b5040;
+            font-family: inherit;
+            font-size: 10px;
+            padding: 2px 0;
+            outline: none;
+            width: 100%;
+            margin-top: 2px;
+        }
+
+        .inv-stats-input:focus { border-bottom-color: #8a6050; color: #8a7060; }
+        .inv-stats-input::placeholder { color: #3a2030; }
+
+        /* ===================== CONDITIONS ===================== */
+        .accordion-body {
+            display: none;
+            padding: 4px 0;
+        }
+
+        .accordion-body.open { display: block; }
+
+        .active-conditions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+
+        .condition-chip {
+            display: inline-flex;
+            align-items: center;
+            background: #2a0e14;
+            border: 1px solid #8c2a3a;
+            padding: 3px 8px;
+            font-size: 10px;
+            color: #e05050;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .condition-chip:active { background: #3a1020; }
+
+        .condition-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 0;
+            border-bottom: 1px solid #1a1018;
+        }
+
+        .condition-row:last-child { border-bottom: none; }
+
+        .condition-name {
+            font-size: 12px;
+            color: #c4a44e;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .condition-name:hover { color: #d4b45e; text-decoration: underline; }
+
+        .toggle-switch {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: #1a1018;
+            border: 1.5px solid #4a2030;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #4a2030;
+            top: 2px;
+            left: 2px;
+            transition: left 0.15s, background 0.15s;
+        }
+
+        .toggle-switch input:checked + .toggle-track { background: #3a1018; border-color: #8c2a3a; }
+        .toggle-switch input:checked + .toggle-track .toggle-thumb { left: 18px; background: #e04040; }
+
+        /* ===================== SAVING THROWS ===================== */
+        .save-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 0;
+            border-bottom: 1px solid #1a1018;
+        }
+
+        .save-row:last-child { border-bottom: none; }
+
+        .save-stat {
+            font-size: 10px;
+            font-weight: bold;
+            color: #8a6050;
+            text-transform: uppercase;
+            width: 28px;
+            flex-shrink: 0;
+        }
+
+        .save-value {
+            font-size: 15px;
+            font-weight: bold;
+            color: #c4a44e;
+            width: 30px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .save-prof-btn {
+            width: 20px;
+            height: 20px;
+            background: #1a1018;
+            border: 1.5px solid #4a2030;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #4a2030;
+            flex-shrink: 0;
+            touch-action: manipulation;
+            font-family: inherit;
+            padding: 0;
+        }
+
+        .save-prof-btn.active {
+            background: #1a1810;
+            border-color: #c4a44e;
+            color: #c4a44e;
+        }
+
+        .save-prof-btn:disabled { opacity: 0.3; cursor: default; }
+
+        .save-name {
+            font-size: 10px;
+            color: #5a4048;
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -1626,14 +1824,14 @@
     <!-- Tabbed content -->
     <div class="win">
             <div class="tab-bar">
-                <button class="tab active" data-tab="sheet" onclick="setTab('sheet')" title="Character">&#9876;</button>
-                <button class="tab" data-tab="inventory" onclick="setTab('inventory')" title="Inventory">&#8862;</button>
+                <button class="tab active" data-tab="sheet" onclick="setTab('sheet')" title="Stats">&#9876;</button>
+                <button class="tab" data-tab="inventory" onclick="setTab('inventory')" title="Character">&#8862;</button>
                 <button class="tab" data-tab="dice" onclick="setTab('dice')" title="Dice">&#9860;</button>
             </div>
             <div class="tab-columns">
-                <!-- CHARACTER TAB: stats + abilities -->
+                <!-- STATS TAB -->
                 <div class="tab-panel active" id="tab-sheet">
-                    <div class="desktop-panel-title">&#9876; Character</div>
+                    <div class="desktop-panel-title">&#9876; Stats</div>
                     <div class="win-body">
                         <div class="sheet-layout">
                             <div class="sheet-column-primary">
@@ -1644,15 +1842,20 @@
                                     <div class="ability-grid" id="abilityScores"></div>
                                 </div>
                             </div>
-                            <div class="sheet-special" id="specialBody"></div>
+                            <div id="conditionsBody"></div>
+                            <div id="savingThrowsBody"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- INVENTORY TAB -->
+                <!-- CHARACTER TAB -->
                 <div class="tab-panel" id="tab-inventory">
-                    <div class="desktop-panel-title">&#8862; Inventory</div>
+                    <div class="desktop-panel-title">&#8862; Character</div>
                     <div class="win-body">
+                        <div class="sheet-special" id="specialBody"></div>
+                        <div id="spellsBody"></div>
+                        <div id="skillsBody"></div>
+                        <div id="goldDisplay"></div>
                         <div id="invList">
                             <div class="inv-empty">&#9871; Your pack is empty &#9871;</div>
                         </div>
@@ -1660,8 +1863,9 @@
                             <input type="text" class="inv-input" id="invInput" placeholder="Item name..." maxlength="60" style="flex:1;min-width:80px">
                             <input type="number" class="inv-amt-new" id="invAmtInput" value="1" min="1" max="9999">
                             <select class="inv-cat-select" id="invCatSelect">
+                                <option value="armour">Armour</option>
                                 <option value="weapons">Weapons</option>
-                                <option value="cash">Cash</option>
+                                <option value="tools">Tools</option>
                                 <option value="loot">Loot</option>
                                 <option value="consumables" selected>Consumables</option>
                                 <option value="other">Other</option>
@@ -1763,6 +1967,10 @@
     let currentHp = null;
     let rollHistory = [];
     let pendingRequests = {};
+    let activeConditions = {};
+    let saveProficiencies = [];
+    let skillProficiencies = [];
+    let currentGold = 0;
 
     // =========================================================
     // INIT — load characters from Firebase, then proceed
@@ -1776,6 +1984,7 @@
             CHARS[key] = {
                 name: c.name,
                 cls: c.cls || '',
+                level: c.level || 1,
                 maxHp: c.maxHp || 10,
                 ac: c.ac || 10,
                 proficiency: c.proficiency || 2,
@@ -1836,25 +2045,34 @@
     function buildPlayerScreen() {
         document.title = char.name + ' — D&D';
         document.getElementById('charTitle').textContent = char.name;
-        document.getElementById('charClassLabel').textContent = char.cls;
+        document.getElementById('charClassLabel').textContent = char.cls + ' · Level ' + (char.level || 1);
 
         buildCoreStats();
         buildAbilityScores();
+        buildConditions();
+        buildSavingThrows();
         buildSpecial();
+        buildSpells();
+        buildSkills();
+        renderGold();
         initDiceStrip();
         startFirebaseSync();
+    }
+
+    function proficiencyFromLevel(level) {
+        // D&D 5e: +2 at lvl 1-4, +3 at 5-8, +4 at 9-12, +5 at 13-16, +6 at 17-20
+        return Math.ceil((level || 1) / 4) + 1;
     }
 
     function buildCoreStats() {
         const container = document.getElementById('coreStats');
         container.innerHTML = '';
-        const statIcons = { 'AC': '\u26E8', 'Proficiency': '\u2726', 'Spell Save DC': '\u2727', 'Initiative': '\u2694' };
+        const statIcons = { 'AC': '\u26E8', 'Prof Bonus': '\u2726', 'Spell Save DC': '\u2727' };
+        const profBonus = proficiencyFromLevel(char.level || 1);
         const items = [
             { label: 'AC', value: char.ac },
-            { label: 'Proficiency', value: '+' + char.proficiency },
-            char.spellSaveDC
-                ? { label: 'Spell Save DC', value: char.spellSaveDC }
-                : { label: 'Initiative', value: fmtMod(char.stats.DEX) }
+            { label: 'Spell Save DC', value: char.spellSaveDC != null ? char.spellSaveDC : '\u2014' },
+            { label: 'Prof Bonus', value: '+' + profBonus },
         ];
         items.forEach(item => {
             const box = document.createElement('div');
@@ -1879,6 +2097,220 @@
                 '<div class="ability-mod">' + fmtMod(mod) + '</div>' +
                 '<div class="ability-label">' + stat + '</div>';
             container.appendChild(box);
+        });
+    }
+
+    // =========================================================
+    // CONDITIONS
+    // =========================================================
+    const CONDITIONS = [
+        { name: 'Blinded',        desc: 'Cannot see. Attacks against you have advantage; your attacks have disadvantage. Auto-fail sight-based checks.' },
+        { name: 'Charmed',        desc: 'Cannot attack the charmer or target them with harmful abilities. Charmer has advantage on social ability checks against you.' },
+        { name: 'Deafened',       desc: 'Cannot hear. Auto-fail hearing-based ability checks.' },
+        { name: 'Exhaustion',     desc: 'Lvl 1: Disadv. on ability checks. Lvl 2: Speed halved. Lvl 3: Disadv. on attacks & saves. Lvl 4: Max HP halved. Lvl 5: Speed 0. Lvl 6: Death.' },
+        { name: 'Frightened',     desc: 'Disadvantage on ability checks and attacks while source of fear is visible. Cannot willingly move closer to the source.' },
+        { name: 'Grappled',       desc: 'Speed becomes 0. Ends if grappler is incapacitated or you are moved beyond their reach.' },
+        { name: 'Incapacitated',  desc: 'Cannot take actions or reactions.' },
+        { name: 'Invisible',      desc: 'Cannot be seen without special senses. Your attack rolls have advantage; attacks against you have disadvantage.' },
+        { name: 'Paralyzed',      desc: 'Incapacitated; cannot move or speak. Auto-fail STR and DEX saves. Attacks have advantage; hits within 5 ft are automatic critical hits.' },
+        { name: 'Petrified',      desc: 'Transformed to stone. Incapacitated, speed 0. Immune to poison and disease. Resistance to all damage. Auto-fail STR and DEX saves.' },
+        { name: 'Poisoned',       desc: 'Disadvantage on attack rolls and ability checks.' },
+        { name: 'Prone',          desc: 'Disadvantage on attack rolls. Melee attacks within 5 ft have advantage against you; ranged attacks have disadvantage. Costs half speed to stand up.' },
+        { name: 'Restrained',     desc: 'Speed 0. Your attack rolls have disadvantage. Attacks against you have advantage. Disadvantage on DEX saves.' },
+        { name: 'Stunned',        desc: 'Incapacitated, cannot move. Auto-fail STR and DEX saves. Attacks against you have advantage.' },
+        { name: 'Unconscious',    desc: 'Incapacitated; cannot move, speak, or perceive surroundings. Drops items, falls prone. Auto-fail STR and DEX saves. Attacks have advantage; hits within 5 ft are critical hits.' },
+    ];
+
+    function buildConditions() {
+        const body = document.getElementById('conditionsBody');
+        body.innerHTML = '';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sheet-section-group';
+        wrapper.style.marginTop = '10px';
+
+        const header = document.createElement('div');
+        header.className = 'section-label';
+        header.style.cursor = 'pointer';
+        header.style.userSelect = 'none';
+        header.innerHTML = '<span>\u25CE Conditions</span>';
+
+        const activeDisplay = document.createElement('div');
+        activeDisplay.className = 'active-conditions';
+        activeDisplay.id = 'activeConditionsDisplay';
+
+        const accordionBody = document.createElement('div');
+        accordionBody.className = 'accordion-body';
+        accordionBody.id = 'conditionsAccordion';
+
+        let isOpen = false;
+        header.addEventListener('click', () => {
+            isOpen = !isOpen;
+            accordionBody.classList.toggle('open', isOpen);
+        });
+
+        CONDITIONS.forEach(cond => {
+            const row = document.createElement('div');
+            row.className = 'condition-row';
+
+            const nameEl = document.createElement('span');
+            nameEl.className = 'condition-name';
+            nameEl.textContent = cond.name;
+            nameEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showAbilityPopup(nameEl, cond.name, cond.desc);
+            });
+
+            const toggle = document.createElement('label');
+            toggle.className = 'toggle-switch';
+
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.dataset.cond = cond.name;
+            input.checked = !!activeConditions[cond.name];
+
+            const track = document.createElement('div');
+            track.className = 'toggle-track';
+            const thumb = document.createElement('div');
+            thumb.className = 'toggle-thumb';
+            track.appendChild(thumb);
+
+            input.addEventListener('change', () => {
+                activeConditions[cond.name] = input.checked;
+                const fbKey = cond.name.replace(/\s/g, '_');
+                db.ref('characters/' + charKey + '/conditions/' + fbKey).set(input.checked ? true : null);
+                updateActiveConditionsDisplay();
+            });
+
+            toggle.appendChild(input);
+            toggle.appendChild(track);
+            row.appendChild(nameEl);
+            row.appendChild(toggle);
+            accordionBody.appendChild(row);
+        });
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(activeDisplay);
+        wrapper.appendChild(accordionBody);
+        body.appendChild(wrapper);
+
+        updateActiveConditionsDisplay();
+    }
+
+    function updateActiveConditionsDisplay() {
+        const display = document.getElementById('activeConditionsDisplay');
+        if (!display) return;
+        display.innerHTML = '';
+        CONDITIONS.filter(c => activeConditions[c.name]).forEach(cond => {
+            const chip = document.createElement('button');
+            chip.className = 'condition-chip';
+            chip.textContent = cond.name;
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showAbilityPopup(chip, cond.name, cond.desc);
+            });
+            display.appendChild(chip);
+        });
+    }
+
+    // =========================================================
+    // SAVING THROWS
+    // =========================================================
+    const SAVE_STATS = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+    const SAVE_NAMES = { STR: 'Strength', DEX: 'Dexterity', CON: 'Constitution', INT: 'Intelligence', WIS: 'Wisdom', CHA: 'Charisma' };
+
+    function getSaveValue(stat) {
+        const base = char.stats[stat] || 0;
+        const profBonus = proficiencyFromLevel(char.level || 1);
+        return fmtMod(base + (saveProficiencies.includes(stat) ? profBonus : 0));
+    }
+
+    function buildSavingThrows() {
+        const body = document.getElementById('savingThrowsBody');
+        body.innerHTML = '';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sheet-section-group';
+        wrapper.style.marginTop = '10px';
+
+        const header = document.createElement('div');
+        header.className = 'section-label';
+        header.style.cursor = 'pointer';
+        header.style.userSelect = 'none';
+        header.innerHTML = '<span>\u2726 Saving Throws</span>';
+
+        const accordionBody = document.createElement('div');
+        accordionBody.className = 'accordion-body';
+        accordionBody.id = 'savingThrowsAccordion';
+
+        let isOpen = false;
+        header.addEventListener('click', () => {
+            isOpen = !isOpen;
+            accordionBody.classList.toggle('open', isOpen);
+        });
+
+        SAVE_STATS.forEach(stat => {
+            const row = document.createElement('div');
+            row.className = 'save-row';
+
+            const profBtn = document.createElement('button');
+            profBtn.className = 'save-prof-btn';
+            profBtn.dataset.stat = stat;
+            profBtn.innerHTML = '\u25C6';
+
+            const statEl = document.createElement('span');
+            statEl.className = 'save-stat';
+            statEl.textContent = stat;
+
+            const valueEl = document.createElement('span');
+            valueEl.className = 'save-value';
+            valueEl.id = 'save-value-' + stat;
+            valueEl.textContent = getSaveValue(stat);
+
+            const nameEl = document.createElement('span');
+            nameEl.className = 'save-name';
+            nameEl.textContent = SAVE_NAMES[stat];
+
+            profBtn.addEventListener('click', () => toggleSaveProficiency(stat));
+
+            row.appendChild(profBtn);
+            row.appendChild(statEl);
+            row.appendChild(valueEl);
+            row.appendChild(nameEl);
+            accordionBody.appendChild(row);
+        });
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(accordionBody);
+        body.appendChild(wrapper);
+
+        refreshSavingThrows();
+    }
+
+    function toggleSaveProficiency(stat) {
+        const idx = saveProficiencies.indexOf(stat);
+        if (idx !== -1) {
+            saveProficiencies = saveProficiencies.filter(s => s !== stat);
+        } else {
+            if (saveProficiencies.length >= 2) return;
+            saveProficiencies = [...saveProficiencies, stat];
+        }
+        db.ref('characters/' + charKey + '/saveProficiencies').set(saveProficiencies.length > 0 ? saveProficiencies : null);
+        refreshSavingThrows();
+    }
+
+    function refreshSavingThrows() {
+        SAVE_STATS.forEach(stat => {
+            const valueEl = document.getElementById('save-value-' + stat);
+            if (valueEl) valueEl.textContent = getSaveValue(stat);
+
+            const profBtn = document.querySelector('.save-prof-btn[data-stat="' + stat + '"]');
+            if (!profBtn) return;
+            const isProficient = saveProficiencies.includes(stat);
+            const isMaxed = saveProficiencies.length >= 2 && !isProficient;
+            profBtn.classList.toggle('active', isProficient);
+            profBtn.disabled = isMaxed;
+            profBtn.title = 'Toggle save proficiency (' + saveProficiencies.length + '/2 used)';
         });
     }
 
@@ -1985,32 +2417,6 @@
             body.appendChild(group);
         }
 
-        // Known spells
-        if (char.spells.length > 0) {
-            const group = makeSectionGroup('\u2728 Known Spells');
-
-            const levels = [];
-            char.spells.forEach(s => { if (levels.indexOf(s.level) === -1) levels.push(s.level); });
-            levels.forEach(lvl => {
-                const lvlLabel = document.createElement('div');
-                lvlLabel.className = 'spell-level-label';
-                lvlLabel.textContent = lvl;
-                group.appendChild(lvlLabel);
-
-                const chips = document.createElement('div');
-                chips.className = 'ability-chips';
-                char.spells.filter(s => s.level === lvl).forEach(s => {
-                    const btn = document.createElement('button');
-                    btn.className = 'ability-chip passive spell';
-                    btn.textContent = '\u2727 ' + s.name;
-                    btn.disabled = true;
-                    chips.appendChild(btn);
-                });
-                group.appendChild(chips);
-            });
-            body.appendChild(group);
-        }
-
         // Active abilities
         if (activeAbils.length > 0) {
             const group = makeSectionGroup('\u2694 Abilities');
@@ -2066,6 +2472,317 @@
             group.appendChild(chips);
             body.appendChild(group);
         }
+    }
+
+    // =========================================================
+    // SPELLS
+    // =========================================================
+    const SPELL_DESCRIPTIONS = {
+        // Cantrips
+        'Eldritch Blast': 'Ranged spell attack, 120 ft. 1d10 force damage. Gains an additional beam at levels 5, 11, and 17.',
+        'Mage Hand': 'Spectral hand at a point within 30 ft for 1 min. Can manipulate objects, open unlocked doors/containers, stow or retrieve items, pour vials. Cannot attack or activate magic items.',
+        'Minor Illusion': 'Create a sound or image (up to 5-ft cube) within 30 ft for 1 min. Investigation vs. spell save DC reveals illusion.',
+        'Prestidigitation': 'Minor magical tricks: light/snuff a small fire, clean or soil an object, chill/warm/flavour 1 cu ft of material, make a small mark, create a small trinket or illusion.',
+        'Toll the Dead': 'One creature within 60 ft makes a WIS save. Fail: 1d8 necrotic (1d12 if it is missing any HP).',
+        'Vicious Mockery': 'Creature within 60 ft that can hear you makes a WIS save. Fail: 1d4 psychic damage and disadvantage on its next attack roll.',
+        'Shillelagh': 'Bonus action. Club or quarterstaff becomes magical — use spellcasting modifier for attack/damage. Damage becomes 1d8. Duration: 1 min.',
+        'Sacred Flame': 'Creature within 60 ft makes a DEX save (no cover bonus). Fail: 1d8 radiant damage.',
+        'Guidance': 'Touch a willing creature. Once in the next minute, it can add 1d4 to one ability check.',
+        'Thaumaturgy': 'Minor effects: amplify voice, change eye colour, cause tremors, create a non-magical flame, open/slam shut a door. Up to 1 min each.',
+        'Spare the Dying': 'Touch a creature with 0 HP — it stabilises.',
+        'Friends': 'Concentration, 1 min. Advantage on CHA checks against one non-hostile creature. When it ends, the creature knows you used magic.',
+        'Chill Touch': 'Spectral hand, 120 ft, ranged spell attack. 1d8 necrotic; target cannot regain HP until start of your next turn. Undead also have disadvantage on attacks against you.',
+        'Fire Bolt': '120 ft, ranged spell attack. 1d10 fire damage. Ignites flammable objects.',
+        'Ray of Frost': '60 ft, ranged spell attack. 1d8 cold damage. Target speed −10 ft until start of your next turn.',
+        'Poison Spray': '10 ft. Target makes a CON save. Fail: 1d12 poison damage.',
+        'Dancing Lights': 'Create up to 4 torch-sized lights within 120 ft for 1 min (concentration). Move them as a bonus action.',
+        'Blade Ward': 'Until end of your next turn: resistance to bludgeoning, piercing, and slashing damage from weapon attacks.',
+        'True Strike': 'Concentration, up to 1 round. Advantage on your next attack roll against the target.',
+        'Message': '120 ft. Whisper a message to a creature — only they hear it and can whisper a reply.',
+        'Mending': '1 min cast. Repairs a single break or tear in an object up to 1-ft in any dimension.',
+        // 1st level
+        'Hex': 'Bonus action, 90 ft. Curse one creature for 1 hr (concentration). +1d6 necrotic on each hit. Choose one ability — target has disadvantage on checks using it.',
+        'Charm Person': 'Humanoid within 30 ft makes a WIS save. Fail: charmed for 1 hr or until harmed. Regards you as a friendly acquaintance.',
+        'Disguise Self': '1 hr. Alter your appearance — height, weight, features, and gear. Does not hold up to touch; Investigation vs. DC 13 to disbelieve.',
+        'Dissonant Whispers': '60 ft. Target makes a WIS save. Fail: 3d6 psychic and immediately moves away using its reaction. Succeed: half damage, no movement.',
+        'Healing Word': 'Bonus action, 60 ft. Target regains 1d4 + spellcasting modifier HP.',
+        'Thunderwave': '15-ft cube originating from you. CON save. Fail: 2d8 thunder damage and pushed 10 ft. Succeed: half. Boom audible 300 ft away.',
+        'Sleep': '90 ft, 20-ft sphere. Roll 5d8 — total HP of creatures affected (lowest HP first). Lasts 1 min. Undead and immune creatures unaffected.',
+        'Hideous Laughter': '30 ft. WIS save each turn. Fail: incapacitated and prone for up to 1 min (concentration). Repeats each turn or on taking damage.',
+        'Faerie Fire': '20-ft cube, 60 ft, concentration, 1 min. DEX save. Fail: outlined in coloured light — attacks against it have advantage, and it cannot benefit from invisibility.',
+        'Comprehend Languages': '1 hr (can be cast as ritual). Understand the literal meaning of any spoken or written language.',
+        'Detect Magic': 'Concentration, 10 min (ritual). Sense presence of magic within 30 ft; action to see a faint aura and learn school of magic.',
+        'Silent Image': 'Concentration, 10 min. Create an image of an object, creature, or phenomenon (15-ft cube) within 60 ft.',
+        'Longstrider': '1 hr. Touch. Target\'s speed increases by 10 ft.',
+        'Bless': 'Concentration, 1 min. Up to 3 creatures add 1d4 to attack rolls and saving throws.',
+        'Cure Wounds': 'Touch. Target regains 1d8 + spellcasting modifier HP.',
+        'Guiding Bolt': '120 ft, ranged spell attack. 4d6 radiant damage. Next attack against the target before end of your next turn has advantage.',
+        'Shield of Faith': 'Bonus action, 60 ft, concentration, 10 min. Target gains +2 AC.',
+        'Command': '60 ft. Humanoid makes a WIS save. Fail: obeys a single one-word command on its next turn (Flee, Grovel, Halt, etc.).',
+        'Inflict Wounds': 'Melee spell attack (touch). 3d10 necrotic damage.',
+        'Burning Hands': '15-ft cone. DEX save. Fail: 3d6 fire. Succeed: half. Ignites flammable objects.',
+        'Mage Armor': 'Touch. Target not wearing armour gets AC = 13 + DEX modifier. Duration: 8 hr.',
+        'Magic Missile': '120 ft. Three darts, each dealing 1d4+1 force damage. Automatically hit; can target same or different creatures.',
+        'Identify': '1 min (ritual). Learn magic item properties, how to use it, attunement requirement, and charges remaining.',
+        'Find Familiar': 'Ritual. Summon a spirit in animal form as a familiar. Share senses, deliver touch spells, aid attacks (grant advantage).',
+        'Unseen Servant': '1 hr (ritual). Invisible force carries out simple tasks within 60 ft. STR 2, AC 10, 1 HP.',
+        'Feather Fall': 'Reaction. Up to 5 falling creatures within 60 ft descend at 60 ft/round and land safely.',
+        'Arms of Hadar': '10 ft around you. STR save. Fail: 2d6 necrotic, cannot use reactions until end of next turn. Succeed: half.',
+        'Hellish Rebuke': 'Reaction (when damaged by a creature within 60 ft). DEX save. Fail: 2d10 fire. Succeed: half.',
+        'Expeditious Retreat': 'Bonus action, concentration, 10 min. Take the Dash action as a bonus action each turn.',
+        'Entangle': 'Concentration, 1 min. 20-ft square, 90 ft. STR save. Fail: restrained. Area is difficult terrain.',
+        'Searing Smite': 'Concentration, 1 min. Bonus action. Next weapon hit: +1d6 fire and target ignites — 1d6 fire at start of each turn until CON save or doused.',
+        'Thunderous Smite': 'Concentration, 1 min. Bonus action. Next weapon hit: +2d6 thunder, push 10 ft, STR save or knocked prone.',
+        'Wrathful Smite': 'Concentration, 1 min. Bonus action. Next weapon hit: +1d6 psychic, WIS save or frightened of you.',
+        'Shield': 'Reaction (when hit by an attack or targeted by Magic Missile). +5 AC until start of your next turn, including against the triggering attack.',
+        // 2nd level
+        'Misty Step': 'Bonus action. Teleport up to 30 ft to an unoccupied space you can see.',
+        'Mirror Image': '1 min. Three illusory duplicates move with you. When targeted, roll d20 to see if a copy is hit (threshold drops as copies are destroyed). Copy AC = 10 + DEX.',
+        'Invisibility': 'Concentration, 1 hr. Target is invisible until it attacks or casts a spell.',
+        'Shatter': '60 ft, 10-ft sphere. CON save. Fail: 3d8 thunder. Succeed: half. Always full damage to objects and constructs.',
+        'Suggestion': 'Concentration, 8 hr. One creature makes a WIS save. Fail: follows a reasonable course of action you suggest.',
+        'Darkness': 'Concentration, 10 min, 15-ft radius from a point or object within 60 ft. Magical darkness blocks darkvision.',
+        'Spider Climb': 'Concentration, 1 hr. Target can move on walls and ceilings at full speed with hands free.',
+        'Hunger of Hadar': 'Concentration, 1 min. 20-ft sphere of darkness at a point within 150 ft. Creatures inside are blinded. Start of turn: 2d6 cold. End of turn: DEX save or 2d6 acid.',
+        'Phantasmal Force': 'Concentration, 1 min, 60 ft. INT save. Fail: creature perceives a phantasm you describe — 1d6 psychic per turn until save succeeds or spell ends.',
+        'Crown of Madness': 'Concentration, 1 min, 120 ft. Humanoid makes WIS save. Fail: charmed — attacks a creature of your choice on its turn.',
+        'Hold Person': 'Concentration, 1 min, 60 ft. Humanoid makes WIS save. Fail: paralyzed. Repeats each turn.',
+        'Knock': '60 ft. One lock, bolt, or bar opens. Loud booming sound audible 300 ft away.',
+        'Pass Without Trace': 'Concentration, 1 hr. You and up to 10 creatures within 30 ft can\'t be tracked except by magical means, and add +10 to Stealth checks.',
+        'Spiritual Weapon': 'Bonus action, 60 ft. Spectral weapon attacks as a bonus action each turn for 1 min (no concentration). +1d8 + spellcasting mod force on a hit.',
+        'Prayer of Healing': '10 min cast. Up to 6 creatures regain 2d8 + spellcasting modifier HP.',
+        'Lesser Restoration': 'Touch. End one disease or one condition: blinded, deafened, paralyzed, or poisoned.',
+        'Enhance Ability': 'Concentration, 1 hr. Touch. Grant one of: Bear\'s Endurance (CON adv + 2d6 temp HP), Bull\'s Strength (STR adv), Cat\'s Grace (DEX adv, no fall dmg ≤20 ft), Eagle\'s Splendor (CHA adv), Fox\'s Cunning (INT adv), Owl\'s Wisdom (WIS adv).',
+        // 3rd level
+        'Hypnotic Pattern': 'Concentration, 1 min, 30-ft cube within 120 ft. WIS save. Fail: incapacitated and speed 0. Breaks on taking damage or being shaken.',
+        'Counterspell': 'Reaction. When a creature within 60 ft casts a spell, counter it. Auto-succeeds if spell is 3rd level or lower. Higher: ability check DC 10 + spell level.',
+        'Dispel Magic': '120 ft. End any spell of 3rd level or lower on a target. Higher-level spells require an ability check.',
+        'Fear': 'Concentration, 1 min, 30-ft cone. WIS save. Fail: frightened and must use movement to flee each turn. Repeat save each turn at end of turn.',
+        'Fly': 'Concentration, 10 min. Touched willing creature gains flying speed of 60 ft.',
+        'Fireball': '150 ft, 20-ft radius. DEX save. Fail: 8d6 fire. Succeed: half. Ignites flammable objects.',
+        'Lightning Bolt': '100-ft line, 5 ft wide. DEX save. Fail: 8d6 lightning. Succeed: half.',
+        'Spirit Guardians': 'Concentration, 10 min. Spirits surround you in 15-ft radius. Creatures of your choice make WIS saves. Fail: 3d8 radiant/necrotic and speed halved.',
+        'Mass Healing Word': 'Bonus action, 60 ft. Up to 6 creatures regain 1d4 + spellcasting modifier HP.',
+    };
+
+    function buildSpells() {
+        const body = document.getElementById('spellsBody');
+        if (!body) return;
+        body.innerHTML = '';
+
+        if (!char.spells || char.spells.length === 0) return;
+
+        const cantrips = char.spells.filter(s => String(s.level).toLowerCase() === 'cantrip');
+        const spellList = char.spells.filter(s => String(s.level).toLowerCase() !== 'cantrip');
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sheet-section-group';
+        wrapper.style.marginTop = '10px';
+
+        const header = document.createElement('div');
+        header.className = 'section-label';
+        header.style.cursor = 'pointer';
+        header.style.userSelect = 'none';
+        header.innerHTML = '<span>\u2727 Spells</span>';
+
+        const accordionBody = document.createElement('div');
+        accordionBody.className = 'accordion-body';
+
+        let isOpen = false;
+        header.addEventListener('click', () => {
+            isOpen = !isOpen;
+            accordionBody.classList.toggle('open', isOpen);
+        });
+
+        function makeSpellGroup(title, list) {
+            if (list.length === 0) return;
+            const lbl = document.createElement('div');
+            lbl.className = 'spell-level-label';
+            lbl.style.marginTop = '6px';
+            lbl.style.marginBottom = '4px';
+            lbl.textContent = title;
+            accordionBody.appendChild(lbl);
+
+            const chips = document.createElement('div');
+            chips.className = 'ability-chips';
+            chips.style.marginBottom = '6px';
+            list.forEach(s => {
+                const btn = document.createElement('button');
+                btn.className = 'ability-chip passive spell';
+                btn.textContent = '\u2727 ' + s.name;
+                const desc = SPELL_DESCRIPTIONS[s.name] || '';
+                btn.addEventListener('click', () => showAbilityPopup(btn, s.name, desc || 'No description available.'));
+                chips.appendChild(btn);
+            });
+            accordionBody.appendChild(chips);
+        }
+
+        makeSpellGroup('Cantrips', cantrips);
+        makeSpellGroup('Spells', spellList);
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(accordionBody);
+        body.appendChild(wrapper);
+    }
+
+    // =========================================================
+    // SKILLS
+    // =========================================================
+    const SKILLS = [
+        { name: 'Athletics',       stat: 'STR' },
+        { name: 'Acrobatics',      stat: 'DEX' },
+        { name: 'Sleight of Hand', stat: 'DEX' },
+        { name: 'Stealth',         stat: 'DEX' },
+        { name: 'Arcana',          stat: 'INT' },
+        { name: 'History',         stat: 'INT' },
+        { name: 'Investigation',   stat: 'INT' },
+        { name: 'Nature',          stat: 'INT' },
+        { name: 'Religion',        stat: 'INT' },
+        { name: 'Animal Handling', stat: 'WIS' },
+        { name: 'Insight',         stat: 'WIS' },
+        { name: 'Medicine',        stat: 'WIS' },
+        { name: 'Perception',      stat: 'WIS' },
+        { name: 'Survival',        stat: 'WIS' },
+        { name: 'Deception',       stat: 'CHA' },
+        { name: 'Intimidation',    stat: 'CHA' },
+        { name: 'Performance',     stat: 'CHA' },
+        { name: 'Persuasion',      stat: 'CHA' },
+    ];
+
+    function getSkillValue(skill) {
+        const base = char.stats[skill.stat] || 0;
+        const profBonus = proficiencyFromLevel(char.level || 1);
+        return fmtMod(base + (skillProficiencies.includes(skill.name) ? profBonus : 0));
+    }
+
+    function buildSkills() {
+        const body = document.getElementById('skillsBody');
+        if (!body) return;
+        body.innerHTML = '';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sheet-section-group';
+        wrapper.style.marginTop = '10px';
+
+        const header = document.createElement('div');
+        header.className = 'section-label';
+        header.style.cursor = 'pointer';
+        header.style.userSelect = 'none';
+        header.innerHTML = '<span>\u25C8 Skills</span>';
+
+        const accordionBody = document.createElement('div');
+        accordionBody.className = 'accordion-body';
+        accordionBody.id = 'skillsAccordion';
+
+        let isOpen = false;
+        header.addEventListener('click', () => {
+            isOpen = !isOpen;
+            accordionBody.classList.toggle('open', isOpen);
+        });
+
+        SKILLS.forEach(skill => {
+            const row = document.createElement('div');
+            row.className = 'save-row';
+
+            const profBtn = document.createElement('button');
+            profBtn.className = 'save-prof-btn';
+            profBtn.dataset.skill = skill.name;
+            profBtn.innerHTML = '\u25C6';
+            profBtn.addEventListener('click', () => toggleSkillProficiency(skill.name));
+
+            const statEl = document.createElement('span');
+            statEl.className = 'save-stat';
+            statEl.textContent = skill.stat;
+
+            const valueEl = document.createElement('span');
+            valueEl.className = 'save-value';
+            valueEl.id = 'skill-value-' + skill.name.replace(/\s/g, '-');
+            valueEl.textContent = getSkillValue(skill);
+
+            const nameEl = document.createElement('span');
+            nameEl.className = 'save-name';
+            nameEl.textContent = skill.name;
+
+            row.appendChild(profBtn);
+            row.appendChild(statEl);
+            row.appendChild(valueEl);
+            row.appendChild(nameEl);
+            accordionBody.appendChild(row);
+        });
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(accordionBody);
+        body.appendChild(wrapper);
+
+        refreshSkills();
+    }
+
+    function toggleSkillProficiency(skillName) {
+        const idx = skillProficiencies.indexOf(skillName);
+        if (idx !== -1) {
+            skillProficiencies = skillProficiencies.filter(s => s !== skillName);
+        } else {
+            if (skillProficiencies.length >= 4) return;
+            skillProficiencies = [...skillProficiencies, skillName];
+        }
+        db.ref('characters/' + charKey + '/skillProficiencies').set(skillProficiencies.length > 0 ? skillProficiencies : null);
+        refreshSkills();
+    }
+
+    function refreshSkills() {
+        SKILLS.forEach(skill => {
+            const valueEl = document.getElementById('skill-value-' + skill.name.replace(/\s/g, '-'));
+            if (valueEl) valueEl.textContent = getSkillValue(skill);
+
+            const profBtn = document.querySelector('.save-prof-btn[data-skill="' + skill.name + '"]');
+            if (!profBtn) return;
+            const isProficient = skillProficiencies.includes(skill.name);
+            const isMaxed = skillProficiencies.length >= 4 && !isProficient;
+            profBtn.classList.toggle('active', isProficient);
+            profBtn.disabled = isMaxed;
+            profBtn.title = 'Toggle skill proficiency (' + skillProficiencies.length + '/4 used)';
+        });
+    }
+
+    // =========================================================
+    // GOLD
+    // =========================================================
+    function renderGold() {
+        const el = document.getElementById('goldDisplay');
+        if (!el) return;
+        el.innerHTML = '';
+
+        const row = document.createElement('div');
+        row.className = 'gold-row';
+
+        const label = document.createElement('span');
+        label.className = 'gold-label';
+        label.innerHTML = '\u25CE Gold';
+
+        const minusBtn = document.createElement('button');
+        minusBtn.className = 'inv-amt-btn';
+        minusBtn.textContent = '\u2212';
+        minusBtn.onclick = () => adjustGold(-1);
+
+        const valEl = document.createElement('span');
+        valEl.className = 'gold-value';
+        valEl.id = 'goldValue';
+        valEl.textContent = currentGold;
+
+        const plusBtn = document.createElement('button');
+        plusBtn.className = 'inv-amt-btn';
+        plusBtn.textContent = '+';
+        plusBtn.onclick = () => adjustGold(+1);
+
+        row.appendChild(label);
+        row.appendChild(minusBtn);
+        row.appendChild(valEl);
+        row.appendChild(plusBtn);
+        el.appendChild(row);
+    }
+
+    function adjustGold(delta) {
+        db.ref('characters/' + charKey + '/gold').transaction(g => Math.max(0, (g || 0) + delta));
     }
 
     function setTab(name) {
@@ -2532,6 +3249,39 @@
                 btn.classList.toggle('used', used >= max);
             });
         });
+
+        // Live conditions sync
+        charRef.child('conditions').on('value', snap => {
+            const conds = snap.val() || {};
+            activeConditions = {};
+            Object.entries(conds).forEach(([key, val]) => {
+                if (val) activeConditions[key.replace(/_/g, ' ')] = true;
+            });
+            CONDITIONS.forEach(cond => {
+                const input = document.querySelector('[data-cond="' + cond.name + '"]');
+                if (input) input.checked = !!activeConditions[cond.name];
+            });
+            updateActiveConditionsDisplay();
+        });
+
+        // Live saving throw proficiencies sync
+        charRef.child('saveProficiencies').on('value', snap => {
+            saveProficiencies = snap.val() || [];
+            refreshSavingThrows();
+        });
+
+        // Live skill proficiencies sync
+        charRef.child('skillProficiencies').on('value', snap => {
+            skillProficiencies = snap.val() || [];
+            refreshSkills();
+        });
+
+        // Live gold sync
+        charRef.child('gold').on('value', snap => {
+            currentGold = snap.val() || 0;
+            const el = document.getElementById('goldValue');
+            if (el) el.textContent = currentGold;
+        });
     }
 
     // =========================================================
@@ -2564,8 +3314,9 @@
     // INVENTORY
     // =========================================================
     const INV_CATEGORIES = [
-        { key: 'weapons',     label: '\u2694 Weapons' },
-        { key: 'cash',        label: '\u25CE Cash' },
+        { key: 'armour',      label: '\u26E8 Armour',      hasStats: true },
+        { key: 'weapons',     label: '\u2694 Weapons',     hasStats: true },
+        { key: 'tools',       label: '\u2692 Tools' },
         { key: 'loot',        label: '\u25C6 Loot' },
         { key: 'consumables', label: '\u25CF Consumables' },
         { key: 'other',       label: '\u25CB Other' },
@@ -2607,6 +3358,9 @@
                 const row = document.createElement('div');
                 row.className = 'inv-item';
 
+                const nameWrap = document.createElement('div');
+                nameWrap.className = 'inv-item-wrap';
+
                 const nameEl = document.createElement('span');
                 nameEl.className = 'inv-item-name' + (pending ? ' inv-pending' : '');
 
@@ -2617,7 +3371,21 @@
                 } else {
                     nameEl.textContent = item.name;
                 }
-                row.appendChild(nameEl);
+                nameWrap.appendChild(nameEl);
+
+                if (!pending && cat.hasStats) {
+                    const statsInput = document.createElement('input');
+                    statsInput.type = 'text';
+                    statsInput.className = 'inv-stats-input';
+                    statsInput.placeholder = item.category === 'armour' ? 'AC, properties...' : 'damage, to-hit...';
+                    statsInput.value = item.stats || '';
+                    statsInput.addEventListener('change', () => {
+                        db.ref('characters/' + charKey + '/inventory/' + key + '/stats').set(statsInput.value.trim() || null);
+                    });
+                    nameWrap.appendChild(statsInput);
+                }
+
+                row.appendChild(nameWrap);
 
                 if (!pending) {
                     const amtGroup = document.createElement('div');
