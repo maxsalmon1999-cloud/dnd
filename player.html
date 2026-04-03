@@ -2861,9 +2861,9 @@
         header.innerHTML = '<span>\u2727 Spells</span>';
 
         const accordionBody = document.createElement('div');
-        accordionBody.className = 'accordion-body';
+        accordionBody.className = 'accordion-body open';
 
-        let isOpen = false;
+        let isOpen = true;
         header.addEventListener('click', () => {
             isOpen = !isOpen;
             accordionBody.classList.toggle('open', isOpen);
