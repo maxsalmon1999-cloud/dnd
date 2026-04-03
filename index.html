@@ -4122,7 +4122,7 @@ ${fullText.slice(0, 30000)}`;
             // Clear conversation history
             conversationHistory = [];
             // Clear story display
-            storyDisplay.innerHTML = '<div class="welcome-message"><h2>Welcome, Dungeon Master</h2><p>Type a prompt below to begin your session.</p></div>';
+            storyDisplay.innerHTML = '<div class="welcome-message"><h2>Welcome, Dungeon Master</h2><p>Type a prompt below to consult ' + escapeHtml(AI_ASSISTANT_NAME) + '.</p></div>';
             // Clear dice table
             tableSurface.querySelectorAll('.table-portion').forEach(p => {
                 p.querySelectorAll('canvas').forEach(c => unregisterAnim(c));
@@ -4832,7 +4832,7 @@ ${fullText.slice(0, 30000)}`;
 
             // DM option at the top
             makeSec('DM', npcCol);
-            makeNameBtn('Dungeon Master', npcCol);
+            makeNameBtn(AI_ASSISTANT_NAME, npcCol);
 
             makeSec('Campaign', npcCol);
             CAMPAIGN_NPCS.npcs.forEach(n => makeNameBtn(n, npcCol));
