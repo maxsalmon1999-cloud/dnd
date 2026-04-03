@@ -2210,6 +2210,38 @@
     let currentGold = 0;
     let currentSlots = {};
 
+    function parseSpellsFromRawMarkdown(text) {
+        const lines = String(text || '').split('\n');
+        const spells = [];
+        let inSpells = false;
+        let currentSpellLevel = '';
+
+        function isSectionHeader(line) {
+            return /^[^\x00-\x7F]/.test(line);
+        }
+
+        lines.forEach(line => {
+            if (isSectionHeader(line)) {
+                inSpells = /\bspells?\b/i.test(line) && !/\b(slot|attack|save)\b/i.test(line);
+                return;
+            }
+            if (!inSpells) return;
+            const trimmed = line.trim();
+            if (!trimmed) return;
+            if (/^(Cantrips?|(\d+)\w*\s+Level|Spells?\s+Known|Known\s+Spells?|Prepared|At.?Will)/i.test(trimmed)) {
+                const raw = trimmed.replace(/:.*/, '').replace(/\s*\(.*\)/, '').trim();
+                currentSpellLevel = /^cantrip/i.test(raw) ? 'cantrip' : raw;
+                return;
+            }
+            if (/^[•\-\*]/.test(trimmed)) {
+                const spellText = trimmed.replace(/^[•\-\*]\s*/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+                if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
+            }
+        });
+
+        return spells;
+    }
+
     // =========================================================
     // INIT — load characters from Firebase, then proceed
     // =========================================================
@@ -2218,7 +2250,14 @@
         const snap = await db.ref('characterSheets').once('value');
         const sheets = snap.val() || {};
         CHARS = {};
+        const spellBackfillUpdates = {};
         Object.entries(sheets).forEach(([key, c]) => {
+            const spells = Array.isArray(c.spells) && c.spells.length > 0
+                ? c.spells
+                : parseSpellsFromRawMarkdown(c.rawMarkdown);
+            if ((!Array.isArray(c.spells) || c.spells.length === 0) && spells.length > 0) {
+                spellBackfillUpdates['characterSheets/' + key + '/spells'] = spells;
+            }
             CHARS[key] = {
                 name: c.name,
                 cls: c.cls || '',
@@ -2231,9 +2270,12 @@
                 stats: c.stats || {},
                 spellSlots: c.spellSlots || [],
                 abilities: c.abilities || [],
-                spells: c.spells || [],
+                spells,
             };
         });
+        if (Object.keys(spellBackfillUpdates).length > 0) {
+            await db.ref().update(spellBackfillUpdates);
+        }
 
         const params = new URLSearchParams(window.location.search);
         charKey = (params.get('char') || '').toLowerCase();

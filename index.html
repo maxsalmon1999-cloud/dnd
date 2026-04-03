@@ -2964,6 +2964,19 @@
             ]);
 
             LOADED_CHARS = charSnap.val() || {};
+            const spellBackfillUpdates = {};
+            Object.entries(LOADED_CHARS).forEach(([key, c]) => {
+                if ((!Array.isArray(c.spells) || c.spells.length === 0) && c.rawMarkdown) {
+                    const parsedSpells = parseSpellsFromRawMarkdown(c.rawMarkdown);
+                    if (parsedSpells.length > 0) {
+                        c.spells = parsedSpells;
+                        spellBackfillUpdates['characterSheets/' + key + '/spells'] = parsedSpells;
+                    }
+                }
+            });
+            if (Object.keys(spellBackfillUpdates).length > 0) {
+                await firebaseDb.ref().update(spellBackfillUpdates);
+            }
 
             LOADED_CAMPAIGN = campSnap.val();
             if (LOADED_CAMPAIGN) {
@@ -3125,6 +3138,38 @@
             }
             reservedKeys.add(key);
             return key;
+        }
+
+        function parseSpellsFromRawMarkdown(text) {
+            const lines = String(text || '').split('\n');
+            const spells = [];
+            let inSpells = false;
+            let currentSpellLevel = '';
+
+            function isSectionHeader(line) {
+                return /^[^\x00-\x7F]/.test(line);
+            }
+
+            lines.forEach(line => {
+                if (isSectionHeader(line)) {
+                    inSpells = /\bspells?\b/i.test(line) && !/\b(slot|attack|save)\b/i.test(line);
+                    return;
+                }
+                if (!inSpells) return;
+                const trimmed = line.trim();
+                if (!trimmed) return;
+                if (/^(Cantrips?|(\d+)\w*\s+Level|Spells?\s+Known|Known\s+Spells?|Prepared|At.?Will)/i.test(trimmed)) {
+                    const raw = trimmed.replace(/:.*/, '').replace(/\s*\(.*\)/, '').trim();
+                    currentSpellLevel = /^cantrip/i.test(raw) ? 'cantrip' : raw;
+                    return;
+                }
+                if (/^[•\-\*]/.test(trimmed)) {
+                    const spellText = trimmed.replace(/^[•\-\*]\s*/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+                    if (spellText) spells.push({ level: currentSpellLevel, name: spellText });
+                }
+            });
+
+            return spells;
         }
 
         function parseCharacterSheet(text) {
