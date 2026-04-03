@@ -2256,10 +2256,12 @@
         CHARS = {};
         const spellBackfillUpdates = {};
         Object.entries(sheets).forEach(([key, c]) => {
-            const spells = Array.isArray(c.spells) && c.spells.length > 0
-                ? c.spells
+            const hasRawMarkdown = !!c.rawMarkdown;
+            const rawSpells = Array.isArray(c.spells) ? c.spells : (c.spells ? Object.values(c.spells) : []);
+            const spells = rawSpells.length > 0
+                ? rawSpells
                 : parseSpellsFromRawMarkdown(c.rawMarkdown);
-            if ((!Array.isArray(c.spells) || c.spells.length === 0) && spells.length > 0) {
+            if (rawSpells.length === 0 && spells.length > 0) {
                 spellBackfillUpdates['characterSheets/' + key + '/spells'] = spells;
             }
             CHARS[key] = {
@@ -2275,6 +2277,7 @@
                 spellSlots: c.spellSlots || [],
                 abilities: c.abilities || [],
                 spells,
+                _dbg: { hasRawMarkdown, rawSpellCount: rawSpells.length, parsedCount: spells.length },
             };
         });
         if (Object.keys(spellBackfillUpdates).length > 0) {
@@ -2848,7 +2851,8 @@
         // DEBUG — remove once spells confirmed working
         const dbg = document.createElement('div');
         dbg.style.cssText = 'font-size:9px;color:#ff0;background:#300;padding:4px;margin-bottom:4px;word-break:break-all';
-        dbg.textContent = 'spells: ' + JSON.stringify(char.spells) + ' | slots: ' + JSON.stringify(char.spellSlots);
+        const d = char._dbg || {};
+        dbg.textContent = 'hasRawMd=' + d.hasRawMarkdown + ' | rawSpells=' + d.rawSpellCount + ' | parsed=' + d.parsedCount + ' | final=' + char.spells.length;
         body.appendChild(dbg);
 
         if ((!char.spells || char.spells.length === 0) && (!char.spellSlots || char.spellSlots.length === 0)) return;
