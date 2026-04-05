@@ -2408,15 +2408,18 @@
         document.title = char.name + ' — D&D';
         const charTitle = document.getElementById('charTitle');
         const classLabel = document.getElementById('charClassLabel');
-        const showXpDetails = (anchorEl, label) => {
+        const showXpDetails = (anchorEl, label, event) => {
+            if (event) event.stopPropagation();
             const xpText = char.xp ? 'XP: ' + char.xp : 'XP not recorded for this character.';
             showAbilityPopup(anchorEl, label, xpText);
         };
 
         charTitle.textContent = char.name;
         classLabel.textContent = char.cls + ' · Level ' + (char.level || 1);
-        charTitle.onclick = () => showXpDetails(charTitle, char.name);
-        classLabel.onclick = () => showXpDetails(classLabel, 'Level ' + (char.level || 1));
+        charTitle.onclick = null;
+        classLabel.onclick = null;
+        charTitle.addEventListener('click', (event) => showXpDetails(charTitle, char.name, event));
+        classLabel.addEventListener('click', (event) => showXpDetails(classLabel, 'Level ' + (char.level || 1), event));
 
         buildCoreStats();
         buildAbilityScores();
@@ -2743,9 +2746,11 @@
     }
 
     document.addEventListener('click', function(e) {
+        if (!(e.target instanceof Element)) return;
         if (
             !e.target.closest('.ability-chip') &&
             !e.target.closest('.chip-info') &&
+            !e.target.closest('#ability-popup') &&
             !e.target.closest('#charTitle') &&
             !e.target.closest('#charClassLabel')
         ) hideAbilityPopup();
