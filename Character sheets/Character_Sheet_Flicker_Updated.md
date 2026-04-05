@@ -48,20 +48,22 @@ Warlock Slots: 2 (2nd level)
 Recharge on: Short Rest
 
 🔮 Known Spells
-Cantrips (at will):
+Cantrips:
 • Eldritch Blast
-• Mage Hand
 • Guidance (Tome)
+• Mage Hand
 • Minor Illusion (Tome)
 • Prestidigitation (Tome)
 
-Spells Known:
-• Hex (bonus action, concentration, +1d6 necrotic per hit)
+1st Level:
 • Faerie Fire (20-ft cube, DEX save, advantage on attacks vs affected)
+• Hex (bonus action, concentration, +1d6 necrotic per hit)
+
+2nd Level:
 • Misty Step (bonus action, teleport 30 ft)
 • Suggestion (WIS save, 8-hour duration, concentration)
 
-🔮 Eldritch Invocations
+✨ Eldritch Invocations
 Agonizing Blast
 Add CHA modifier (+3) to Eldritch Blast damage
 
@@ -77,12 +79,12 @@ Action — Creatures in 10-ft cube make WIS save DC 13
 Charmed or Frightened until end of next turn
 
 Shapechanger (Changeling)
-  Action — Change appearance and voice
-  Form must be Medium humanoid
-  Clothing/equipment not changed
+Action — Change appearance and voice
+Form must be Medium humanoid
+Clothing/equipment not changed
 
 Changeling Instincts
-  Proficiency in Deception and Insight
+Proficiency in Deception and Insight
 
 Feywild Connection (Feylost Background)
 Advantage on checks to recall Feywild lore

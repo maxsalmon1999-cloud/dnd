@@ -359,6 +359,14 @@
             color: #5a4048;
             text-align: center;
             margin-bottom: 6px;
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 2px;
+        }
+
+        .char-class-label:hover {
+            color: #8a6050;
         }
 
         /* — Ornate health bar frame — */
@@ -2290,6 +2298,30 @@
         return spells;
     }
 
+    function normalizeSpellList(spells) {
+        return (Array.isArray(spells) ? spells : []).map(spell => ({
+            level: String((spell && spell.level) || '').trim().toLowerCase(),
+            name: String((spell && spell.name) || '').trim().toLowerCase()
+        }));
+    }
+
+    function shouldRepairStoredSpells(storedSpells, parsedSpells) {
+        const normalizedStored = normalizeSpellList(storedSpells);
+        const normalizedParsed = normalizeSpellList(parsedSpells);
+        if (normalizedParsed.length === 0) return false;
+        if (normalizedStored.length !== normalizedParsed.length) return true;
+
+        return normalizedStored.some((spell, index) => {
+            const parsed = normalizedParsed[index];
+            return spell.level !== parsed.level || spell.name !== parsed.name;
+        });
+    }
+
+    function extractXpFromRawMarkdown(text) {
+        const match = String(text || '').match(/XP:\s*([^\n]+)/i);
+        return match ? match[1].trim() : null;
+    }
+
     // =========================================================
     // INIT — load characters from Firebase, then proceed
     // =========================================================
@@ -2300,8 +2332,6 @@
         CHARS = {};
         const spellBackfillUpdates = {};
         Object.entries(sheets).forEach(([key, c]) => {
-            // Always re-parse from rawMarkdown if available — it's the ground truth.
-            // Only fall back to stored spells if there's no markdown.
             const spells = c.rawMarkdown
                 ? parseSpellsFromRawMarkdown(c.rawMarkdown)
                 : (Array.isArray(c.spells) ? c.spells : (c.spells ? Object.values(c.spells) : []));
@@ -2312,6 +2342,7 @@
                 name: c.name,
                 cls: c.cls || '',
                 level: c.level || 1,
+                xp: c.xp || extractXpFromRawMarkdown(c.rawMarkdown),
                 maxHp: c.maxHp || 10,
                 ac: c.ac || 10,
                 proficiency: c.proficiency || 2,
@@ -2375,7 +2406,12 @@
     function buildPlayerScreen() {
         document.title = char.name + ' — D&D';
         document.getElementById('charTitle').textContent = char.name;
-        document.getElementById('charClassLabel').textContent = char.cls + ' · Level ' + (char.level || 1);
+        const classLabel = document.getElementById('charClassLabel');
+        classLabel.textContent = char.cls + ' · Level ' + (char.level || 1);
+        classLabel.onclick = () => {
+            const xpText = char.xp ? 'XP: ' + char.xp : 'XP not recorded for this character.';
+            showAbilityPopup(classLabel, 'Level ' + (char.level || 1), xpText);
+        };
 
         buildCoreStats();
         buildAbilityScores();

@@ -2149,6 +2149,25 @@
         }
         .menu-setup-btn:hover { background: #c4a44e; color: #000; }
 
+        .menu-dice-lab {
+            background: none;
+            border: 1px solid #4a2030;
+            padding: 1px 8px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #c4a44e;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .menu-dice-lab:hover {
+            background: #c4a44e;
+            color: #000;
+        }
+
         #gameSetupBackdrop {
             display: none;
             position: fixed;
@@ -2396,6 +2415,7 @@
         <span class="apple"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="vertical-align:middle"><circle cx="8" cy="8" r="4" stroke="#c4a44e" stroke-width="1.5" fill="none"/><line x1="8" y1="0" x2="8" y2="3" stroke="#c4a44e" stroke-width="1.2"/><line x1="8" y1="13" x2="8" y2="16" stroke="#c4a44e" stroke-width="1.2"/><line x1="0" y1="8" x2="3" y2="8" stroke="#c4a44e" stroke-width="1.2"/><line x1="13" y1="8" x2="16" y2="8" stroke="#c4a44e" stroke-width="1.2"/><line x1="2.3" y1="2.3" x2="4.4" y2="4.4" stroke="#c4a44e" stroke-width="1.2"/><line x1="11.6" y1="11.6" x2="13.7" y2="13.7" stroke="#c4a44e" stroke-width="1.2"/><line x1="2.3" y1="13.7" x2="4.4" y2="11.6" stroke="#c4a44e" stroke-width="1.2"/><line x1="11.6" y1="4.4" x2="13.7" y2="2.3" stroke="#c4a44e" stroke-width="1.2"/><line x1="5" y1="14" x2="11" y2="2" stroke="#c4a44e" stroke-width="1.5"/><line x1="7" y1="1.5" x2="11" y2="2" stroke="#c4a44e" stroke-width="1"/><line x1="11" y1="2" x2="10" y2="5.5" stroke="#c4a44e" stroke-width="1"/></svg></span>
         <span class="menu-campaign" id="menuCampaignName">No campaign loaded</span>
         <button class="menu-setup-btn" onclick="toggleGameSetup()">&#9881; Setup</button>
+        <a class="menu-dice-lab" href="dice-lab.html" target="_blank" rel="noopener noreferrer">&#9860; Dice Lab</a>
         <button class="menu-end-session" onclick="endSession()">End Session</button>
         <button class="menu-reset-session" onclick="showResetModal()">&#10005;</button>
     </div>
@@ -2962,12 +2982,11 @@
             LOADED_CHARS = charSnap.val() || {};
             const spellBackfillUpdates = {};
             Object.entries(LOADED_CHARS).forEach(([key, c]) => {
-                if (c.rawMarkdown) {
-                    const parsedSpells = parseSpellsFromRawMarkdown(c.rawMarkdown);
-                    if (parsedSpells.length > 0) {
-                        c.spells = parsedSpells;
-                        spellBackfillUpdates['characterSheets/' + key + '/spells'] = parsedSpells;
-                    }
+                if (!c.rawMarkdown) return;
+                const parsedSpells = parseSpellsFromRawMarkdown(c.rawMarkdown);
+                if (parsedSpells.length > 0) {
+                    c.spells = parsedSpells;
+                    spellBackfillUpdates['characterSheets/' + key + '/spells'] = parsedSpells;
                 }
             });
             if (Object.keys(spellBackfillUpdates).length > 0) {
@@ -3200,6 +3219,25 @@
             return spells;
         }
 
+        function normalizeSpellList(spells) {
+            return (Array.isArray(spells) ? spells : []).map(spell => ({
+                level: String((spell && spell.level) || '').trim().toLowerCase(),
+                name: String((spell && spell.name) || '').trim().toLowerCase()
+            }));
+        }
+
+        function shouldRepairStoredSpells(storedSpells, parsedSpells) {
+            const normalizedStored = normalizeSpellList(storedSpells);
+            const normalizedParsed = normalizeSpellList(parsedSpells);
+            if (normalizedParsed.length === 0) return false;
+            if (normalizedStored.length !== normalizedParsed.length) return true;
+
+            return normalizedStored.some((spell, index) => {
+                const parsed = normalizedParsed[index];
+                return spell.level !== parsed.level || spell.name !== parsed.name;
+            });
+        }
+
         function parseCharacterSheet(text) {
             const lines = text.split('\n');
             const name = lines[0].trim();
@@ -3220,6 +3258,7 @@
             const spellAttack = extract(/Spell Attack:\s*(\+?\d+)/);
             const levelRaw = extract(/\(Level\s+(\d+)\)/i) || extract(/^Level\s*[:\s]\s*(\d+)/i);
             const level = parseInt(levelRaw) || 1;
+            const xp = extract(/XP:\s*([^\n]+)/i);
 
             // Parse ability mods
             const stats = {};
@@ -3393,7 +3432,7 @@
                 inventory[itemKey] = entry;
             });
 
-            return { name, cls, level, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells, inventory };
+            return { name, cls, level, xp, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells, inventory };
         }
 
         function ordinal(n) {

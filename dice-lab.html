@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Dice Lab</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0e0a0c;
+            --bg-panel: #1a1018;
+            --bg-panel-dark: #120c10;
+            --bg-panel-deep: #100c0e;
+            --line: #4a2030;
+            --line-bright: #6b2a3a;
+            --gold: #c4a44e;
+            --gold-soft: #c8b070;
+            --muted: #8a6050;
+            --muted-deep: #5a4048;
+            --danger: #b85a40;
+            --ok: #88b87b;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Geneva', 'Chicago', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            background:
+                radial-gradient(ellipse at top, rgba(66, 26, 34, 0.26) 0%, transparent 55%),
+                radial-gradient(ellipse at bottom, rgba(19, 12, 17, 0.95) 0%, var(--bg) 70%),
+                repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(80, 30, 40, 0.03) 3px, rgba(80, 30, 40, 0.03) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(80, 30, 40, 0.03) 3px, rgba(80, 30, 40, 0.03) 4px);
+            color: var(--gold-soft);
+            -webkit-font-smoothing: none;
+            -moz-osx-font-smoothing: unset;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button,
+        input,
+        select {
+            font: inherit;
+        }
+
+        .menu-bar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: linear-gradient(180deg, #1a1018 0%, #120c10 100%);
+            border-bottom: 3px solid var(--line);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(107, 26, 42, 0.3);
+            padding: 4px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 28px;
+            color: var(--gold);
+        }
+
+        .menu-title {
+            font-weight: bold;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .menu-spacer {
+            margin-left: auto;
+        }
+
+        .menu-btn {
+            background: none;
+            border: 1px solid var(--line);
+            padding: 2px 8px;
+            color: var(--gold);
+            cursor: pointer;
+        }
+
+        .menu-btn:hover {
+            background: var(--gold);
+            color: #000;
+        }
+
+        .page {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) minmax(320px, 1fr);
+            gap: 10px;
+            padding: 10px;
+            min-height: calc(100vh - 28px);
+        }
+
+        .window {
+            background: var(--bg-panel);
+            border: 3px solid var(--line);
+            box-shadow: inset 0 0 0 1px #2a1520, 2px 2px 0 #000, 0 0 12px rgba(0, 0, 0, 0.45);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            position: relative;
+        }
+
+        .window::before,
+        .window::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+        }
+
+        .window::before {
+            top: -2px;
+            left: -2px;
+            border-top: 3px solid var(--line-bright);
+            border-left: 3px solid var(--line-bright);
+        }
+
+        .window::after {
+            top: -2px;
+            right: -2px;
+            border-top: 3px solid var(--line-bright);
+            border-right: 3px solid var(--line-bright);
+        }
+
+        .window-title {
+            background: linear-gradient(180deg, #2a1520 0%, #1a1018 50%, #2a1520 100%);
+            border-bottom: 2px solid var(--line);
+            padding: 4px 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 26px;
+            flex-shrink: 0;
+        }
+
+        .close-box {
+            width: 14px;
+            height: 14px;
+            border: 1.5px solid var(--line-bright);
+            background: var(--bg-panel);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .close-box::after {
+            content: '\2020';
+            color: var(--line-bright);
+            font-size: 9px;
+            line-height: 1;
+        }
+
+        .stripes {
+            flex: 1;
+            height: 10px;
+            background: repeating-linear-gradient(90deg, transparent 0px, transparent 2px, #3a1828 2px, #3a1828 3px);
+        }
+
+        .title-text {
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 0.06em;
+            color: var(--gold);
+            white-space: nowrap;
+        }
+
+        .window-body {
+            padding: 10px;
+            background: var(--bg-panel-deep);
+            overflow: auto;
+        }
+
+        .control-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .section {
+            border: 1.5px solid var(--line);
+            background: rgba(18, 12, 16, 0.92);
+            padding: 8px;
+        }
+
+        .section-label {
+            font-size: 9px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 8px;
+        }
+
+        .lede {
+            line-height: 1.5;
+            color: #b89a88;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border: 1px solid var(--line);
+            background: var(--bg-panel);
+            color: var(--muted);
+        }
+
+        .status-chip.ready {
+            color: var(--ok);
+            border-color: rgba(136, 184, 123, 0.55);
+        }
+
+        .status-chip.error {
+            color: #ff9e8a;
+            border-color: rgba(184, 90, 64, 0.7);
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .field:last-child {
+            margin-bottom: 0;
+        }
+
+        .field-label {
+            font-size: 10px;
+            color: var(--muted);
+        }
+
+        .field-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .field-value {
+            color: var(--gold-soft);
+            font-size: 10px;
+        }
+
+        .row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .row.wrap {
+            flex-wrap: wrap;
+        }
+
+        .text-input,
+        .select-input,
+        .range-input,
+        .color-input {
+            width: 100%;
+            background: var(--bg-panel);
+            color: var(--gold-soft);
+            border: 1.5px solid var(--line);
+            border-top-color: #2a1520;
+            border-left-color: #2a1520;
+            border-bottom-color: var(--line-bright);
+            border-right-color: var(--line-bright);
+            padding: 6px 8px;
+            outline: none;
+        }
+
+        .text-input:focus,
+        .select-input:focus,
+        .range-input:focus,
+        .color-input:focus {
+            border-color: var(--gold);
+        }
+
+        .range-input {
+            padding: 0;
+            height: 28px;
+        }
+
+        .color-input {
+            min-height: 34px;
+            padding: 3px;
+        }
+
+        .btn {
+            background: var(--bg-panel);
+            color: var(--gold);
+            border: 1.5px solid var(--line);
+            border-top-color: var(--line-bright);
+            border-left-color: var(--line-bright);
+            border-bottom-color: #2a1520;
+            border-right-color: #2a1520;
+            padding: 6px 10px;
+            cursor: pointer;
+            min-height: 30px;
+        }
+
+        .btn:hover {
+            background: #2a1828;
+            color: #d4b45e;
+        }
+
+        .btn:active {
+            border-top-color: #2a1520;
+            border-left-color: #2a1520;
+            border-bottom-color: var(--line-bright);
+            border-right-color: var(--line-bright);
+            background: var(--bg-panel-dark);
+        }
+
+        .btn.primary {
+            border-color: #7f4c24;
+            color: #f3d17b;
+        }
+
+        .btn.small {
+            min-height: 24px;
+            padding: 4px 8px;
+            font-size: 10px;
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .preset-btn {
+            text-align: left;
+            line-height: 1.35;
+        }
+
+        .preset-btn strong {
+            display: block;
+            color: var(--gold-soft);
+            font-size: 11px;
+            margin-bottom: 1px;
+        }
+
+        .preset-btn span {
+            font-size: 9px;
+            color: var(--muted);
+        }
+
+        .results-box,
+        .log-box {
+            border: 1.5px solid var(--line);
+            background: #0b0709;
+            min-height: 86px;
+            padding: 8px;
+            line-height: 1.5;
+        }
+
+        .result-total {
+            font-size: 22px;
+            color: #f0d48d;
+            margin-bottom: 4px;
+        }
+
+        .result-breakdown {
+            color: #b89a88;
+            word-break: break-word;
+        }
+
+        .result-dice {
+            margin-top: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .die-pill {
+            border: 1px solid var(--line);
+            background: var(--bg-panel);
+            color: var(--gold-soft);
+            padding: 2px 6px;
+            font-size: 10px;
+        }
+
+        .log-box {
+            min-height: 180px;
+            max-height: 260px;
+            overflow: auto;
+        }
+
+        .log-entry {
+            padding-bottom: 6px;
+            margin-bottom: 6px;
+            border-bottom: 1px dotted var(--line);
+        }
+
+        .log-entry:last-child {
+            padding-bottom: 0;
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: var(--muted-deep);
+            font-size: 9px;
+            margin-bottom: 2px;
+        }
+
+        .log-notation {
+            color: var(--gold);
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .log-summary {
+            color: #b89a88;
+        }
+
+        .stage-body {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stage-header {
+            padding: 10px;
+            border-bottom: 2px solid var(--line);
+            background: var(--bg-panel-dark);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .stage-copy {
+            color: #b89a88;
+            line-height: 1.5;
+            max-width: 620px;
+        }
+
+        .dice-stage {
+            position: relative;
+            flex: 1;
+            min-height: 420px;
+            background:
+                radial-gradient(circle at 50% 10%, rgba(196, 164, 78, 0.1) 0%, transparent 35%),
+                linear-gradient(180deg, #161018 0%, #090608 100%);
+        }
+
+        #dice-box {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+
+        #dice-box canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .stage-empty {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            color: var(--muted-deep);
+            pointer-events: none;
+            line-height: 1.6;
+        }
+
+        .footer-note {
+            font-size: 10px;
+            color: var(--muted-deep);
+            line-height: 1.5;
+        }
+
+        @media (max-width: 980px) {
+            .page {
+                grid-template-columns: 1fr;
+            }
+
+            .dice-stage {
+                min-height: 360px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="menu-bar">
+        <span class="menu-title">Dice Lab</span>
+        <span>Fantastic Dice Trial</span>
+        <span class="menu-spacer"></span>
+        <a class="menu-btn" href="index.html">Back to Session Manager</a>
+    </div>
+
+    <main class="page">
+        <section class="window">
+            <div class="window-title">
+                <div class="close-box"></div>
+                <div class="stripes"></div>
+                <div class="title-text">Controls</div>
+                <div class="stripes"></div>
+            </div>
+            <div class="window-body">
+                <div class="control-stack">
+                    <div class="section">
+                        <div class="section-label">Status</div>
+                        <div id="statusChip" class="status-chip">Loading Fantastic Dice assets...</div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-label">Purpose</div>
+                        <p class="lede">
+                            This page is a sandbox for trying 3D roll behaviour before wiring it into the main DnD flow.
+                            It uses the official browser ES module build of Fantastic Dice.
+                        </p>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-label">Quick Roll</div>
+                        <div class="field">
+                            <label class="field-label" for="notationInput">Dice notation</label>
+                            <input id="notationInput" class="text-input" type="text" value="1d20" spellcheck="false">
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="modifierInput">Total modifier</label>
+                            <input id="modifierInput" class="text-input" type="number" value="0" step="1">
+                        </div>
+                        <div class="field">
+                            <label class="field-label" for="themeInput">Theme</label>
+                            <select id="themeInput" class="select-input">
+                                <option value="default">Default</option>
+                            </select>
+                        </div>
+                        <div class="row wrap">
+                            <button id="rollBtn" class="btn primary">Roll Dice</button>
+                            <button id="clearBtn" class="btn">Clear Table</button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-label">Physics Lab</div>
+                        <div class="field">
+                            <div class="field-label-row">
+                                <label class="field-label" for="scaleControl">Scale</label>
+                                <span class="field-value" id="scaleValue">8.8</span>
+                            </div>
+                            <input id="scaleControl" class="range-input" type="range" min="2" max="14" step="0.2" value="8.8">
+                        </div>
+                        <div class="field">
+                            <div class="field-label-row">
+                                <label class="field-label" for="gravityControl">Gravity</label>
+                                <span class="field-value" id="gravityValue">1.6</span>
+                            </div>
+                            <input id="gravityControl" class="range-input" type="range" min="0.6" max="3" step="0.05" value="1.6">
+                        </div>
+                        <div class="field">
+                            <div class="field-label-row">
+                                <label class="field-label" for="throwForceControl">Throw force</label>
+                                <span class="field-value" id="throwForceValue">5.5</span>
+                            </div>
+                            <input id="throwForceControl" class="range-input" type="range" min="2" max="10" step="0.1" value="5.5">
+                        </div>
+                        <div class="field">
+                            <div class="field-label-row">
+                                <label class="field-label" for="spinForceControl">Spin force</label>
+                                <span class="field-value" id="spinForceValue">4.2</span>
+                            </div>
+                            <input id="spinForceControl" class="range-input" type="range" min="1" max="8" step="0.1" value="4.2">
+                        </div>
+                        <div class="field">
+                            <div class="field-label-row">
+                                <label class="field-label" for="restitutionControl">Bounce</label>
+                                <span class="field-value" id="restitutionValue">0</span>
+                            </div>
+                            <input id="restitutionControl" class="range-input" type="range" min="0" max="1" step="0.02" value="0">
+                        </div>
+                        <div class="field">
+                            <div class="field-label-row">
+                                <label class="field-label" for="themeColorControl">Dice color</label>
+                                <span class="field-value" id="themeColorValue">#111111</span>
+                            </div>
+                            <input id="themeColorControl" class="color-input" type="color" value="#111111">
+                        </div>
+                        <div class="row wrap">
+                            <button id="applyPhysicsBtn" class="btn">Apply Settings</button>
+                            <button id="resetPhysicsBtn" class="btn">Reset Physics</button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-label">Presets</div>
+                        <div class="preset-grid">
+                            <button class="btn preset-btn" data-notation="1d20" data-modifier="5">
+                                <strong>Attack Roll</strong>
+                                <span>`1d20 + 5`</span>
+                            </button>
+                            <button class="btn preset-btn" data-notation="2d20" data-modifier="5">
+                                <strong>Advantage</strong>
+                                <span>`2d20`, keep highest manually</span>
+                            </button>
+                            <button class="btn preset-btn" data-notation="1d20" data-modifier="2">
+                                <strong>Saving Throw</strong>
+                                <span>`1d20 + 2`</span>
+                            </button>
+                            <button class="btn preset-btn" data-notation="8d6" data-modifier="0">
+                                <strong>Fireball</strong>
+                                <span>`8d6`</span>
+                            </button>
+                            <button class="btn preset-btn" data-notation="4d6" data-modifier="0">
+                                <strong>Stat Roll</strong>
+                                <span>`4d6`, drop lowest manually</span>
+                            </button>
+                            <button class="btn preset-btn" data-notation="1d8" data-modifier="3">
+                                <strong>Weapon Damage</strong>
+                                <span>`1d8 + 3`</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-label">Latest Result</div>
+                        <div id="resultsBox" class="results-box">
+                            Waiting for first roll.
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-label">Roll Log</div>
+                        <div id="logBox" class="log-box">
+                            <div class="log-entry">
+                                <div class="log-summary">No rolls yet.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-label">Notes</div>
+                        <p class="footer-note">
+                            If this page is opened directly from the filesystem, module or asset loading may fail.
+                            Serve it through a local server or your GitHub Pages deployment.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="window">
+            <div class="window-title">
+                <div class="close-box"></div>
+                <div class="stripes"></div>
+                <div class="title-text">3D Tray</div>
+                <div class="stripes"></div>
+            </div>
+            <div class="window-body stage-body">
+                <div class="stage-header">
+                    <p class="stage-copy">
+                        Roll notation from the left panel and watch the dice physics here. This first pass keeps the setup simple:
+                        default assets from the official CDN, one theme, and a plain result parser on top.
+                    </p>
+                    <button id="rerollBtn" class="btn small">Reroll Last</button>
+                </div>
+                <div class="dice-stage">
+                    <div id="dice-box"></div>
+                    <div id="stageEmpty" class="stage-empty">
+                        Initialising the dice box. If nothing appears after loading, check the status panel for asset errors.
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module">
+        import DiceBox from "https://unpkg.com/@3d-dice/dice-box@1.1.4/dist/dice-box.es.min.js";
+
+        const CDN_ORIGIN = "https://unpkg.com/@3d-dice/dice-box@1.1.4/dist/";
+        const AVAILABLE_THEMES = ["default"];
+
+        const statusChip = document.getElementById('statusChip');
+        const notationInput = document.getElementById('notationInput');
+        const modifierInput = document.getElementById('modifierInput');
+        const themeInput = document.getElementById('themeInput');
+        const rollBtn = document.getElementById('rollBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const rerollBtn = document.getElementById('rerollBtn');
+        const applyPhysicsBtn = document.getElementById('applyPhysicsBtn');
+        const resetPhysicsBtn = document.getElementById('resetPhysicsBtn');
+        const resultsBox = document.getElementById('resultsBox');
+        const logBox = document.getElementById('logBox');
+        const stageEmpty = document.getElementById('stageEmpty');
+        const scaleControl = document.getElementById('scaleControl');
+        const gravityControl = document.getElementById('gravityControl');
+        const throwForceControl = document.getElementById('throwForceControl');
+        const spinForceControl = document.getElementById('spinForceControl');
+        const restitutionControl = document.getElementById('restitutionControl');
+        const themeColorControl = document.getElementById('themeColorControl');
+        const scaleValue = document.getElementById('scaleValue');
+        const gravityValue = document.getElementById('gravityValue');
+        const throwForceValue = document.getElementById('throwForceValue');
+        const spinForceValue = document.getElementById('spinForceValue');
+        const restitutionValue = document.getElementById('restitutionValue');
+        const themeColorValue = document.getElementById('themeColorValue');
+
+        let diceBox;
+        let lastRollRequest = null;
+        let isReady = false;
+        let physicsApplyTimer = null;
+        let activePhysics = null;
+        const defaultPhysics = {
+            scale: 8.8,
+            gravity: 1.6,
+            throwForce: 5.5,
+            spinForce: 4.2,
+            restitution: 0,
+            themeColor: '#111111'
+        };
+
+        function setStatus(message, state) {
+            statusChip.textContent = message;
+            statusChip.className = 'status-chip' + (state ? ' ' + state : '');
+        }
+
+        function physicsEqual(a, b) {
+            return JSON.stringify(a) === JSON.stringify(b);
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[char]);
+        }
+
+        function getModifier() {
+            const parsed = Number.parseInt(modifierInput.value, 10);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function readPhysicsControls() {
+            return {
+                scale: Number.parseFloat(scaleControl.value),
+                gravity: Number.parseFloat(gravityControl.value),
+                throwForce: Number.parseFloat(throwForceControl.value),
+                spinForce: Number.parseFloat(spinForceControl.value),
+                restitution: Number.parseFloat(restitutionControl.value),
+                themeColor: themeColorControl.value
+            };
+        }
+
+        function setPhysicsControls(config) {
+            scaleControl.value = String(config.scale);
+            gravityControl.value = String(config.gravity);
+            throwForceControl.value = String(config.throwForce);
+            spinForceControl.value = String(config.spinForce);
+            restitutionControl.value = String(config.restitution);
+            themeColorControl.value = config.themeColor;
+            syncPhysicsLabels();
+        }
+
+        function syncPhysicsLabels() {
+            scaleValue.textContent = Number.parseFloat(scaleControl.value).toFixed(1);
+            gravityValue.textContent = Number.parseFloat(gravityControl.value).toFixed(2);
+            throwForceValue.textContent = Number.parseFloat(throwForceControl.value).toFixed(1);
+            spinForceValue.textContent = Number.parseFloat(spinForceControl.value).toFixed(1);
+            restitutionValue.textContent = Number.parseFloat(restitutionControl.value).toFixed(2);
+            themeColorValue.textContent = themeColorControl.value;
+        }
+
+        function physicsIsDirty() {
+            return !activePhysics || !physicsEqual(readPhysicsControls(), activePhysics);
+        }
+
+        async function buildDiceBox(config) {
+            isReady = false;
+            rerollBtn.disabled = true;
+            rollBtn.disabled = true;
+            clearBtn.disabled = true;
+            applyPhysicsBtn.disabled = true;
+            resetPhysicsBtn.disabled = true;
+            setStatus('Loading dice box...', '');
+
+            const host = document.getElementById('dice-box');
+            host.innerHTML = '';
+
+            diceBox = new DiceBox({
+                container: '#dice-box',
+                assetPath: 'assets/',
+                origin: CDN_ORIGIN,
+                theme: 'default',
+                themeColor: config.themeColor,
+                scale: config.scale,
+                gravity: config.gravity,
+                throwForce: config.throwForce,
+                spinForce: config.spinForce,
+                restitution: config.restitution,
+                lightIntensity: 1.15,
+                shadowTransparency: 0.55
+            });
+
+            await diceBox.init();
+            isReady = true;
+            activePhysics = { ...config };
+            rerollBtn.disabled = false;
+            rollBtn.disabled = false;
+            clearBtn.disabled = false;
+            applyPhysicsBtn.disabled = false;
+            resetPhysicsBtn.disabled = false;
+            setStatus('Fantastic Dice loaded.', 'ready');
+            stageEmpty.textContent = 'Ready. Use a preset or enter custom notation to throw dice into the tray.';
+        }
+
+        async function applyPhysicsFromControls() {
+            const nextPhysics = readPhysicsControls();
+            if (activePhysics && physicsEqual(nextPhysics, activePhysics)) {
+                return;
+            }
+
+            await buildDiceBox(nextPhysics);
+        }
+
+        function queuePhysicsApply() {
+            if (physicsApplyTimer) {
+                clearTimeout(physicsApplyTimer);
+            }
+
+            setStatus('Applying physics changes...', '');
+            physicsApplyTimer = window.setTimeout(async () => {
+                physicsApplyTimer = null;
+                try {
+                    await applyPhysicsFromControls();
+                } catch (error) {
+                    console.error(error);
+                    setStatus('Failed to apply settings.', 'error');
+                    resultsBox.textContent = 'Applying settings failed: ' + error.message;
+                }
+            }, 180);
+        }
+
+        function summarizeResults(results, modifier) {
+            const dice = results.map((die) => {
+                const rolledValue = typeof die.value === 'number' ? die.value : (typeof die.result === 'number' ? die.result : 0);
+                return {
+                    sides: die.sides || die.dieType || '?',
+                    value: rolledValue
+                };
+            });
+
+            const subtotal = dice.reduce((sum, die) => sum + die.value, 0);
+            const total = subtotal + modifier;
+
+            return { dice, subtotal, total };
+        }
+
+        function renderResults(notation, modifier, summary) {
+            const modifierText = modifier === 0 ? '' : (modifier > 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`);
+            const pills = summary.dice.map((die) => (
+                `<span class="die-pill">d${escapeHtml(die.sides)}: ${escapeHtml(die.value)}</span>`
+            )).join('');
+
+            resultsBox.innerHTML = `
+                <div class="result-total">${escapeHtml(summary.total)}</div>
+                <div class="result-breakdown">${escapeHtml(notation)}${modifierText} = ${escapeHtml(summary.subtotal)}${modifierText}</div>
+                <div class="result-dice">${pills || '<span class="die-pill">No dice returned</span>'}</div>
+            `;
+        }
+
+        function prependLog(notation, modifier, summary) {
+            const modifierText = modifier === 0 ? '' : (modifier > 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`);
+            const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const diceText = summary.dice.map((die) => `d${die.sides}:${die.value}`).join(', ');
+            const firstPlaceholder = logBox.querySelector('.log-entry .log-summary');
+
+            if (firstPlaceholder && firstPlaceholder.textContent === 'No rolls yet.') {
+                logBox.innerHTML = '';
+            }
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <div class="log-time">${escapeHtml(stamp)}</div>
+                <div class="log-notation">${escapeHtml(notation)}${escapeHtml(modifierText)}</div>
+                <div class="log-summary">Total ${escapeHtml(summary.total)} from ${escapeHtml(diceText || 'no dice data')}.</div>
+            `;
+
+            logBox.prepend(entry);
+        }
+
+        async function performRoll(notation, modifier, theme) {
+            if (physicsIsDirty()) {
+                try {
+                    await applyPhysicsFromControls();
+                } catch (error) {
+                    console.error(error);
+                    setStatus('Failed to apply settings before roll.', 'error');
+                    resultsBox.textContent = 'Applying settings failed: ' + error.message;
+                    return;
+                }
+            }
+
+            if (!isReady) {
+                setStatus('Dice box is still loading.', 'error');
+                return;
+            }
+
+            const cleanNotation = notation.trim();
+            if (!cleanNotation) {
+                setStatus('Enter a dice notation like 1d20 or 8d6.', 'error');
+                notationInput.focus();
+                return;
+            }
+
+            setStatus('Rolling...', '');
+            rollBtn.disabled = true;
+            rerollBtn.disabled = true;
+            stageEmpty.style.display = 'none';
+
+            try {
+                const results = await diceBox.roll(cleanNotation, {
+                    theme,
+                    newStartPoint: true
+                });
+                const summary = summarizeResults(results, modifier);
+                renderResults(cleanNotation, modifier, summary);
+                prependLog(cleanNotation, modifier, summary);
+                lastRollRequest = { notation: cleanNotation, modifier, theme };
+                setStatus('Ready to roll.', 'ready');
+            } catch (error) {
+                console.error(error);
+                setStatus('Roll failed. Check the console for details.', 'error');
+                resultsBox.textContent = 'Roll failed: ' + error.message;
+            } finally {
+                rollBtn.disabled = false;
+                rerollBtn.disabled = false;
+            }
+        }
+
+        function populateThemes() {
+            themeInput.innerHTML = AVAILABLE_THEMES.map((theme) => (
+                `<option value="${escapeHtml(theme)}">${escapeHtml(theme)}</option>`
+            )).join('');
+        }
+
+        rollBtn.addEventListener('click', () => {
+            performRoll(notationInput.value, getModifier(), themeInput.value);
+        });
+
+        clearBtn.addEventListener('click', async () => {
+            if (!diceBox) {
+                return;
+            }
+
+            await diceBox.clear();
+            stageEmpty.style.display = 'flex';
+            setStatus('Table cleared.', 'ready');
+        });
+
+        rerollBtn.addEventListener('click', () => {
+            if (!lastRollRequest) {
+                setStatus('No previous roll to repeat yet.', 'error');
+                return;
+            }
+
+            performRoll(lastRollRequest.notation, lastRollRequest.modifier, lastRollRequest.theme);
+        });
+
+        notationInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                performRoll(notationInput.value, getModifier(), themeInput.value);
+            }
+        });
+
+        [scaleControl, gravityControl, throwForceControl, spinForceControl, restitutionControl, themeColorControl].forEach((input) => {
+            input.addEventListener('input', () => {
+                syncPhysicsLabels();
+                queuePhysicsApply();
+            });
+        });
+
+        applyPhysicsBtn.addEventListener('click', async () => {
+            try {
+                await applyPhysicsFromControls();
+            } catch (error) {
+                console.error(error);
+                setStatus('Failed to apply settings.', 'error');
+                resultsBox.textContent = 'Applying settings failed: ' + error.message;
+            }
+        });
+
+        resetPhysicsBtn.addEventListener('click', async () => {
+            setPhysicsControls(defaultPhysics);
+            try {
+                await buildDiceBox(defaultPhysics);
+            } catch (error) {
+                console.error(error);
+                setStatus('Failed to reset settings.', 'error');
+                resultsBox.textContent = 'Reset failed: ' + error.message;
+            }
+        });
+
+        document.querySelectorAll('.preset-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                notationInput.value = button.dataset.notation || '1d20';
+                modifierInput.value = button.dataset.modifier || '0';
+                performRoll(notationInput.value, getModifier(), themeInput.value);
+            });
+        });
+
+        populateThemes();
+        setPhysicsControls(defaultPhysics);
+        rerollBtn.disabled = true;
+
+        try {
+            await buildDiceBox(defaultPhysics);
+        } catch (error) {
+            console.error(error);
+            setStatus('Failed to load Fantastic Dice assets.', 'error');
+            stageEmpty.textContent = 'The dice engine did not load. This usually means the page is being opened without HTTP(S), or the CDN assets were blocked.';
+            resultsBox.textContent = 'Initialisation failed: ' + error.message;
+        }
+    </script>
+</body>
+</html>
