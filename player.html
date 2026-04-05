@@ -590,6 +590,30 @@
             box-shadow: inset 0 1px 0 rgba(74,32,48,0.3);
             padding: 6px 4px;
             text-align: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .ability-box:hover {
+            border-color: #6b2a3a;
+            background: #1a1018;
+        }
+
+        .ability-box:active {
+            background: #24131b;
+        }
+
+        .ability-box::after {
+            content: 'Roll';
+            position: absolute;
+            top: 4px;
+            right: 5px;
+            font-size: 8px;
+            color: #5a4048;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
         .ability-icon {
@@ -1723,6 +1747,110 @@
         .notes-textarea::placeholder { color: #3a2030; }
         .notes-textarea:focus { background: #120a0e; }
 
+        .roll-counter {
+            border-top: 1px solid #2a1520;
+            padding: 8px 10px 10px;
+            background: #120a0e;
+        }
+
+        .roll-counter-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #8a6050;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+        }
+
+        .roll-counter-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #c4a44e;
+        }
+
+        .roll-counter-meta {
+            margin-top: 4px;
+            font-size: 10px;
+            color: #8a6050;
+            line-height: 1.5;
+        }
+
+        .ability-roll-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(8, 6, 8, 0.55);
+            z-index: 9500;
+            pointer-events: none;
+        }
+
+        .ability-roll-overlay.active {
+            display: flex;
+        }
+
+        .ability-roll-stage {
+            width: min(88vw, 720px);
+            height: min(54vh, 420px);
+            position: relative;
+            border: 2px solid #4a2030;
+            background:
+                radial-gradient(circle at 50% 10%, rgba(196, 164, 78, 0.12) 0%, transparent 35%),
+                linear-gradient(180deg, #161018 0%, #090608 100%);
+            box-shadow: inset 0 0 0 1px #2a1520, 0 10px 28px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+
+        .ability-roll-stage::before,
+        .ability-roll-stage::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .ability-roll-stage::before {
+            top: -2px;
+            left: -2px;
+            border-top: 3px solid #6b2a3a;
+            border-left: 3px solid #6b2a3a;
+        }
+
+        .ability-roll-stage::after {
+            top: -2px;
+            right: -2px;
+            border-top: 3px solid #6b2a3a;
+            border-right: 3px solid #6b2a3a;
+        }
+
+        .ability-roll-stage-label {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 0.08em;
+            color: #c4a44e;
+            text-transform: uppercase;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            z-index: 2;
+        }
+
+        .ability-dice-box {
+            position: absolute;
+            inset: 0;
+        }
+
+        .ability-dice-box canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
         /* ===================== GOLD ===================== */
         .gold-row {
             display: flex;
@@ -2207,6 +2335,11 @@
                             </div>
                             <div id="notesBody" style="display:none">
                                 <textarea id="notesTextarea" class="notes-textarea" placeholder="&#8226; Session notes...&#10;&#8226; Important clues...&#10;&#8226; NPCs met..."></textarea>
+                                <div class="roll-counter">
+                                    <div class="roll-counter-label">&#9860; Roll Counter</div>
+                                    <div class="roll-counter-value" id="abilityRollCount">0</div>
+                                    <div class="roll-counter-meta" id="abilityRollMeta">No ability checks rolled yet.</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2215,6 +2348,12 @@
         </div>
     </div>
 
+    <div class="ability-roll-overlay" id="abilityRollOverlay">
+        <div class="ability-roll-stage">
+            <div class="ability-roll-stage-label" id="abilityRollStageLabel">Ability Check</div>
+            <div class="ability-dice-box" id="abilityDiceBox"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -2252,6 +2391,21 @@
     let skillProficiencies = [];
     let currentGold = 0;
     let currentSlots = {};
+    let abilityRollCount = 0;
+    let abilityRollLastSummary = '';
+    let abilityDiceBox = null;
+    let abilityDiceInitPromise = null;
+    let abilityRollInFlight = false;
+    const ABILITY_DICE_CDN_ORIGIN = "https://unpkg.com/@3d-dice/dice-box@1.1.4/dist/";
+    const ABILITY_DICE_DEFAULTS = {
+        theme: 'default',
+        themeColor: '#111111',
+        scale: 8.8,
+        gravity: 1.6,
+        throwForce: 5.5,
+        spinForce: 4.2,
+        restitution: 0
+    };
 
     function parseSpellsFromRawMarkdown(text) {
         const lines = String(text || '').split('\n');
@@ -2431,6 +2585,7 @@
         renderGold();
         initDiceStrip();
         initNotesPanel();
+        renderAbilityRollCounter();
         startFirebaseSync();
     }
 
@@ -2467,12 +2622,116 @@
         Object.entries(char.stats).forEach(([stat, mod]) => {
             const box = document.createElement('div');
             box.className = 'ability-box';
+            box.title = 'Roll ' + stat + ' check';
             box.innerHTML =
                 '<div class="ability-icon">' + (abilIcons[stat] || '') + '</div>' +
                 '<div class="ability-mod">' + fmtMod(mod) + '</div>' +
                 '<div class="ability-label">' + stat + '</div>';
+            box.addEventListener('click', (event) => {
+                event.stopPropagation();
+                rollAbilityCheck(stat, mod, box);
+            });
             container.appendChild(box);
         });
+    }
+
+    function renderAbilityRollCounter() {
+        const countEl = document.getElementById('abilityRollCount');
+        const metaEl = document.getElementById('abilityRollMeta');
+        if (countEl) countEl.textContent = String(abilityRollCount);
+        if (metaEl) metaEl.textContent = abilityRollLastSummary || 'No ability checks rolled yet.';
+    }
+
+    function showAbilityRollTotal(anchorEl, stat, rawRoll, modifier, total) {
+        const modifierText = modifier >= 0 ? '+' + modifier : String(modifier);
+        showAbilityPopup(anchorEl, stat + ' Check', 'd20 ' + rawRoll + ' ' + modifierText + ' = ' + total);
+    }
+
+    function summarizeDiceResults(results) {
+        const dice = (Array.isArray(results) ? results : []).map((die) => {
+            const value = typeof die.value === 'number' ? die.value : (typeof die.result === 'number' ? die.result : 0);
+            return {
+                sides: die.sides || die.dieType || '?',
+                value
+            };
+        });
+
+        return {
+            dice,
+            subtotal: dice.reduce((sum, die) => sum + die.value, 0)
+        };
+    }
+
+    async function ensureAbilityDiceBox() {
+        if (abilityDiceBox) return abilityDiceBox;
+        if (abilityDiceInitPromise) return abilityDiceInitPromise;
+
+        abilityDiceInitPromise = (async () => {
+            const module = await import('https://unpkg.com/@3d-dice/dice-box@1.1.4/dist/dice-box.es.min.js');
+            const DiceBox = module.default;
+            const host = document.getElementById('abilityDiceBox');
+            host.innerHTML = '';
+
+            abilityDiceBox = new DiceBox({
+                container: '#abilityDiceBox',
+                assetPath: 'assets/',
+                origin: ABILITY_DICE_CDN_ORIGIN,
+                theme: ABILITY_DICE_DEFAULTS.theme,
+                themeColor: ABILITY_DICE_DEFAULTS.themeColor,
+                scale: ABILITY_DICE_DEFAULTS.scale,
+                gravity: ABILITY_DICE_DEFAULTS.gravity,
+                throwForce: ABILITY_DICE_DEFAULTS.throwForce,
+                spinForce: ABILITY_DICE_DEFAULTS.spinForce,
+                restitution: ABILITY_DICE_DEFAULTS.restitution,
+                lightIntensity: 1.15,
+                shadowTransparency: 0.55
+            });
+
+            await abilityDiceBox.init();
+            return abilityDiceBox;
+        })();
+
+        try {
+            return await abilityDiceInitPromise;
+        } finally {
+            if (!abilityDiceBox) abilityDiceInitPromise = null;
+        }
+    }
+
+    async function rollAbilityCheck(stat, modifier, sourceEl) {
+        if (abilityRollInFlight) return;
+        abilityRollInFlight = true;
+
+        const overlay = document.getElementById('abilityRollOverlay');
+        const stageLabel = document.getElementById('abilityRollStageLabel');
+        if (stageLabel) stageLabel.textContent = stat + ' Check';
+
+        try {
+            overlay.classList.add('active');
+            const diceBox = await ensureAbilityDiceBox();
+            await diceBox.clear();
+            const results = await diceBox.roll('1d20', {
+                theme: ABILITY_DICE_DEFAULTS.theme,
+                newStartPoint: true
+            });
+            const summary = summarizeDiceResults(results);
+            const rawRoll = summary.dice[0] ? summary.dice[0].value : 0;
+            const total = rawRoll + modifier;
+
+            await new Promise((resolve) => window.setTimeout(resolve, 250));
+            overlay.classList.remove('active');
+
+            abilityRollCount += 1;
+            abilityRollLastSummary = stat + ': ' + rawRoll + ' ' + (modifier >= 0 ? '+' + modifier : modifier) + ' = ' + total;
+            renderAbilityRollCounter();
+            showAbilityRollTotal(sourceEl, stat, rawRoll, modifier, total);
+        } catch (error) {
+            console.error(error);
+            overlay.classList.remove('active');
+            showAbilityPopup(sourceEl, stat + ' Check', 'Dice roll failed to load. Check the network/CDN path.');
+        } finally {
+            abilityRollInFlight = false;
+        }
     }
 
     // =========================================================
