@@ -238,6 +238,7 @@
             color: #c4a44e;
             flex-shrink: 0;
             text-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 0 6px rgba(196,164,78,0.15);
+            cursor: pointer;
         }
 
         .win-body {
@@ -2405,13 +2406,17 @@
     // =========================================================
     function buildPlayerScreen() {
         document.title = char.name + ' — D&D';
-        document.getElementById('charTitle').textContent = char.name;
+        const charTitle = document.getElementById('charTitle');
         const classLabel = document.getElementById('charClassLabel');
-        classLabel.textContent = char.cls + ' · Level ' + (char.level || 1);
-        classLabel.onclick = () => {
+        const showXpDetails = (anchorEl, label) => {
             const xpText = char.xp ? 'XP: ' + char.xp : 'XP not recorded for this character.';
-            showAbilityPopup(classLabel, 'Level ' + (char.level || 1), xpText);
+            showAbilityPopup(anchorEl, label, xpText);
         };
+
+        charTitle.textContent = char.name;
+        classLabel.textContent = char.cls + ' · Level ' + (char.level || 1);
+        charTitle.onclick = () => showXpDetails(charTitle, char.name);
+        classLabel.onclick = () => showXpDetails(classLabel, 'Level ' + (char.level || 1));
 
         buildCoreStats();
         buildAbilityScores();
@@ -2738,7 +2743,12 @@
     }
 
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.ability-chip') && !e.target.closest('.chip-info')) hideAbilityPopup();
+        if (
+            !e.target.closest('.ability-chip') &&
+            !e.target.closest('.chip-info') &&
+            !e.target.closest('#charTitle') &&
+            !e.target.closest('#charClassLabel')
+        ) hideAbilityPopup();
     });
 
     document.addEventListener('keydown', function(e) {
