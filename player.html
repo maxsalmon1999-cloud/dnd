@@ -2210,6 +2210,16 @@
 
         .save-row:last-child { border-bottom: none; }
 
+        .save-row.rollable {
+            cursor: pointer;
+        }
+
+        .save-row.rollable:hover .save-stat,
+        .save-row.rollable:hover .save-value,
+        .save-row.rollable:hover .save-name {
+            color: #d4b45e;
+        }
+
         .save-stat {
             font-size: 10px;
             font-weight: bold;
@@ -2982,6 +2992,42 @@
         }
     }
 
+    async function rollSavingThrow(stat, sourceEl) {
+        if (abilityRollInFlight) return;
+        abilityRollInFlight = true;
+
+        const modifier = getSaveModifier(stat);
+
+        try {
+            const summary = await rollWithFantasticDice('1d20', stat + ' Save');
+            const rawRoll = summary.dice[0] ? summary.dice[0].value : 0;
+            const total = rawRoll + modifier;
+
+            abilityRollCount += 1;
+            abilityRollLastSummary = stat + ' save: ' + rawRoll + ' ' + (modifier >= 0 ? '+' + modifier : modifier) + ' = ' + total;
+            renderAbilityRollCounter();
+            const isCrit = rawRoll === 20;
+            const isFail = rawRoll === 1;
+            const historyLabel = 'd20' + (modifier !== 0 ? (modifier > 0 ? '+' + modifier : String(modifier)) : '');
+            const suffix = isCrit ? ' CRIT!' : isFail ? ' FAIL' : '';
+            pushRollHistoryEntry({ type: stat + ' Save', label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
+            db.ref('diceLog').push({
+                character: char.name,
+                charKey,
+                dice: historyLabel,
+                result: total,
+                type: stat + ' Save',
+                modifier,
+                timestamp: Date.now(),
+            });
+        } catch (error) {
+            console.error(error);
+            showAbilityPopup(sourceEl, stat + ' Save', 'Dice roll failed to load. Check the network/CDN path.');
+        } finally {
+            abilityRollInFlight = false;
+        }
+    }
+
     // =========================================================
     // CONDITIONS
     // =========================================================
@@ -3101,10 +3147,14 @@
     const SAVE_STATS = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
     const SAVE_NAMES = { STR: 'Strength', DEX: 'Dexterity', CON: 'Constitution', INT: 'Intelligence', WIS: 'Wisdom', CHA: 'Charisma' };
 
-    function getSaveValue(stat) {
+    function getSaveModifier(stat) {
         const base = char.stats[stat] || 0;
         const profBonus = proficiencyFromLevel(char.level || 1);
-        return fmtMod(base + (saveProficiencies.includes(stat) ? profBonus : 0));
+        return base + (saveProficiencies.includes(stat) ? profBonus : 0);
+    }
+
+    function getSaveValue(stat) {
+        return fmtMod(getSaveModifier(stat));
     }
 
     function buildSavingThrows() {
@@ -3133,7 +3183,8 @@
 
         SAVE_STATS.forEach(stat => {
             const row = document.createElement('div');
-            row.className = 'save-row';
+            row.className = 'save-row rollable';
+            row.title = 'Roll ' + stat + ' save';
 
             const profBtn = document.createElement('button');
             profBtn.className = 'save-prof-btn';
@@ -3153,7 +3204,11 @@
             nameEl.className = 'save-name';
             nameEl.textContent = SAVE_NAMES[stat];
 
-            profBtn.addEventListener('click', () => toggleSaveProficiency(stat));
+            profBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                toggleSaveProficiency(stat);
+            });
+            row.addEventListener('click', () => rollSavingThrow(stat, row));
 
             row.appendChild(profBtn);
             row.appendChild(statEl);
