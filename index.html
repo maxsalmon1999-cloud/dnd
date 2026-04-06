@@ -788,7 +788,6 @@
 
         .story-display {
             flex: 1;
-            max-height: 30vh;
             overflow-y: auto;
             padding: 8px;
             background: #100c0e;
@@ -4569,6 +4568,7 @@ ${fullText.slice(0, 30000)}`;
                     body: JSON.stringify({
                         model: API_MODEL,
                         max_tokens: 1024,
+                        stream: true,
                         system: systemPrompt,
                         messages: conversationHistory,
                     }),
@@ -4579,15 +4579,50 @@ ${fullText.slice(0, 30000)}`;
                     throw new Error(err.error?.message || `API error ${res.status}`);
                 }
 
-                const data = await res.json();
-                recordPromptUsage(data);
-                const reply = data.content?.[0]?.text || '(No response)';
-                conversationHistory.push({ role: 'assistant', content: reply });
+                // Stream the response
+                const textEl = loadingEl.querySelector('.text');
+                let fullReply = '';
+                let usage = null;
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // keep incomplete line in buffer
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const data = line.slice(6).trim();
+                        if (data === '[DONE]') continue;
+
+                        try {
+                            const event = JSON.parse(data);
+                            if (event.type === 'content_block_delta' && event.delta?.text) {
+                                fullReply += event.delta.text;
+                                textEl.innerHTML = renderAssistantMarkdown(fullReply);
+                                storyDisplay.scrollTop = storyDisplay.scrollHeight;
+                            } else if (event.type === 'message_start' && event.message?.usage) {
+                                usage = { input_tokens: event.message.usage.input_tokens, output_tokens: 0 };
+                            } else if (event.type === 'message_delta' && event.usage) {
+                                if (usage) usage.output_tokens = event.usage.output_tokens;
+                            }
+                        } catch (e) { /* skip unparseable lines */ }
+                    }
+                }
+
+                if (usage) recordPromptUsage({ usage });
+                conversationHistory.push({ role: 'assistant', content: fullReply });
                 loadingEl.remove();
 
                 // Check for dice automation request
-                const diceRequest = parseDiceRequest(reply);
-                const cleanReply = stripDiceRequest(reply);
+                const diceRequest = parseDiceRequest(fullReply);
+                const cleanReply = stripDiceRequest(fullReply);
                 addStoryEntry('assistant', AI_ASSISTANT_NAME, cleanReply, currentMode);
 
                 if (diceRequest) {
