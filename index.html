@@ -320,6 +320,21 @@
             margin-left: 2px;
         }
 
+        .ability-btn.spell-btn {
+            width: 100%;
+            justify-content: flex-start;
+            text-align: left;
+            white-space: normal;
+            line-height: 1.35;
+            color: #d0b87a;
+        }
+
+        .ability-btn.spell-btn::before {
+            content: '\2022';
+            margin-right: 5px;
+            color: #8a6050;
+        }
+
         .ability-info-btn {
             display: inline-block;
             margin-left: 4px;
@@ -3776,7 +3791,8 @@ ${fullText.slice(0, 30000)}`;
                     levels.forEach(lvl => {
                         statsHtml += '<div style="font-size:8px;color:#8a6050;margin-top:3px;font-weight:bold">' + escapeHtml(lvl) + '</div>';
                         charSpells.filter(s => s.level === lvl).forEach(s => {
-                            statsHtml += '<div style="font-size:9px;color:#c8b070;padding:1px 0 1px 6px">\u2022 ' + escapeHtml(s.name) + '</div>';
+                            const spellDesc = escapeHtml(getSpellDescription(s.name));
+                            statsHtml += '<button class="ability-btn spell-btn" data-name="' + escapeHtml(s.name) + '" data-desc="' + spellDesc + '" onclick="showAbilityPopup(this,this.dataset.name,this.dataset.desc)">' + escapeHtml(s.name) + '</button>';
                         });
                     });
                     statsHtml += '</div>';
@@ -4368,6 +4384,97 @@ ${fullText.slice(0, 30000)}`;
                 .replace(/\s+\d+d\d+\b/gi, '')
                 .trim();
             return ABILITY_DESCRIPTIONS[name] || ABILITY_DESCRIPTIONS[normalized] || fallback || '';
+        }
+
+        const SPELL_DESCRIPTIONS = {
+            'Eldritch Blast': 'Ranged spell attack, 120 ft. 1d10 force damage. Gains an additional beam at levels 5, 11, and 17.',
+            'Mage Hand': 'Spectral hand at a point within 30 ft for 1 min. Can manipulate objects, open unlocked doors/containers, stow or retrieve items, pour vials. Cannot attack or activate magic items.',
+            'Minor Illusion': 'Create a sound or image (up to 5-ft cube) within 30 ft for 1 min. Investigation vs. spell save DC reveals illusion.',
+            'Prestidigitation': 'Minor magical tricks: light/snuff a small fire, clean or soil an object, chill/warm/flavour 1 cu ft of material, make a small mark, create a small trinket or illusion.',
+            'Toll the Dead': 'One creature within 60 ft makes a WIS save. Fail: 1d8 necrotic (1d12 if it is missing any HP).',
+            'Vicious Mockery': 'Creature within 60 ft that can hear you makes a WIS save. Fail: 1d4 psychic damage and disadvantage on its next attack roll.',
+            'Shillelagh': 'Bonus action. Club or quarterstaff becomes magical - use spellcasting modifier for attack/damage. Damage becomes 1d8. Duration: 1 min.',
+            'Sacred Flame': 'Creature within 60 ft makes a DEX save (no cover bonus). Fail: 1d8 radiant damage.',
+            'Guidance': 'Touch a willing creature. Once in the next minute, it can add 1d4 to one ability check.',
+            'Thaumaturgy': 'Minor effects: amplify voice, change eye colour, cause tremors, create a non-magical flame, open/slam shut a door. Up to 1 min each.',
+            'Spare the Dying': 'Touch a creature with 0 HP - it stabilises.',
+            'Friends': 'Concentration, 1 min. Advantage on CHA checks against one non-hostile creature. When it ends, the creature knows you used magic.',
+            'Chill Touch': 'Spectral hand, 120 ft, ranged spell attack. 1d8 necrotic; target cannot regain HP until start of your next turn. Undead also have disadvantage on attacks against you.',
+            'Fire Bolt': '120 ft, ranged spell attack. 1d10 fire damage. Ignites flammable objects.',
+            'Ray of Frost': '60 ft, ranged spell attack. 1d8 cold damage. Target speed -10 ft until start of your next turn.',
+            'Poison Spray': '10 ft. Target makes a CON save. Fail: 1d12 poison damage.',
+            'Dancing Lights': 'Create up to 4 torch-sized lights within 120 ft for 1 min (concentration). Move them as a bonus action.',
+            'Blade Ward': 'Until end of your next turn: resistance to bludgeoning, piercing, and slashing damage from weapon attacks.',
+            'True Strike': 'Concentration, up to 1 round. Advantage on your next attack roll against the target.',
+            'Message': '120 ft. Whisper a message to a creature - only they hear it and can whisper a reply.',
+            'Mending': '1 min cast. Repairs a single break or tear in an object up to 1-ft in any dimension.',
+            'Hex': 'Bonus action, 90 ft. Curse one creature for 1 hr (concentration). +1d6 necrotic on each hit. Choose one ability - target has disadvantage on checks using it.',
+            'Charm Person': 'Humanoid within 30 ft makes a WIS save. Fail: charmed for 1 hr or until harmed. Regards you as a friendly acquaintance.',
+            'Disguise Self': '1 hr. Alter your appearance - height, weight, features, and gear. Does not hold up to touch; Investigation vs. DC 13 to disbelieve.',
+            'Dissonant Whispers': '60 ft. Target makes a WIS save. Fail: 3d6 psychic and immediately moves away using its reaction. Succeed: half damage, no movement.',
+            'Healing Word': 'Bonus action, 60 ft. Target regains 1d4 + spellcasting modifier HP.',
+            'Thunderwave': '15-ft cube originating from you. CON save. Fail: 2d8 thunder damage and pushed 10 ft. Succeed: half. Boom audible 300 ft away.',
+            'Sleep': '90 ft, 20-ft sphere. Roll 5d8 - total HP of creatures affected (lowest HP first). Lasts 1 min. Undead and immune creatures unaffected.',
+            'Hideous Laughter': '30 ft. WIS save each turn. Fail: incapacitated and prone for up to 1 min (concentration). Repeats each turn or on taking damage.',
+            'Faerie Fire': '20-ft cube, 60 ft, concentration, 1 min. DEX save. Fail: outlined in coloured light - attacks against it have advantage, and it cannot benefit from invisibility.',
+            'Comprehend Languages': '1 hr (can be cast as ritual). Understand the literal meaning of any spoken or written language.',
+            'Detect Magic': 'Concentration, 10 min (ritual). Sense presence of magic within 30 ft; action to see a faint aura and learn school of magic.',
+            'Silent Image': 'Concentration, 10 min. Create an image of an object, creature, or phenomenon (15-ft cube) within 60 ft.',
+            'Longstrider': '1 hr. Touch. Target\'s speed increases by 10 ft.',
+            'Bless': 'Concentration, 1 min. Up to 3 creatures add 1d4 to attack rolls and saving throws.',
+            'Cure Wounds': 'Touch. Target regains 1d8 + spellcasting modifier HP.',
+            'Guiding Bolt': '120 ft, ranged spell attack. 4d6 radiant damage. Next attack against the target before end of your next turn has advantage.',
+            'Shield of Faith': 'Bonus action, 60 ft, concentration, 10 min. Target gains +2 AC.',
+            'Command': '60 ft. Humanoid makes a WIS save. Fail: obeys a single one-word command on its next turn (Flee, Grovel, Halt, etc.).',
+            'Inflict Wounds': 'Melee spell attack (touch). 3d10 necrotic damage.',
+            'Burning Hands': '15-ft cone. DEX save. Fail: 3d6 fire. Succeed: half. Ignites flammable objects.',
+            'Mage Armor': 'Touch. Target not wearing armour gets AC = 13 + DEX modifier. Duration: 8 hr.',
+            'Magic Missile': '120 ft. Three darts, each dealing 1d4+1 force damage. Automatically hit; can target same or different creatures.',
+            'Identify': '1 min (ritual). Learn magic item properties, how to use it, attunement requirement, and charges remaining.',
+            'Find Familiar': 'Ritual. Summon a spirit in animal form as a familiar. Share senses, deliver touch spells, aid attacks (grant advantage).',
+            'Unseen Servant': '1 hr (ritual). Invisible force carries out simple tasks within 60 ft. STR 2, AC 10, 1 HP.',
+            'Feather Fall': 'Reaction. Up to 5 falling creatures within 60 ft descend at 60 ft/round and land safely.',
+            'Arms of Hadar': '10 ft around you. STR save. Fail: 2d6 necrotic, cannot use reactions until end of next turn. Succeed: half.',
+            'Hellish Rebuke': 'Reaction (when damaged by a creature within 60 ft). DEX save. Fail: 2d10 fire. Succeed: half.',
+            'Expeditious Retreat': 'Bonus action, concentration, 10 min. Take the Dash action as a bonus action each turn.',
+            'Entangle': 'Concentration, 1 min. 20-ft square, 90 ft. STR save. Fail: restrained. Area is difficult terrain.',
+            'Searing Smite': 'Concentration, 1 min. Bonus action. Next weapon hit: +1d6 fire and target ignites - 1d6 fire at start of each turn until CON save or doused.',
+            'Thunderous Smite': 'Concentration, 1 min. Bonus action. Next weapon hit: +2d6 thunder, push 10 ft, STR save or knocked prone.',
+            'Wrathful Smite': 'Concentration, 1 min. Bonus action. Next weapon hit: +1d6 psychic, WIS save or frightened of you.',
+            'Shield': 'Reaction (when hit by an attack or targeted by Magic Missile). +5 AC until start of your next turn, including against the triggering attack.',
+            'Misty Step': 'Bonus action. Teleport up to 30 ft to an unoccupied space you can see.',
+            'Mirror Image': '1 min. Three illusory duplicates move with you. When targeted, roll d20 to see if a copy is hit (threshold drops as copies are destroyed). Copy AC = 10 + DEX.',
+            'Invisibility': 'Concentration, 1 hr. Target is invisible until it attacks or casts a spell.',
+            'Shatter': '60 ft, 10-ft sphere. CON save. Fail: 3d8 thunder. Succeed: half. Always full damage to objects and constructs.',
+            'Suggestion': 'Concentration, 8 hr. One creature makes a WIS save. Fail: follows a reasonable course of action you suggest.',
+            'Darkness': 'Concentration, 10 min, 15-ft radius from a point or object within 60 ft. Magical darkness blocks darkvision.',
+            'Spider Climb': 'Concentration, 1 hr. Target can move on walls and ceilings at full speed with hands free.',
+            'Hunger of Hadar': 'Concentration, 1 min. 20-ft sphere of darkness at a point within 150 ft. Creatures inside are blinded. Start of turn: 2d6 cold. End of turn: DEX save or 2d6 acid.',
+            'Phantasmal Force': 'Concentration, 1 min, 60 ft. INT save. Fail: creature perceives a phantasm you describe - 1d6 psychic per turn until save succeeds or spell ends.',
+            'Crown of Madness': 'Concentration, 1 min, 120 ft. Humanoid makes WIS save. Fail: charmed - attacks a creature of your choice on its turn.',
+            'Hold Person': 'Concentration, 1 min, 60 ft. Humanoid makes WIS save. Fail: paralyzed. Repeats each turn.',
+            'Knock': '60 ft. One lock, bolt, or bar opens. Loud booming sound audible 300 ft away.',
+            'Pass Without Trace': 'Concentration, 1 hr. You and up to 10 creatures within 30 ft can\'t be tracked except by magical means, and add +10 to Stealth checks.',
+            'Spiritual Weapon': 'Bonus action, 60 ft. Spectral weapon attacks as a bonus action each turn for 1 min (no concentration). +1d8 + spellcasting mod force on a hit.',
+            'Prayer of Healing': '10 min cast. Up to 6 creatures regain 2d8 + spellcasting modifier HP.',
+            'Lesser Restoration': 'Touch. End one disease or one condition: blinded, deafened, paralyzed, or poisoned.',
+            'Enhance Ability': 'Concentration, 1 hr. Touch. Grant one of: Bear\'s Endurance (CON adv + 2d6 temp HP), Bull\'s Strength (STR adv), Cat\'s Grace (DEX adv, no fall dmg <=20 ft), Eagle\'s Splendor (CHA adv), Fox\'s Cunning (INT adv), Owl\'s Wisdom (WIS adv).',
+            'Hypnotic Pattern': 'Concentration, 1 min, 30-ft cube within 120 ft. WIS save. Fail: incapacitated and speed 0. Breaks on taking damage or being shaken.',
+            'Counterspell': 'Reaction. When a creature within 60 ft casts a spell, counter it. Auto-succeeds if spell is 3rd level or lower. Higher: ability check DC 10 + spell level.',
+            'Dispel Magic': '120 ft. End any spell of 3rd level or lower on a target. Higher-level spells require an ability check.',
+            'Fear': 'Concentration, 1 min, 30-ft cone. WIS save. Fail: frightened and must use movement to flee each turn. Repeat save each turn at end of turn.',
+            'Fly': 'Concentration, 10 min. Touched willing creature gains flying speed of 60 ft.',
+            'Fireball': '150 ft, 20-ft radius. DEX save. Fail: 8d6 fire. Succeed: half. Ignites flammable objects.',
+            'Lightning Bolt': '100-ft line, 5 ft wide. DEX save. Fail: 8d6 lightning. Succeed: half.',
+            'Spirit Guardians': 'Concentration, 10 min. Spirits surround you in 15-ft radius. Creatures of your choice make WIS saves. Fail: 3d8 radiant/necrotic and speed halved.',
+            'Mass Healing Word': 'Bonus action, 60 ft. Up to 6 creatures regain 1d4 + spellcasting modifier HP.'
+        };
+
+        function getSpellDescription(name) {
+            const normalized = String(name || '')
+                .replace(/\s+\([^)]*\)/g, '')
+                .trim();
+            return SPELL_DESCRIPTIONS[name] || SPELL_DESCRIPTIONS[normalized] || 'No spell description available.';
         }
 
         function showAbilityPopup(el, name, desc) {
