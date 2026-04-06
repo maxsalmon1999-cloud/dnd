@@ -1928,6 +1928,32 @@
             inset: 0;
         }
 
+        .dice-smoke {
+            position: absolute;
+            pointer-events: none;
+            z-index: 3;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(160,140,120,0.6) 0%, rgba(100,80,60,0.3) 40%, transparent 70%);
+            animation: dice-smoke-rise 1s ease-out forwards;
+        }
+
+        @keyframes dice-smoke-rise {
+            0% {
+                opacity: 1;
+                transform: scale(0.4) translateY(0);
+                filter: blur(2px);
+            }
+            50% {
+                opacity: 0.5;
+                filter: blur(6px);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(2.2) translateY(-30px);
+                filter: blur(10px);
+            }
+        }
+
         .ability-dice-box canvas {
             display: block;
             width: 100% !important;
@@ -2838,6 +2864,91 @@
 
     let diceOverlayTimeout = null;
 
+    function findDicePositions() {
+        const canvas = document.querySelector('#abilityDiceBox canvas');
+        if (!canvas || !canvas.width || !canvas.height) return [];
+
+        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (!gl) return [];
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const pixels = new Uint8Array(w * h * 4);
+        gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+        // Scan in a grid to find bright pixel clusters (dice)
+        const gridSize = 16;
+        const cols = Math.floor(w / gridSize);
+        const rows = Math.floor(h / gridSize);
+        const brightCells = [];
+
+        for (let gy = 0; gy < rows; gy++) {
+            for (let gx = 0; gx < cols; gx++) {
+                const cx = gx * gridSize + Math.floor(gridSize / 2);
+                const cy = gy * gridSize + Math.floor(gridSize / 2);
+                const idx = (cy * w + cx) * 4;
+                const r = pixels[idx], g = pixels[idx + 1], b = pixels[idx + 2], a = pixels[idx + 3];
+                if (a > 30 && (r + g + b) > 80) {
+                    brightCells.push({ x: cx, y: h - cy }); // WebGL y is flipped
+                }
+            }
+        }
+
+        if (brightCells.length === 0) return [];
+
+        // Cluster bright cells into dice positions using simple distance grouping
+        const clusters = [];
+        const used = new Set();
+        const clusterRadius = 60;
+
+        for (let i = 0; i < brightCells.length; i++) {
+            if (used.has(i)) continue;
+            let sumX = brightCells[i].x, sumY = brightCells[i].y, count = 1;
+            used.add(i);
+            for (let j = i + 1; j < brightCells.length; j++) {
+                if (used.has(j)) continue;
+                const dx = brightCells[j].x - brightCells[i].x;
+                const dy = brightCells[j].y - brightCells[i].y;
+                if (dx * dx + dy * dy < clusterRadius * clusterRadius) {
+                    sumX += brightCells[j].x;
+                    sumY += brightCells[j].y;
+                    count++;
+                    used.add(j);
+                }
+            }
+            if (count >= 2) {
+                // Convert canvas coords to CSS coords
+                const scaleX = canvas.clientWidth / w;
+                const scaleY = canvas.clientHeight / h;
+                clusters.push({ x: (sumX / count) * scaleX, y: (sumY / count) * scaleY });
+            }
+        }
+
+        return clusters;
+    }
+
+    function spawnDiceSmoke(positions) {
+        const stage = document.querySelector('.ability-roll-stage');
+        if (!stage) return;
+        positions.forEach(pos => {
+            const count = 5 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < count; i++) {
+                const puff = document.createElement('div');
+                puff.className = 'dice-smoke';
+                const size = 25 + Math.random() * 35;
+                const ox = (Math.random() - 0.5) * 24;
+                const oy = (Math.random() - 0.5) * 24;
+                puff.style.width = size + 'px';
+                puff.style.height = size + 'px';
+                puff.style.left = (pos.x + ox - size / 2) + 'px';
+                puff.style.top = (pos.y + oy - size / 2) + 'px';
+                puff.style.animationDuration = (0.7 + Math.random() * 0.5) + 's';
+                stage.appendChild(puff);
+                puff.addEventListener('animationend', () => puff.remove());
+            }
+        });
+    }
+
     async function rollWithFantasticDice(formula, stageLabelText) {
         const overlay = document.getElementById('abilityRollOverlay');
         const stageLabel = document.getElementById('abilityRollStageLabel');
@@ -2852,10 +2963,13 @@
                 newStartPoint: false
             });
             const summary = summarizeDiceResults(results);
-            // Keep dice visible for 2s after they stop rolling, then hide overlay
+            // Keep dice visible for 2s after they stop rolling, then smoke + clear
             diceOverlayTimeout = setTimeout(() => {
-                overlay.classList.remove('active');
+                const positions = findDicePositions();
+                spawnDiceSmoke(positions);
                 diceBox.clear();
+                // Keep overlay visible for smoke animation to finish
+                setTimeout(() => overlay.classList.remove('active'), 1000);
             }, 2000);
             return summary;
         } catch (error) {
@@ -2893,6 +3007,7 @@
                 container: '#abilityDiceBox',
                 assetPath: 'assets/',
                 origin: ABILITY_DICE_CDN_ORIGIN,
+                offscreen: false,
                 theme: ABILITY_DICE_DEFAULTS.theme,
                 themeColor: ABILITY_DICE_DEFAULTS.themeColor,
                 scale: ABILITY_DICE_DEFAULTS.scale,
