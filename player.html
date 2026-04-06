@@ -3099,12 +3099,8 @@
         document.getElementById('xp-modal-overlay').classList.remove('visible');
     }
 
-    document.getElementById('xp-modal-overlay').addEventListener('click', function(e) {
-        if (e.target === this) hideXpModal();
-    });
-
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') hideXpModal();
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'xp-modal-overlay') hideXpModal();
     });
 
     function hideAbilityPopup() {
@@ -3124,7 +3120,7 @@
     });
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') hideAbilityPopup();
+        if (e.key === 'Escape') { hideAbilityPopup(); hideXpModal(); }
     });
 
     function buildSpecial() {
