@@ -2848,11 +2848,6 @@
         if (surface) surface.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    function showAbilityRollTotal(anchorEl, stat, rawRoll, modifier, total) {
-        const modifierText = modifier >= 0 ? '+' + modifier : String(modifier);
-        showAbilityPopup(anchorEl, stat + ' Check', 'd20 ' + rawRoll + ' ' + modifierText + ' = ' + total);
-    }
-
     async function rollWithFantasticDice(formula, stageLabelText) {
         const overlay = document.getElementById('abilityRollOverlay');
         const stageLabel = document.getElementById('abilityRollStageLabel');
@@ -2943,7 +2938,6 @@
             const historyLabel = 'd20' + (modifier !== 0 ? (modifier > 0 ? '+' + modifier : String(modifier)) : '');
             const suffix = isCrit ? ' CRIT!' : isFail ? ' FAIL' : '';
             pushRollHistoryEntry({ type: stat + ' Check', label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
-            showAbilityRollTotal(sourceEl, stat, rawRoll, modifier, total);
             db.ref('diceLog').push({
                 character: char.name,
                 charKey,
