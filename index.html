@@ -4788,10 +4788,9 @@ ${fullText.slice(0, 30000)}`;
 
         function updateUndoBar() {
             let bar = document.getElementById('undoBar');
-            const hasExchanges = storyDisplay.querySelector('.story-exchange');
             const hasUndo = undoStack.length > 0;
 
-            if (!hasExchanges && !hasUndo) {
+            if (!hasUndo) {
                 if (bar) bar.remove();
                 return;
             }
@@ -4806,12 +4805,6 @@ ${fullText.slice(0, 30000)}`;
             }
 
             bar.innerHTML = '';
-            if (hasExchanges) {
-                const undoBtn = document.createElement('button');
-                undoBtn.textContent = '↩ Undo last';
-                undoBtn.onclick = undoLast;
-                bar.appendChild(undoBtn);
-            }
             if (hasUndo) {
                 const redoBtn = document.createElement('button');
                 redoBtn.textContent = '↪ Redo';
