@@ -1860,20 +1860,7 @@
         }
 
         .manual-roll-btn {
-            background: linear-gradient(180deg, #8c2a3a 0%, #6b1a2a 50%, #4a1020 100%);
-            border: 1.5px solid #4a2030;
-            color: #c4a44e;
-            font-family: inherit;
-            font-size: 12px;
-            font-weight: bold;
-            padding: 8px 14px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .manual-roll-btn:active {
-            background: linear-gradient(180deg, #a03848 0%, #8c2a3a 50%, #6b1a2a 100%);
+            min-width: 72px;
         }
 
         .ability-roll-overlay {
@@ -2400,7 +2387,7 @@
                                     <option value="20" selected>d20</option>
                                     <option value="100">d100</option>
                                 </select>
-                                <button id="manualRollBtn" class="manual-roll-btn" onclick="rollManualDice(this)">Roll</button>
+                                <button id="manualRollBtn" class="spell-cast-btn manual-roll-btn" onclick="rollManualDice(this)">Roll</button>
                             </div>
                         </div>
 
