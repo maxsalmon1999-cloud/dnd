@@ -2849,7 +2849,7 @@
             const diceBox = await ensureAbilityDiceBox();
             const results = await diceBox.roll(formula, {
                 theme: ABILITY_DICE_DEFAULTS.theme,
-                newStartPoint: true
+                newStartPoint: false
             });
             const summary = summarizeDiceResults(results);
             // Keep dice visible for 2s after they stop rolling, then hide overlay
