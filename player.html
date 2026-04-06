@@ -2210,16 +2210,6 @@
 
         .save-row:last-child { border-bottom: none; }
 
-        .save-row.rollable {
-            cursor: pointer;
-        }
-
-        .save-row.rollable:hover .save-stat,
-        .save-row.rollable:hover .save-value,
-        .save-row.rollable:hover .save-name {
-            color: #d4b45e;
-        }
-
         .save-stat {
             font-size: 10px;
             font-weight: bold;
@@ -2267,6 +2257,12 @@
             font-size: 10px;
             color: #5a4048;
             flex: 1;
+        }
+
+        .save-roll-btn {
+            flex-shrink: 0;
+            min-width: 56px;
+            padding: 5px 8px;
         }
     </style>
 </head>
@@ -3178,8 +3174,7 @@
 
         SAVE_STATS.forEach(stat => {
             const row = document.createElement('div');
-            row.className = 'save-row rollable';
-            row.title = 'Roll ' + stat + ' save';
+            row.className = 'save-row';
 
             const profBtn = document.createElement('button');
             profBtn.className = 'save-prof-btn';
@@ -3199,16 +3194,21 @@
             nameEl.className = 'save-name';
             nameEl.textContent = SAVE_NAMES[stat];
 
+            const rollBtn = document.createElement('button');
+            rollBtn.className = 'spell-cast-btn save-roll-btn';
+            rollBtn.textContent = 'Roll';
+
             profBtn.addEventListener('click', (event) => {
                 event.stopPropagation();
                 toggleSaveProficiency(stat);
             });
-            row.addEventListener('click', () => rollSavingThrow(stat, row));
+            rollBtn.addEventListener('click', () => rollSavingThrow(stat, rollBtn));
 
             row.appendChild(profBtn);
             row.appendChild(statEl);
             row.appendChild(valueEl);
             row.appendChild(nameEl);
+            row.appendChild(rollBtn);
             accordionBody.appendChild(row);
         });
 
