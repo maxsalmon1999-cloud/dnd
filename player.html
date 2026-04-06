@@ -2704,6 +2704,29 @@
         if (metaEl) metaEl.textContent = abilityRollLastSummary || 'No ability checks rolled yet.';
     }
 
+    function normalizeRollHistoryEntries(entries) {
+        const list = Array.isArray(entries)
+            ? entries
+            : (entries && typeof entries === 'object' ? Object.values(entries) : []);
+
+        return list
+            .filter(entry => entry && typeof entry === 'object')
+            .map(entry => ({
+                type: String(entry.type || ''),
+                label: String(entry.label || ''),
+                total: Number(entry.total || 0),
+                isTotalCrit: !!entry.isTotalCrit,
+                isTotalFail: !!entry.isTotalFail,
+                suffix: String(entry.suffix || '')
+            }))
+            .slice(0, 8);
+    }
+
+    function persistRollHistory() {
+        if (!charKey) return;
+        db.ref('characters/' + charKey + '/rollHistory').set(rollHistory.length > 0 ? rollHistory : null);
+    }
+
     function getZoneContext(zoneId) {
         return zoneContexts[zoneId] || null;
     }
@@ -2830,6 +2853,7 @@
             rollHistory.unshift({ type: stat + ' Check', label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
             if (rollHistory.length > 8) rollHistory.pop();
             renderRollHistory();
+            persistRollHistory();
             showAbilityRollTotal(sourceEl, stat, rawRoll, modifier, total);
             db.ref('diceLog').push({
                 character: char.name,
@@ -4283,6 +4307,7 @@
         rollHistory.unshift({ type: typeLabel, label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
         if (rollHistory.length > 8) rollHistory.pop();
         renderRollHistory();
+        persistRollHistory();
 
         if (zoneContext && zoneContext.stat) {
             abilityRollCount += 1;
@@ -4418,6 +4443,12 @@
         charRef.child('gold').on('value', snap => {
             currentGold = snap.val() || 0;
             renderGold();
+        });
+
+        // Persistent player roll history
+        charRef.child('rollHistory').on('value', snap => {
+            rollHistory = normalizeRollHistoryEntries(snap.val());
+            renderRollHistory();
         });
 
         // Gold requests (pending DM approval)
@@ -4820,6 +4851,7 @@
     function clearRollHistory() {
         rollHistory = [];
         renderRollHistory();
+        persistRollHistory();
     }
 
     // =========================================================
