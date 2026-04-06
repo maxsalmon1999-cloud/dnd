@@ -2509,7 +2509,7 @@
     let abilityRollLastSummary = '';
     let abilityDiceBox = null;
     let abilityDiceInitPromise = null;
-    let abilityRollInFlight = false;
+    // (abilityRollInFlight removed — multiple dice can coexist on the table)
     const ABILITY_DICE_CDN_ORIGIN = "https://unpkg.com/@3d-dice/dice-box@1.1.4/dist/";
     const ABILITY_DICE_DEFAULTS = {
         theme: 'default',
@@ -2836,22 +2836,28 @@
         if (surface) surface.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
+    let diceOverlayTimeout = null;
+
     async function rollWithFantasticDice(formula, stageLabelText) {
         const overlay = document.getElementById('abilityRollOverlay');
         const stageLabel = document.getElementById('abilityRollStageLabel');
         if (stageLabel) stageLabel.textContent = stageLabelText;
 
+        if (diceOverlayTimeout) clearTimeout(diceOverlayTimeout);
         overlay.classList.add('active');
         try {
             const diceBox = await ensureAbilityDiceBox();
-            await diceBox.clear();
             const results = await diceBox.roll(formula, {
                 theme: ABILITY_DICE_DEFAULTS.theme,
                 newStartPoint: true
             });
-            await new Promise((resolve) => window.setTimeout(resolve, 4250));
-            overlay.classList.remove('active');
-            return summarizeDiceResults(results);
+            const summary = summarizeDiceResults(results);
+            // Keep dice visible for 2s after they stop rolling, then hide overlay
+            diceOverlayTimeout = setTimeout(() => {
+                overlay.classList.remove('active');
+                diceBox.clear();
+            }, 2000);
+            return summary;
         } catch (error) {
             overlay.classList.remove('active');
             throw error;
@@ -2910,9 +2916,6 @@
     }
 
     async function rollAbilityCheck(stat, modifier, sourceEl) {
-        if (abilityRollInFlight) return;
-        abilityRollInFlight = true;
-
         try {
             const summary = await rollWithFantasticDice('1d20', stat + ' Check');
             const rawRoll = summary.dice[0] ? summary.dice[0].value : 0;
@@ -2938,15 +2941,10 @@
         } catch (error) {
             console.error(error);
             showAbilityPopup(sourceEl, stat + ' Check', 'Dice roll failed to load. Check the network/CDN path.');
-        } finally {
-            abilityRollInFlight = false;
         }
     }
 
     async function rollManualDice(sourceEl) {
-        if (abilityRollInFlight) return;
-        abilityRollInFlight = true;
-
         const count = Math.max(1, parseInt(document.getElementById('manualDiceCount').value, 10) || 1);
         const sides = Math.max(2, parseInt(document.getElementById('manualDiceType').value, 10) || 20);
         const formula = count + 'd' + sides;
@@ -2978,15 +2976,10 @@
         } catch (error) {
             console.error(error);
             showAbilityPopup(sourceEl, label, 'Dice roll failed to load. Check the network/CDN path.');
-        } finally {
-            abilityRollInFlight = false;
         }
     }
 
     async function rollSavingThrow(stat, sourceEl) {
-        if (abilityRollInFlight) return;
-        abilityRollInFlight = true;
-
         const modifier = getSaveModifier(stat);
 
         try {
@@ -3014,8 +3007,6 @@
         } catch (error) {
             console.error(error);
             showAbilityPopup(sourceEl, stat + ' Save', 'Dice roll failed to load. Check the network/CDN path.');
-        } finally {
-            abilityRollInFlight = false;
         }
     }
 
@@ -3885,9 +3876,6 @@
     }
 
     async function rollSkillCheck(skill, sourceEl) {
-        if (abilityRollInFlight) return;
-        abilityRollInFlight = true;
-
         const modifier = getSkillModifier(skill);
 
         try {
@@ -3915,8 +3903,6 @@
         } catch (error) {
             console.error(error);
             showAbilityPopup(sourceEl, skill.name, 'Dice roll failed to load. Check the network/CDN path.');
-        } finally {
-            abilityRollInFlight = false;
         }
     }
 
