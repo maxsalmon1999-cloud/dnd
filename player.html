@@ -795,6 +795,64 @@
             line-height: 1.5;
         }
 
+        /* ===================== XP MODAL ===================== */
+        #xp-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        #xp-modal-overlay.visible {
+            display: flex;
+        }
+        #xp-modal {
+            background: #1a1018;
+            border: 1px solid #6b2a3a;
+            border-top-color: #9b3a5a;
+            border-left-color: #9b3a5a;
+            border-bottom-color: #3a1520;
+            border-right-color: #3a1520;
+            padding: 20px 28px;
+            min-width: 240px;
+            max-width: 300px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.9);
+            text-align: center;
+        }
+        #xp-modal .xp-modal-title {
+            font-size: 14px;
+            color: #c4a44e;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+        #xp-modal .xp-modal-value {
+            font-size: 13px;
+            color: #d4c4a0;
+            margin-bottom: 6px;
+        }
+        #xp-modal .xp-progress-track {
+            width: 100%;
+            height: 10px;
+            background: #2a1a20;
+            border: 1px solid #4a2a3a;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        #xp-modal .xp-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6b2a3a, #c4a44e);
+            transition: width 0.3s ease;
+        }
+        #xp-modal .xp-progress-label {
+            font-size: 11px;
+            color: #8a7060;
+            margin-top: 6px;
+        }
+
         /* ===================== INVENTORY ===================== */
         .inv-list {
             min-height: 16px;
@@ -2564,8 +2622,7 @@
         const classLabel = document.getElementById('charClassLabel');
         const showXpDetails = (anchorEl, label, event) => {
             if (event) event.stopPropagation();
-            const xpText = char.xp ? 'XP: ' + char.xp : 'XP not recorded for this character.';
-            showAbilityPopup(anchorEl, label, xpText);
+            showXpModal(char);
         };
 
         charTitle.textContent = char.name;
@@ -2998,6 +3055,58 @@
         popup.style.top = top + 'px';
         popup.style.left = left + 'px';
     }
+
+    const XP_THRESHOLDS = [
+        0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+        85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000
+    ];
+
+    function showXpModal(char) {
+        const overlay = document.getElementById('xp-modal-overlay');
+        const level = char.level || 1;
+        const xpRaw = char.xp ? parseInt(String(char.xp).replace(/[^0-9]/g, ''), 10) : null;
+
+        overlay.querySelector('.xp-modal-title').textContent = 'Level ' + level;
+
+        const valueEl = document.getElementById('xpModalValue');
+        const fillEl = document.getElementById('xpProgressFill');
+        const labelEl = document.getElementById('xpProgressLabel');
+
+        if (xpRaw == null || isNaN(xpRaw)) {
+            valueEl.textContent = 'XP not recorded for this character.';
+            fillEl.style.width = '0%';
+            labelEl.textContent = '';
+        } else {
+            const currentThreshold = XP_THRESHOLDS[level - 1] || 0;
+            const nextThreshold = level < 20 ? XP_THRESHOLDS[level] : null;
+
+            if (nextThreshold == null) {
+                valueEl.textContent = 'XP: ' + xpRaw.toLocaleString();
+                fillEl.style.width = '100%';
+                labelEl.textContent = 'Max level reached';
+            } else {
+                valueEl.textContent = 'XP: ' + xpRaw.toLocaleString() + ' / ' + nextThreshold.toLocaleString();
+                const progress = Math.max(0, Math.min(1, (xpRaw - currentThreshold) / (nextThreshold - currentThreshold)));
+                fillEl.style.width = (progress * 100).toFixed(1) + '%';
+                const remaining = nextThreshold - xpRaw;
+                labelEl.textContent = remaining > 0 ? remaining.toLocaleString() + ' XP to level ' + (level + 1) : 'Ready to level up!';
+            }
+        }
+
+        overlay.classList.add('visible');
+    }
+
+    function hideXpModal() {
+        document.getElementById('xp-modal-overlay').classList.remove('visible');
+    }
+
+    document.getElementById('xp-modal-overlay').addEventListener('click', function(e) {
+        if (e.target === this) hideXpModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') hideXpModal();
+    });
 
     function hideAbilityPopup() {
         const popup = document.getElementById('ability-popup');
@@ -4660,6 +4769,14 @@
     init();
 </script>
 <div id="ability-popup"><div class="popup-name"></div><div class="popup-desc"></div></div>
+<div id="xp-modal-overlay">
+    <div id="xp-modal">
+        <div class="xp-modal-title"></div>
+        <div class="xp-modal-value" id="xpModalValue"></div>
+        <div class="xp-progress-track"><div class="xp-progress-fill" id="xpProgressFill"></div></div>
+        <div class="xp-progress-label" id="xpProgressLabel"></div>
+    </div>
+</div>
 <div id="item-stats-modal">
     <div class="item-stats-box">
         <div class="item-stats-title" id="itemStatsTitle"></div>
