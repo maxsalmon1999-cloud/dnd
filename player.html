@@ -1832,80 +1832,91 @@
             line-height: 1.5;
         }
 
-        .ability-roll-overlay {
-            position: fixed;
-            inset: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: rgba(8, 6, 8, 0.55);
-            z-index: 9500;
-            pointer-events: none;
-        }
-
-        .ability-roll-overlay.active {
-            display: flex;
-        }
-
-        .ability-roll-stage {
-            width: min(88vw, 720px);
-            height: min(54vh, 420px);
-            position: relative;
-            border: 2px solid #4a2030;
+        .inline-roll-panel {
+            border: 1.5px solid #2a1520;
+            margin-bottom: 8px;
             background:
-                radial-gradient(circle at 50% 10%, rgba(196, 164, 78, 0.12) 0%, transparent 35%),
-                linear-gradient(180deg, #161018 0%, #090608 100%);
-            box-shadow: inset 0 0 0 1px #2a1520, 0 10px 28px rgba(0,0,0,0.6);
-            overflow: hidden;
+                radial-gradient(circle at 50% 0%, rgba(196,164,78,0.12) 0%, transparent 45%),
+                linear-gradient(180deg, #140d12 0%, #0f0a0e 100%);
+            padding: 12px;
         }
 
-        .ability-roll-stage::before,
-        .ability-roll-stage::after {
-            content: '';
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            pointer-events: none;
-            z-index: 2;
+        .inline-roll-panel.rolling {
+            border-color: #8c2a3a;
+            box-shadow: inset 0 0 0 1px rgba(140,42,58,0.3), 0 0 18px rgba(107,26,42,0.2);
         }
 
-        .ability-roll-stage::before {
-            top: -2px;
-            left: -2px;
-            border-top: 3px solid #6b2a3a;
-            border-left: 3px solid #6b2a3a;
-        }
+        .inline-roll-panel.crit .inline-roll-total { color: #4aff4a; }
+        .inline-roll-panel.fail .inline-roll-total { color: #e04040; }
 
-        .ability-roll-stage::after {
-            top: -2px;
-            right: -2px;
-            border-top: 3px solid #6b2a3a;
-            border-right: 3px solid #6b2a3a;
-        }
-
-        .ability-roll-stage-label {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 11px;
+        .inline-roll-title {
+            font-size: 12px;
             font-weight: bold;
-            letter-spacing: 0.08em;
             color: #c4a44e;
             text-transform: uppercase;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-            z-index: 2;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
         }
 
-        .ability-dice-box {
-            position: absolute;
-            inset: 0;
+        .inline-roll-body {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .ability-dice-box canvas {
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
+        .inline-roll-die {
+            width: 84px;
+            height: 84px;
+            border: 2px solid #4a2030;
+            background: #120c10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: inset 0 0 0 1px #2a1520;
+        }
+
+        .inline-roll-die-label {
+            font-size: 9px;
+            color: #8a6050;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 3px;
+        }
+
+        .inline-roll-raw {
+            font-size: 32px;
+            font-weight: bold;
+            color: #c4a44e;
+            line-height: 1;
+            text-shadow: 0 0 8px rgba(196,164,78,0.2);
+        }
+
+        .inline-roll-math {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .inline-roll-total-label {
+            font-size: 9px;
+            color: #8a6050;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .inline-roll-total {
+            font-size: 34px;
+            font-weight: bold;
+            color: #c4a44e;
+            line-height: 1;
+            margin: 3px 0 6px;
+        }
+
+        .inline-roll-breakdown {
+            font-size: 10px;
+            color: #8a6050;
+            line-height: 1.6;
         }
 
         /* ===================== GOLD ===================== */
@@ -2332,57 +2343,23 @@
                 <div class="tab-panel" id="tab-dice">
                     <div class="desktop-panel-title">&#9860; Dice</div>
                     <div class="win-body" style="padding:8px;display:flex;flex-direction:column;height:100%;overflow-y:auto">
-
-                        <!-- ATTACK panel -->
-                        <div class="dice-panel">
-                            <div class="dice-panel-header">
-                                <span class="dice-panel-label">&#9876; Event 1</span>
-                                <button class="clear-btn" onclick="clearDiceZone('atk')">Clear</button>
-                            </div>
-                            <div class="player-dice-surface" id="atkSurface">
-                                <div class="player-dice-hint" id="atkHint">&#9860; Drop dice here</div>
-                            </div>
-                            <div class="dice-actions">
-                                <button class="roll-all-btn" id="atkRollBtn" onclick="rollZone('atk')" disabled>Roll Event 1</button>
-                            </div>
-                            <div class="dice-result-bar" id="atkResultBar" style="display:none">
-                                <div class="dice-result-total" id="atkResultTotal"></div>
-                                <div class="dice-result-breakdown" id="atkResultBreakdown"></div>
-                            </div>
-                        </div>
-
-                        <!-- DAMAGE panel -->
-                        <div class="dice-panel">
-                            <div class="dice-panel-header">
-                                <span class="dice-panel-label">&#128481; Event 2</span>
-                                <button class="clear-btn" onclick="clearDiceZone('dmg')">Clear</button>
-                            </div>
-                            <div class="player-dice-surface" id="dmgSurface">
-                                <div class="player-dice-hint" id="dmgHint">&#9860; Drop dice here</div>
-                            </div>
-                            <div class="dice-actions">
-                                <button class="roll-all-btn" id="dmgRollBtn" onclick="rollZone('dmg')" disabled>Roll Event 2</button>
-                            </div>
-                            <div class="dice-result-bar" id="dmgResultBar" style="display:none">
-                                <div class="dice-result-total" id="dmgResultTotal"></div>
-                                <div class="dice-result-breakdown" id="dmgResultBreakdown"></div>
+                        <div class="inline-roll-panel" id="inlineRollPanel">
+                            <div class="inline-roll-title" id="inlineRollTitle">&#9876; Ability Check</div>
+                            <div class="inline-roll-body">
+                                <div class="inline-roll-die">
+                                    <div class="inline-roll-die-label">d20</div>
+                                    <div class="inline-roll-raw" id="inlineRollRaw">--</div>
+                                </div>
+                                <div class="inline-roll-math">
+                                    <div class="inline-roll-total-label">Total</div>
+                                    <div class="inline-roll-total" id="inlineRollTotal">—</div>
+                                    <div class="inline-roll-breakdown" id="inlineRollBreakdown">Tap a stat on the sheet to roll here.</div>
+                                </div>
                             </div>
                         </div>
 
                         <!-- History -->
                         <div id="rollHistory"></div>
-
-                        <!-- Dice strip -->
-                        <div class="dice-strip">
-                            <span class="dice-strip-label">&#9860; Tap &amp; drag onto a section:</span>
-                            <div class="die-sym" data-sides="4"></div>
-                            <div class="die-sym" data-sides="6"></div>
-                            <div class="die-sym" data-sides="8"></div>
-                            <div class="die-sym" data-sides="10"></div>
-                            <div class="die-sym" data-sides="12"></div>
-                            <div class="die-sym" data-sides="20"></div>
-                            <div class="die-sym" data-sides="100"></div>
-                        </div>
 
                         <!-- Notes -->
                         <div class="dice-panel" style="margin-top:8px;margin-bottom:0">
@@ -2405,13 +2382,52 @@
         </div>
     </div>
 
-    <div class="ability-roll-overlay" id="abilityRollOverlay">
-        <div class="ability-roll-stage">
-            <div class="ability-roll-stage-label" id="abilityRollStageLabel">Ability Check</div>
-            <div class="ability-dice-box" id="abilityDiceBox"></div>
+</div>
+
+<template id="legacyDiceBoardArchive">
+    <div class="dice-panel">
+        <div class="dice-panel-header">
+            <span class="dice-panel-label" id="atkPanelLabel">&#9876; Event 1</span>
+            <button class="clear-btn" onclick="clearDiceZone('atk')">Clear</button>
+        </div>
+        <div class="player-dice-surface" id="atkSurface">
+            <div class="player-dice-hint" id="atkHint">&#9860; Drop dice here</div>
+        </div>
+        <div class="dice-actions">
+            <button class="roll-all-btn" id="atkRollBtn" onclick="rollZone('atk')" disabled>Roll Event 1</button>
+        </div>
+        <div class="dice-result-bar" id="atkResultBar" style="display:none">
+            <div class="dice-result-total" id="atkResultTotal"></div>
+            <div class="dice-result-breakdown" id="atkResultBreakdown"></div>
         </div>
     </div>
-</div>
+    <div class="dice-panel">
+        <div class="dice-panel-header">
+            <span class="dice-panel-label">&#128481; Event 2</span>
+            <button class="clear-btn" onclick="clearDiceZone('dmg')">Clear</button>
+        </div>
+        <div class="player-dice-surface" id="dmgSurface">
+            <div class="player-dice-hint" id="dmgHint">&#9860; Drop dice here</div>
+        </div>
+        <div class="dice-actions">
+            <button class="roll-all-btn" id="dmgRollBtn" onclick="rollZone('dmg')" disabled>Roll Event 2</button>
+        </div>
+        <div class="dice-result-bar" id="dmgResultBar" style="display:none">
+            <div class="dice-result-total" id="dmgResultTotal"></div>
+            <div class="dice-result-breakdown" id="dmgResultBreakdown"></div>
+        </div>
+    </div>
+    <div class="dice-strip">
+        <span class="dice-strip-label">&#9860; Tap &amp; drag onto a section:</span>
+        <div class="die-sym" data-sides="4"></div>
+        <div class="die-sym" data-sides="6"></div>
+        <div class="die-sym" data-sides="8"></div>
+        <div class="die-sym" data-sides="10"></div>
+        <div class="die-sym" data-sides="12"></div>
+        <div class="die-sym" data-sides="20"></div>
+        <div class="die-sym" data-sides="100"></div>
+    </div>
+</template>
 
 <script>
     // =========================================================
@@ -2450,19 +2466,21 @@
     let currentSlots = {};
     let abilityRollCount = 0;
     let abilityRollLastSummary = '';
-    let abilityDiceBox = null;
-    let abilityDiceInitPromise = null;
     let abilityRollInFlight = false;
-    const ABILITY_DICE_CDN_ORIGIN = "https://unpkg.com/@3d-dice/dice-box@1.1.4/dist/";
-    const ABILITY_DICE_DEFAULTS = {
-        theme: 'default',
-        themeColor: '#111111',
-        scale: 8.8,
-        gravity: 1.6,
-        throwForce: 5.5,
-        spinForce: 4.2,
-        restitution: 0
+    let abilityRollPreviewTimer = null;
+    const DEFAULT_ZONE_CONFIG = {
+        atk: {
+            panelLabel: '&#9876; Event 1',
+            hint: '&#9860; Drop dice here',
+            button: 'Roll Event 1'
+        },
+        dmg: {
+            panelLabel: '&#128481; Event 2',
+            hint: '&#9860; Drop dice here',
+            button: 'Roll Event 2'
+        }
     };
+    const zoneContexts = { atk: null, dmg: null };
 
     function parseSpellsFromRawMarkdown(text) {
         const lines = String(text || '').split('\n');
@@ -2639,7 +2657,8 @@
         buildSpells();
         buildSkills();
         renderGold();
-        initDiceStrip();
+        renderInlineRollState();
+        renderRollHistory();
         initNotesPanel();
         renderAbilityRollCounter();
         startFirebaseSync();
@@ -2685,7 +2704,7 @@
                 '<div class="ability-label">' + stat + '</div>';
             box.addEventListener('click', (event) => {
                 event.stopPropagation();
-                rollAbilityCheck(stat, mod, box);
+                rollAbilityCheck(stat, mod);
             });
             container.appendChild(box);
         });
@@ -2698,93 +2717,138 @@
         if (metaEl) metaEl.textContent = abilityRollLastSummary || 'No ability checks rolled yet.';
     }
 
-    function showAbilityRollTotal(anchorEl, stat, rawRoll, modifier, total) {
-        const modifierText = modifier >= 0 ? '+' + modifier : String(modifier);
-        showAbilityPopup(anchorEl, stat + ' Check', 'd20 ' + rawRoll + ' ' + modifierText + ' = ' + total);
+    function renderInlineRollState(state) {
+        const titleEl = document.getElementById('inlineRollTitle');
+        const rawEl = document.getElementById('inlineRollRaw');
+        const totalEl = document.getElementById('inlineRollTotal');
+        const breakdownEl = document.getElementById('inlineRollBreakdown');
+        const panelEl = document.getElementById('inlineRollPanel');
+        if (!titleEl || !rawEl || !totalEl || !breakdownEl || !panelEl) return;
+
+        const data = state || {};
+        titleEl.innerHTML = data.title || '&#9876; Ability Check';
+        rawEl.textContent = data.raw != null ? String(data.raw) : '--';
+        totalEl.textContent = data.total != null ? String(data.total) : '—';
+        breakdownEl.textContent = data.breakdown || 'Tap a stat on the sheet to roll here.';
+        panelEl.classList.toggle('rolling', !!data.rolling);
+        panelEl.classList.toggle('crit', !!data.crit);
+        panelEl.classList.toggle('fail', !!data.fail);
     }
 
-    function summarizeDiceResults(results) {
-        const dice = (Array.isArray(results) ? results : []).map((die) => {
-            const value = typeof die.value === 'number' ? die.value : (typeof die.result === 'number' ? die.result : 0);
-            return {
-                sides: die.sides || die.dieType || '?',
-                value
-            };
-        });
+    function getZoneContext(zoneId) {
+        return zoneContexts[zoneId] || null;
+    }
 
-        return {
-            dice,
-            subtotal: dice.reduce((sum, die) => sum + die.value, 0)
+    function getDefaultZoneConfig(zoneId) {
+        return DEFAULT_ZONE_CONFIG[zoneId] || {
+            panelLabel: 'Dice',
+            hint: '&#9860; Drop dice here',
+            button: 'Roll'
         };
     }
 
-    async function ensureAbilityDiceBox() {
-        if (abilityDiceBox) return abilityDiceBox;
-        if (abilityDiceInitPromise) return abilityDiceInitPromise;
+    function applyZoneUi(zoneId) {
+        const ctx = getZoneContext(zoneId);
+        const defaults = getDefaultZoneConfig(zoneId);
+        const labelEl = document.getElementById(zoneId + 'PanelLabel');
+        const hintEl = document.getElementById(zoneId + 'Hint');
+        const buttonEl = document.getElementById(zoneId + 'RollBtn');
 
-        abilityDiceInitPromise = (async () => {
-            const module = await import('https://unpkg.com/@3d-dice/dice-box@1.1.4/dist/dice-box.es.min.js');
-            const DiceBox = module.default;
-            const host = document.getElementById('abilityDiceBox');
-            host.innerHTML = '';
-
-            abilityDiceBox = new DiceBox({
-                container: '#abilityDiceBox',
-                assetPath: 'assets/',
-                origin: ABILITY_DICE_CDN_ORIGIN,
-                theme: ABILITY_DICE_DEFAULTS.theme,
-                themeColor: ABILITY_DICE_DEFAULTS.themeColor,
-                scale: ABILITY_DICE_DEFAULTS.scale,
-                gravity: ABILITY_DICE_DEFAULTS.gravity,
-                throwForce: ABILITY_DICE_DEFAULTS.throwForce,
-                spinForce: ABILITY_DICE_DEFAULTS.spinForce,
-                restitution: ABILITY_DICE_DEFAULTS.restitution,
-                lightIntensity: 1.15,
-                shadowTransparency: 0.55
-            });
-
-            await abilityDiceBox.init();
-            return abilityDiceBox;
-        })();
-
-        try {
-            return await abilityDiceInitPromise;
-        } finally {
-            if (!abilityDiceBox) abilityDiceInitPromise = null;
-        }
+        if (labelEl) labelEl.innerHTML = ctx && ctx.panelLabel ? ctx.panelLabel : defaults.panelLabel;
+        if (hintEl) hintEl.innerHTML = ctx && ctx.hint ? ctx.hint : defaults.hint;
+        if (buttonEl) buttonEl.textContent = ctx && ctx.buttonLabel ? ctx.buttonLabel : defaults.button;
     }
 
-    async function rollAbilityCheck(stat, modifier, sourceEl) {
+    function setZoneContext(zoneId, context) {
+        zoneContexts[zoneId] = context || null;
+        applyZoneUi(zoneId);
+    }
+
+    function resetZoneContext(zoneId) {
+        setZoneContext(zoneId, null);
+    }
+
+    function scrollDiceZoneIntoView(zoneId) {
+        const surface = document.getElementById(zoneId === 'atk' ? 'atkSurface' : 'dmgSurface');
+        if (surface) surface.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function rollAbilityCheck(stat, modifier) {
         if (abilityRollInFlight) return;
         abilityRollInFlight = true;
 
-        const overlay = document.getElementById('abilityRollOverlay');
-        const stageLabel = document.getElementById('abilityRollStageLabel');
-        if (stageLabel) stageLabel.textContent = stat + ' Check';
-
         try {
-            overlay.classList.add('active');
-            const diceBox = await ensureAbilityDiceBox();
-            await diceBox.clear();
-            const results = await diceBox.roll('1d20', {
-                theme: ABILITY_DICE_DEFAULTS.theme,
-                newStartPoint: true
+            setTab('dice');
+            const modifierText = modifier >= 0 ? '+' + modifier : String(modifier);
+            renderInlineRollState({
+                title: '&#9876; ' + stat + ' Check',
+                raw: '--',
+                total: '…',
+                breakdown: 'Rolling d20 ' + modifierText + '...',
+                rolling: true
             });
-            const summary = summarizeDiceResults(results);
-            const rawRoll = summary.dice[0] ? summary.dice[0].value : 0;
-            const total = rawRoll + modifier;
 
-            await new Promise((resolve) => window.setTimeout(resolve, 250));
-            overlay.classList.remove('active');
+            const finalRaw = await new Promise((resolve) => {
+                let ticks = 0;
+                if (abilityRollPreviewTimer) window.clearInterval(abilityRollPreviewTimer);
+                abilityRollPreviewTimer = window.setInterval(() => {
+                    ticks += 1;
+                    renderInlineRollState({
+                        title: '&#9876; ' + stat + ' Check',
+                        raw: Math.floor(Math.random() * 20) + 1,
+                        total: '…',
+                        breakdown: 'Rolling d20 ' + modifierText + '...',
+                        rolling: true
+                    });
+                    if (ticks >= 8) {
+                        window.clearInterval(abilityRollPreviewTimer);
+                        abilityRollPreviewTimer = null;
+                        resolve(Math.floor(Math.random() * 20) + 1);
+                    }
+                }, 75);
+            });
+
+            const total = finalRaw + modifier;
+            const isCrit = finalRaw === 20;
+            const isFail = finalRaw === 1;
+            renderInlineRollState({
+                title: '&#9876; ' + stat + ' Check',
+                raw: finalRaw,
+                total,
+                breakdown: 'd20:' + finalRaw + ' ' + modifierText + ' = ' + total,
+                crit: isCrit,
+                fail: isFail
+            });
 
             abilityRollCount += 1;
-            abilityRollLastSummary = stat + ': ' + rawRoll + ' ' + (modifier >= 0 ? '+' + modifier : modifier) + ' = ' + total;
+            abilityRollLastSummary = stat + ': ' + finalRaw + ' ' + modifierText + ' = ' + total;
             renderAbilityRollCounter();
-            showAbilityRollTotal(sourceEl, stat, rawRoll, modifier, total);
+
+            const historyLabel = 'd20' + (modifier !== 0 ? modifierText : '');
+            const suffix = isCrit ? ' CRIT!' : isFail ? ' FAIL' : '';
+            rollHistory.unshift({ type: stat + ' Check', label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
+            if (rollHistory.length > 8) rollHistory.pop();
+            renderRollHistory();
+
+            db.ref('diceLog').push({
+                character: char.name,
+                charKey,
+                dice: historyLabel,
+                result: total,
+                type: stat + ' Check',
+                modifier,
+                timestamp: Date.now(),
+            });
         } catch (error) {
             console.error(error);
-            overlay.classList.remove('active');
-            showAbilityPopup(sourceEl, stat + ' Check', 'Dice roll failed to load. Check the network/CDN path.');
+            if (abilityRollPreviewTimer) {
+                window.clearInterval(abilityRollPreviewTimer);
+                abilityRollPreviewTimer = null;
+            }
+            renderInlineRollState({
+                title: '&#9876; ' + stat + ' Check',
+                breakdown: 'Dice roll failed.'
+            });
         } finally {
             abilityRollInFlight = false;
         }
@@ -3843,7 +3907,9 @@
     }
 
     // =========================================================
-    // PIXEL ART DICE SYSTEM
+    // LEGACY 2D DICE BOARD ARCHIVE
+    // Retained for possible rollback. The active player roll flow
+    // now uses the inline roll panel in the dice tab instead.
     // =========================================================
     const PX = 2;
     const C = {
@@ -4146,13 +4212,14 @@
         document.getElementById(zoneId === 'atk' ? 'atkRollBtn' : 'dmgRollBtn').disabled = unrolled.length === 0;
     }
 
-    function clearDiceZone(zoneId) {
+    function clearDiceZone(zoneId, preserveContext) {
         const surface = document.getElementById(zoneId === 'atk' ? 'atkSurface' : 'dmgSurface');
         surface.querySelectorAll('.dice-chip canvas').forEach(c => unregisterAnim(c));
         surface.querySelectorAll('.dice-chip').forEach(c => c.remove());
         checkZoneEmpty(zoneId);
         updateRollBtn(zoneId);
         document.getElementById(zoneId === 'atk' ? 'atkResultBar' : 'dmgResultBar').style.display = 'none';
+        if (!preserveContext) resetZoneContext(zoneId);
     }
 
     // =========================================================
@@ -4161,41 +4228,47 @@
     function rollZone(zoneId) {
         const surface = document.getElementById(zoneId === 'atk' ? 'atkSurface' : 'dmgSurface');
         const unrolled = [...surface.querySelectorAll('.dice-chip[data-rolled="false"]')];
-        if (unrolled.length === 0) return;
+        if (unrolled.length === 0) return Promise.resolve();
 
-        const tickRate = 1000 / FPS;
-        let elapsed = 0;
-        const interval = setInterval(() => {
-            elapsed += tickRate;
-            unrolled.forEach(chip => {
-                chip.dataset.value = Math.floor(Math.random() * parseInt(chip.dataset.sides)) + 1;
-                chip.querySelector('.chip-result').textContent = chip.dataset.value;
-            });
-            if (elapsed >= 600) {
-                clearInterval(interval);
-                const rolls = [];
+        return new Promise((resolve) => {
+            const tickRate = 1000 / FPS;
+            let elapsed = 0;
+            const interval = setInterval(() => {
+                elapsed += tickRate;
                 unrolled.forEach(chip => {
-                    const sides = parseInt(chip.dataset.sides);
-                    const result = Math.floor(Math.random() * sides) + 1;
-                    chip.dataset.rolled = 'true';
-                    chip.dataset.value = result;
-                    chip.classList.add('rolled');
-                    chip.querySelector('.chip-result').textContent = result;
-                    rolls.push({ sides, result });
+                    chip.dataset.value = Math.floor(Math.random() * parseInt(chip.dataset.sides)) + 1;
+                    chip.querySelector('.chip-result').textContent = chip.dataset.value;
                 });
-                updateRollBtn(zoneId);
-                showResults(rolls, zoneId);
-            }
-        }, tickRate);
+                if (elapsed >= 600) {
+                    clearInterval(interval);
+                    const rolls = [];
+                    unrolled.forEach(chip => {
+                        const sides = parseInt(chip.dataset.sides);
+                        const result = Math.floor(Math.random() * sides) + 1;
+                        chip.dataset.rolled = 'true';
+                        chip.dataset.value = result;
+                        chip.classList.add('rolled');
+                        chip.querySelector('.chip-result').textContent = result;
+                        rolls.push({ sides, result });
+                    });
+                    updateRollBtn(zoneId);
+                    showResults(rolls, zoneId);
+                    resolve();
+                }
+            }, tickRate);
+        });
     }
 
     function showResults(rolls, zoneId) {
         const totalId    = zoneId === 'atk' ? 'atkResultTotal'    : 'dmgResultTotal';
         const breakdownId= zoneId === 'atk' ? 'atkResultBreakdown': 'dmgResultBreakdown';
         const barId      = zoneId === 'atk' ? 'atkResultBar'      : 'dmgResultBar';
-        const typeLabel  = zoneId === 'atk' ? 'Event 1' : 'Event 2';
+        const zoneContext = getZoneContext(zoneId);
+        const modifier = zoneContext && typeof zoneContext.modifier === 'number' ? zoneContext.modifier : 0;
+        const typeLabel  = zoneContext && zoneContext.typeLabel ? zoneContext.typeLabel : (zoneId === 'atk' ? 'Event 1' : 'Event 2');
 
-        const total  = rolls.reduce((s, r) => s + r.result, 0);
+        const subtotal = rolls.reduce((s, r) => s + r.result, 0);
+        const total  = subtotal + modifier;
         const isCrit = zoneId === 'atk' && rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 20;
         const isFail = zoneId === 'atk' && rolls.length === 1 && rolls[0].sides === 20 && rolls[0].result === 1;
 
@@ -4205,15 +4278,22 @@
 
         const breakdown = rolls.map(r => `d${r.sides}:${r.result}`).join('  ');
         document.getElementById(breakdownId).textContent =
-            rolls.length > 1 ? breakdown + '  =  ' + total
-                             : (isCrit ? 'Critical Hit!' : isFail ? 'Critical Fail' : breakdown);
+            modifier !== 0 ? breakdown + '  ' + (modifier >= 0 ? '+' : '-') + '  ' + Math.abs(modifier) + '  =  ' + total
+            : (rolls.length > 1 ? breakdown + '  =  ' + total
+                               : (isCrit ? 'Critical Hit!' : isFail ? 'Critical Fail' : breakdown));
         document.getElementById(barId).style.display = 'flex';
 
-        const historyLabel = rolls.map(r => `d${r.sides}`).join('+');
+        const historyLabel = rolls.map(r => `d${r.sides}`).join('+') + (modifier !== 0 ? (modifier > 0 ? '+' + modifier : String(modifier)) : '');
         const suffix = isCrit ? ' CRIT!' : isFail ? ' FAIL' : '';
         rollHistory.unshift({ type: typeLabel, label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
         if (rollHistory.length > 8) rollHistory.pop();
         renderRollHistory();
+
+        if (zoneContext && zoneContext.stat) {
+            abilityRollCount += 1;
+            abilityRollLastSummary = zoneContext.stat + ': ' + subtotal + ' ' + (modifier >= 0 ? '+' + modifier : modifier) + ' = ' + total;
+            renderAbilityRollCounter();
+        }
 
         db.ref('diceLog').push({
             character: char.name,
@@ -4221,6 +4301,7 @@
             dice:      historyLabel,
             result:    total,
             type:      typeLabel,
+            modifier,
             timestamp: Date.now(),
         });
     }
