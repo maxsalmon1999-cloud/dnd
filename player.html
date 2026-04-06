@@ -3874,10 +3874,50 @@
         { name: 'Persuasion',      stat: 'CHA' },
     ];
 
-    function getSkillValue(skill) {
+    function getSkillModifier(skill) {
         const base = char.stats[skill.stat] || 0;
         const profBonus = proficiencyFromLevel(char.level || 1);
-        return fmtMod(base + (skillProficiencies.includes(skill.name) ? profBonus : 0));
+        return base + (skillProficiencies.includes(skill.name) ? profBonus : 0);
+    }
+
+    function getSkillValue(skill) {
+        return fmtMod(getSkillModifier(skill));
+    }
+
+    async function rollSkillCheck(skill, sourceEl) {
+        if (abilityRollInFlight) return;
+        abilityRollInFlight = true;
+
+        const modifier = getSkillModifier(skill);
+
+        try {
+            const summary = await rollWithFantasticDice('1d20', skill.name);
+            const rawRoll = summary.dice[0] ? summary.dice[0].value : 0;
+            const total = rawRoll + modifier;
+
+            abilityRollCount += 1;
+            abilityRollLastSummary = skill.name + ': ' + rawRoll + ' ' + (modifier >= 0 ? '+' + modifier : modifier) + ' = ' + total;
+            renderAbilityRollCounter();
+            const isCrit = rawRoll === 20;
+            const isFail = rawRoll === 1;
+            const historyLabel = 'd20' + (modifier !== 0 ? (modifier > 0 ? '+' + modifier : String(modifier)) : '');
+            const suffix = isCrit ? ' CRIT!' : isFail ? ' FAIL' : '';
+            pushRollHistoryEntry({ type: skill.name, label: historyLabel, total, isTotalCrit: isCrit, isTotalFail: isFail, suffix });
+            db.ref('diceLog').push({
+                character: char.name,
+                charKey,
+                dice: historyLabel,
+                result: total,
+                type: skill.name,
+                modifier,
+                timestamp: Date.now(),
+            });
+        } catch (error) {
+            console.error(error);
+            showAbilityPopup(sourceEl, skill.name, 'Dice roll failed to load. Check the network/CDN path.');
+        } finally {
+            abilityRollInFlight = false;
+        }
     }
 
     function buildSkills() {
@@ -3928,10 +3968,16 @@
             nameEl.className = 'save-name';
             nameEl.textContent = skill.name;
 
+            const rollBtn = document.createElement('button');
+            rollBtn.className = 'spell-cast-btn save-roll-btn';
+            rollBtn.textContent = 'Roll';
+            rollBtn.addEventListener('click', () => rollSkillCheck(skill, rollBtn));
+
             row.appendChild(profBtn);
             row.appendChild(statEl);
             row.appendChild(valueEl);
             row.appendChild(nameEl);
+            row.appendChild(rollBtn);
             accordionBody.appendChild(row);
         });
 
