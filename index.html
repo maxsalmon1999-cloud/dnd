@@ -2656,8 +2656,34 @@
         // =========================================================
         if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         const WORKER_URL = 'https://dnd-anthropic-proxy.max-salmon1999.workers.dev';
+        const CAPABILITIES_URL = WORKER_URL.replace(/\/+$/, '') + '/capabilities';
+        const EMBEDDINGS_URL = WORKER_URL.replace(/\/+$/, '') + '/embeddings';
         const API_MODEL = 'claude-opus-4-6';
+        const EMBEDDING_MODEL = 'text-embedding-3-small';
+        const EMBEDDING_DIMENSIONS = 256;
         const AI_ASSISTANT_NAME = 'The abominable intelligence';
+        const CAMPAIGN_RAG_VERSION = 1;
+        const SECTION_TARGET_CHARS = 3200;
+        const CHILD_CHUNK_TARGET_CHARS = 900;
+        const CHILD_CHUNK_MAX_CHARS = 1400;
+        const CHILD_CHUNK_OVERLAP_PARAGRAPHS = 1;
+        const OUTLINE_PREVIEW_CHARS = 320;
+        const EXTRACTION_BATCH_MAX_CHARS = 14000;
+        const RETRIEVAL_PARENT_LIMIT = 3;
+        const RETRIEVAL_CHILD_LIMIT = 8;
+        const RETRIEVAL_CHILD_CANDIDATE_LIMIT = 16;
+        const RERANK_PARENT_CANDIDATE_LIMIT = 6;
+        const RERANK_PREVIEW_CHARS = 900;
+        const MAX_RETRIEVED_CONTEXT_CHARS = 7000;
+        const SEARCH_STOPWORDS = new Set([
+            'the', 'and', 'for', 'that', 'with', 'from', 'this', 'into', 'onto', 'over', 'under', 'your', 'their',
+            'there', 'here', 'have', 'will', 'would', 'could', 'should', 'about', 'after', 'before', 'where', 'when',
+            'what', 'which', 'while', 'them', 'they', 'then', 'than', 'just', 'been', 'being', 'through', 'across',
+            'does', 'did', 'done', 'also', 'only', 'very', 'more', 'less', 'much', 'many', 'some', 'such', 'into',
+            'once', 'each', 'like', 'must', 'need', 'wants', 'want', 'asks', 'ask', 'told', 'tell', 'make', 'made',
+            'says', 'said', 'same', 'still', 'them', 'ours', 'ourselves', 'yours', 'yourself', 'between', 'within',
+            'campaign', 'adventure', 'section', 'page', 'pages', 'room', 'area'
+        ]);
         const API_PRICING = {
             'claude-opus-4-6': {
                 inputPerMillionUsd: 5,
@@ -2669,6 +2695,8 @@
         let conversationHistory = [];
         let dmPrompts = null;
         let pendingDiceRequest = null;
+        let campaignSearchState = null;
+        let workerCapabilities = null;
 
         function loadPromptBudgetState() {
             try {
@@ -2726,6 +2754,18 @@
             promptBudgetState.spentUsd = 0;
             savePromptBudgetState();
             renderPromptBudget();
+        }
+
+        async function loadWorkerCapabilities() {
+            if (workerCapabilities) return workerCapabilities;
+            try {
+                const res = await fetch(CAPABILITIES_URL);
+                if (!res.ok) throw new Error('Could not load worker capabilities');
+                workerCapabilities = await res.json();
+            } catch (err) {
+                workerCapabilities = { anthropic: true, embeddings: false };
+            }
+            return workerCapabilities;
         }
 
         // =========================================================
@@ -2986,11 +3026,13 @@
         // =========================================================
         let LOADED_CHARS = {};   // key -> full characterSheet data from Firebase
         let LOADED_CAMPAIGN = null;
+        let LOADED_CAMPAIGN_RAG = null;
 
         async function loadGameData() {
-            const [charSnap, campSnap] = await Promise.all([
+            const [charSnap, campSnap, campRagSnap] = await Promise.all([
                 firebaseDb.ref('characterSheets').once('value'),
                 firebaseDb.ref('campaign').once('value'),
+                firebaseDb.ref('campaignRag').once('value'),
             ]);
 
             LOADED_CHARS = charSnap.val() || {};
@@ -3044,6 +3086,8 @@
             }
 
             LOADED_CAMPAIGN = campSnap.val();
+            LOADED_CAMPAIGN_RAG = campRagSnap.val();
+            campaignSearchState = buildCampaignSearchState(LOADED_CAMPAIGN_RAG);
             if (LOADED_CAMPAIGN) {
                 if (LOADED_CAMPAIGN.meta && LOADED_CAMPAIGN.meta.name) {
                     document.getElementById('menuCampaignName').textContent = LOADED_CAMPAIGN.meta.name;
@@ -3062,66 +3106,116 @@
             refreshSetupPanel();
         }
 
-        async function loadPrompts() {
-            if (dmPrompts) return dmPrompts;
-            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.meta) {
-                const { meta, promptTemplates, npcs, locations } = LOADED_CAMPAIGN;
-
-                let systemSection = '';
-                if (meta.setting) systemSection += meta.setting + '\n\n';
-                if (meta.plotSummary) systemSection += '### Plot Summary\n\n' + meta.plotSummary + '\n\n';
-
-                if (npcs && Object.keys(npcs).length > 0) {
-                    systemSection += '### Key NPCs\n\n';
-                    Object.values(npcs).forEach(npc => {
-                        systemSection += '**' + npc.name + '**';
-                        if (npc.role) systemSection += ' (' + npc.role + ')';
-                        systemSection += '\n';
-                        if (npc.description) systemSection += '- ' + npc.description + '\n';
-                        if (npc.personality) systemSection += '- Personality: ' + npc.personality + '\n';
-                        if (npc.notes) systemSection += '- Notes: ' + npc.notes + '\n';
-                        systemSection += '\n';
-                    });
+        function buildPartySystemSection() {
+            if (Object.keys(LOADED_CHARS).length === 0) return '';
+            let systemSection = '### The Party\n\n';
+            Object.values(LOADED_CHARS).forEach(c => {
+                systemSection += '**' + c.name + '** \u2014 ' + c.cls;
+                if (c.level) systemSection += ' (Level ' + c.level + ')';
+                systemSection += '\n';
+                systemSection += '- HP: ' + c.maxHp + ' | AC: ' + c.ac;
+                if (c.spellSaveDC) systemSection += ' | Spell Save DC: ' + c.spellSaveDC;
+                if (c.proficiency) systemSection += ' | Proficiency: +' + c.proficiency;
+                systemSection += '\n';
+                const statsLine = Object.entries(c.stats || {})
+                    .map(([k, v]) => k + ': ' + (v >= 0 ? '+' : '') + v)
+                    .join(', ');
+                if (statsLine) systemSection += '- Stats: ' + statsLine + '\n';
+                if (Array.isArray(c.spells) && c.spells.length > 0) {
+                    systemSection += '- Spells: ' + c.spells.map(s => s.name).filter(Boolean).join(', ') + '\n';
                 }
+                if (Array.isArray(c.abilities) && c.abilities.length > 0) {
+                    systemSection += '- Features: ' + c.abilities.map(a => a.name).filter(Boolean).join(', ') + '\n';
+                }
+                systemSection += '\n';
+            });
+            return systemSection.trim();
+        }
 
-                if (locations && Object.keys(locations).length > 0) {
-                    systemSection += '### Key Locations\n\n';
-                    Object.values(locations).forEach(loc => {
-                        systemSection += '**' + loc.name + '**: ' + (loc.description || '') + '\n';
-                    });
+        function buildLegacyCampaignContextSection(campaign) {
+            if (!campaign || !campaign.meta) return '';
+            const { meta, npcs, locations } = campaign;
+            let systemSection = '';
+            if (meta.setting) systemSection += '### Campaign Setting\n\n' + meta.setting + '\n\n';
+            if (meta.plotSummary) systemSection += '### Plot Summary\n\n' + meta.plotSummary + '\n\n';
+
+            if (npcs && Object.keys(npcs).length > 0) {
+                systemSection += '### Key NPCs\n\n';
+                Object.values(npcs).forEach(npc => {
+                    systemSection += '**' + npc.name + '**';
+                    if (npc.role) systemSection += ' (' + npc.role + ')';
                     systemSection += '\n';
-                }
-
-                if (Object.keys(LOADED_CHARS).length > 0) {
-                    systemSection += '### The Party\n\n';
-                    Object.values(LOADED_CHARS).forEach(c => {
-                        systemSection += '**' + c.name + '** \u2014 ' + c.cls + '\n';
-                        systemSection += '- HP: ' + c.maxHp + ' | AC: ' + c.ac;
-                        if (c.spellSaveDC) systemSection += ' | Spell Save DC: ' + c.spellSaveDC;
-                        systemSection += '\n- Stats: ' + Object.entries(c.stats || {}).map(([k,v]) => k + ': ' + (v >= 0 ? '+' : '') + v).join(', ') + '\n\n';
-                    });
-                }
-
-                dmPrompts = {
-                    system: systemSection,
-                    description: promptTemplates?.description || '',
-                    action: promptTemplates?.action || '',
-                    both: promptTemplates?.both || '',
-                    'session end': promptTemplates?.sessionEnd || '',
-                };
-                return dmPrompts;
+                    if (npc.description) systemSection += '- ' + npc.description + '\n';
+                    if (npc.personality) systemSection += '- Personality: ' + npc.personality + '\n';
+                    if (npc.notes) systemSection += '- Notes: ' + npc.notes + '\n';
+                    systemSection += '\n';
+                });
             }
-            const res = await fetch('Prompts/dm_prompts.md');
-            if (!res.ok) throw new Error('Could not load Prompts/dm_prompts.md');
-            const text = await res.text();
-            const sections = {};
-            for (const part of text.split(/^## /m)) {
-                const nl = part.indexOf('\n');
-                if (nl === -1) continue;
-                sections[part.slice(0, nl).trim().toLowerCase()] = part.slice(nl + 1).trim();
+
+            if (locations && Object.keys(locations).length > 0) {
+                systemSection += '### Key Locations\n\n';
+                Object.values(locations).forEach(loc => {
+                    systemSection += '**' + loc.name + '**: ' + (loc.description || '') + '\n';
+                });
+                systemSection += '\n';
             }
-            dmPrompts = sections;
-            return dmPrompts;
+
+            return systemSection.trim();
+        }
+
+        function buildRagCampaignContextSection(campaign) {
+            if (!campaign || !campaign.meta) return '';
+            const parts = [];
+            if (campaign.meta.name) parts.push('### Campaign\n\n' + campaign.meta.name);
+            if (campaign.meta.setting) parts.push('### Campaign Setting\n\n' + campaign.meta.setting);
+            if (campaign.meta.plotSummary) parts.push('### Plot Summary\n\n' + campaign.meta.plotSummary);
+
+            const npcNames = campaign.npcs ? Object.values(campaign.npcs).map(npc => npc.name).filter(Boolean) : [];
+            if (npcNames.length > 0) parts.push('### Named NPCs\n\n' + npcNames.join(', '));
+
+            const locationNames = campaign.locations ? Object.values(campaign.locations).map(loc => loc.name).filter(Boolean) : [];
+            if (locationNames.length > 0) parts.push('### Named Locations\n\n' + locationNames.join(', '));
+
+            parts.push('### Campaign Retrieval\n\nUse retrieved campaign reference sections as the source of truth for specific room details, NPC motivations, stat blocks, clues, boxed text, and hidden mechanics.');
+            return parts.filter(Boolean).join('\n\n');
+        }
+
+        async function loadPrompts() {
+            if (!dmPrompts) {
+                const res = await fetch('Prompts/dm_prompts.md');
+                if (!res.ok) throw new Error('Could not load Prompts/dm_prompts.md');
+                const text = await res.text();
+                const sections = {};
+                for (const part of text.split(/^## /m)) {
+                    const nl = part.indexOf('\n');
+                    if (nl === -1) continue;
+                    sections[part.slice(0, nl).trim().toLowerCase()] = part.slice(nl + 1).trim();
+                }
+                dmPrompts = sections;
+            }
+
+            const promptTemplates = LOADED_CAMPAIGN && LOADED_CAMPAIGN.promptTemplates
+                ? LOADED_CAMPAIGN.promptTemplates
+                : {};
+            const systemParts = [dmPrompts.system || ''];
+            if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.meta) {
+                systemParts.push(
+                    LOADED_CAMPAIGN_RAG
+                        ? buildRagCampaignContextSection(LOADED_CAMPAIGN)
+                        : buildLegacyCampaignContextSection(LOADED_CAMPAIGN)
+                );
+            }
+            const partySection = buildPartySystemSection();
+            if (partySection) systemParts.push(partySection);
+
+            return {
+                ...dmPrompts,
+                system: systemParts.filter(Boolean).join('\n\n'),
+                description: promptTemplates.description || dmPrompts.description || '',
+                action: promptTemplates.action || dmPrompts.action || '',
+                both: promptTemplates.both || dmPrompts.both || '',
+                'session end': promptTemplates.sessionEnd || dmPrompts['session end'] || dmPrompts['session-end'] || '',
+            };
         }
 
         // =========================================================
@@ -3140,7 +3234,16 @@
             const campInfo = document.getElementById('setupCampaignInfo');
             const campDel = document.getElementById('campaignDeleteSection');
             if (LOADED_CAMPAIGN && LOADED_CAMPAIGN.meta && LOADED_CAMPAIGN.meta.name) {
-                campInfo.innerHTML = '<strong>' + escapeHtml(LOADED_CAMPAIGN.meta.name) + '</strong>';
+                let infoHtml = '<strong>' + escapeHtml(LOADED_CAMPAIGN.meta.name) + '</strong>';
+                if (LOADED_CAMPAIGN_RAG && LOADED_CAMPAIGN_RAG.document) {
+                    const doc = LOADED_CAMPAIGN_RAG.document;
+                    const badges = [];
+                    if (doc.parentCount) badges.push(doc.parentCount + ' sections');
+                    if (doc.chunkCount) badges.push(doc.chunkCount + ' chunks');
+                    badges.push(doc.embeddingsReady ? 'keyword + embeddings' : 'keyword + Claude rerank');
+                    infoHtml += '<br><small>' + escapeHtml(badges.join(' · ')) + '</small>';
+                }
+                campInfo.innerHTML = infoHtml;
                 campDel.style.display = '';
             } else {
                 campInfo.innerHTML = '<span class="setup-none">No campaign loaded</span>';
@@ -3538,6 +3641,993 @@
             }
         }
 
+        function normalizeCampaignKey(name) {
+            return String(name || '')
+                .normalize('NFKD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '_')
+                .replace(/^_+|_+$/g, '') || 'campaign_item';
+        }
+
+        function sanitizeCampaignText(text) {
+            return String(text || '')
+                .replace(/\u00ad/g, '')
+                .replace(/[ \t]+\n/g, '\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .replace(/[^\S\n]+/g, ' ')
+                .replace(/ ?([,;:.!?])/g, '$1')
+                .trim();
+        }
+
+        function estimateTokenCount(text) {
+            return Math.max(1, Math.ceil(String(text || '').length / 4));
+        }
+
+        function splitIntoParagraphs(text) {
+            const cleaned = sanitizeCampaignText(text);
+            if (!cleaned) return [];
+            const paragraphs = cleaned.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+            if (paragraphs.length > 1) return paragraphs;
+
+            const lines = cleaned.split('\n').map(line => line.trim()).filter(Boolean);
+            if (lines.length <= 4) return [cleaned];
+
+            const grouped = [];
+            for (let i = 0; i < lines.length; i += 3) {
+                grouped.push(lines.slice(i, i + 3).join(' '));
+            }
+            return grouped.filter(Boolean);
+        }
+
+        function chunkArray(items, size) {
+            const chunks = [];
+            for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+            return chunks;
+        }
+
+        function toTitleCase(text) {
+            return String(text || '')
+                .toLowerCase()
+                .replace(/\b([a-z])/g, (_, ch) => ch.toUpperCase());
+        }
+
+        function defaultCampaignPromptTemplates() {
+            return {
+                description: 'Describe the scene vividly in 2-4 paragraphs. Focus on sensory detail, mood, character reactions, and concrete environmental cues. Do not resolve mechanics or invent facts beyond the supplied campaign context.',
+                action: 'Resolve the action clearly in 1-3 short paragraphs. Lead with the mechanical outcome, use supplied stat blocks and retrieved campaign notes, and briefly narrate the immediate effect.',
+                both: 'Blend vivid narration with explicit mechanical resolution in 3-5 paragraphs. Use retrieved campaign notes for room details, NPC motivations, and encounter facts. End on the scene’s updated state.',
+                sessionEnd: 'Write a structured session record using the conversation, meta notes, story notes, and campaign context supplied. Be specific, chronological, and grounded in events that actually happened.'
+            };
+        }
+
+        function pickLongerString(currentValue, nextValue) {
+            const currentText = String(currentValue || '').trim();
+            const nextText = String(nextValue || '').trim();
+            if (!nextText) return currentText;
+            if (!currentText || nextText.length > currentText.length) return nextText;
+            return currentText;
+        }
+
+        function mergeNamedRecordMaps(targetMap, items, kind) {
+            (Array.isArray(items) ? items : []).forEach(item => {
+                if (!item || typeof item !== 'object') return;
+                const name = String(item.name || '').trim();
+                if (!name) return;
+                const key = normalizeCampaignKey(name);
+                const existing = targetMap[key] || { name };
+                const merged = { ...existing, name };
+
+                Object.entries(item).forEach(([field, value]) => {
+                    if (field === 'name') return;
+                    if (Array.isArray(value)) {
+                        merged[field] = Array.from(new Set([...(existing[field] || []), ...value.filter(Boolean)]));
+                        return;
+                    }
+                    if (value && typeof value === 'object' && field === 'mods') {
+                        merged.mods = { ...(existing.mods || {}), ...value };
+                        return;
+                    }
+                    if (value == null || value === '') return;
+                    if (typeof value === 'number') {
+                        merged[field] = value;
+                        return;
+                    }
+                    merged[field] = pickLongerString(existing[field], value);
+                });
+
+                if (kind === 'encounter' && !Array.isArray(merged.enemies)) merged.enemies = [];
+                if (kind === 'location' && !Array.isArray(merged.connections)) merged.connections = [];
+                targetMap[key] = merged;
+            });
+        }
+
+        function normalizeStructuredCampaign(campaign, fileName, titleHint) {
+            const fallbackName = String(titleHint || fileName || 'Uploaded Campaign').replace(/\.pdf$/i, '').trim();
+            const promptTemplates = {
+                ...defaultCampaignPromptTemplates(),
+                ...(campaign && campaign.promptTemplates ? campaign.promptTemplates : {})
+            };
+
+            const normalized = {
+                meta: {
+                    name: pickLongerString(campaign && campaign.meta && campaign.meta.name, fallbackName),
+                    setting: sanitizeCampaignText(campaign && campaign.meta && campaign.meta.setting),
+                    plotSummary: sanitizeCampaignText(campaign && campaign.meta && campaign.meta.plotSummary),
+                },
+                promptTemplates,
+                npcs: {},
+                locations: {},
+                encounters: {},
+                enemyStats: {},
+            };
+
+            const coerceMap = value => {
+                if (Array.isArray(value)) {
+                    const map = {};
+                    value.forEach(item => {
+                        if (!item || !item.name) return;
+                        map[normalizeCampaignKey(item.name)] = item;
+                    });
+                    return map;
+                }
+                return value && typeof value === 'object' ? value : {};
+            };
+
+            Object.entries(coerceMap(campaign && campaign.npcs)).forEach(([key, npc]) => {
+                if (!npc || !npc.name) return;
+                normalized.npcs[normalizeCampaignKey(key || npc.name)] = {
+                    name: String(npc.name || '').trim(),
+                    role: sanitizeCampaignText(npc.role || ''),
+                    description: sanitizeCampaignText(npc.description || ''),
+                    personality: sanitizeCampaignText(npc.personality || ''),
+                    notes: sanitizeCampaignText(npc.notes || ''),
+                };
+            });
+
+            Object.entries(coerceMap(campaign && campaign.locations)).forEach(([key, loc]) => {
+                if (!loc || !loc.name) return;
+                normalized.locations[normalizeCampaignKey(key || loc.name)] = {
+                    name: String(loc.name || '').trim(),
+                    description: sanitizeCampaignText(loc.description || ''),
+                    connections: Array.from(new Set((loc.connections || []).map(v => String(v || '').trim()).filter(Boolean))),
+                };
+            });
+
+            Object.entries(coerceMap(campaign && campaign.encounters)).forEach(([key, encounter]) => {
+                if (!encounter || !encounter.name) return;
+                normalized.encounters[normalizeCampaignKey(key || encounter.name)] = {
+                    name: String(encounter.name || '').trim(),
+                    trigger: sanitizeCampaignText(encounter.trigger || ''),
+                    enemies: Array.from(new Set((encounter.enemies || []).map(v => String(v || '').trim()).filter(Boolean))),
+                };
+            });
+
+            Object.entries(coerceMap(campaign && campaign.enemyStats)).forEach(([key, stats]) => {
+                const name = String((stats && stats.name) || key || '').trim();
+                if (!name) return;
+                normalized.enemyStats[name] = {
+                    ac: Number(stats && stats.ac) || 0,
+                    hp: Number(stats && stats.hp) || 0,
+                    proficiency: Number(stats && stats.proficiency) || 0,
+                    mods: {
+                        STR: Number(stats && stats.mods && stats.mods.STR) || 0,
+                        DEX: Number(stats && stats.mods && stats.mods.DEX) || 0,
+                        CON: Number(stats && stats.mods && stats.mods.CON) || 0,
+                        INT: Number(stats && stats.mods && stats.mods.INT) || 0,
+                        WIS: Number(stats && stats.mods && stats.mods.WIS) || 0,
+                        CHA: Number(stats && stats.mods && stats.mods.CHA) || 0,
+                    },
+                };
+            });
+
+            return normalized;
+        }
+
+        function looksTwoColumnLayout(items) {
+            const positioned = items.filter(item => Number.isFinite(item.x));
+            if (positioned.length < 40) return false;
+            const minX = Math.min(...positioned.map(item => item.x));
+            const maxX = Math.max(...positioned.map(item => item.x));
+            const midX = minX + (maxX - minX) / 2;
+            const left = positioned.filter(item => item.x < midX - 20).length;
+            const right = positioned.filter(item => item.x > midX + 20).length;
+            return left / positioned.length > 0.25 && right / positioned.length > 0.25;
+        }
+
+        function groupPdfItemsIntoLines(items) {
+            const cleaned = items
+                .map((item, index) => ({
+                    text: sanitizeCampaignText(item && item.str),
+                    x: item && item.transform ? Number(item.transform[4]) : 0,
+                    y: item && item.transform ? Number(item.transform[5]) : 0,
+                    width: Number(item && item.width) || 0,
+                    index,
+                }))
+                .filter(item => item.text);
+
+            cleaned.sort((a, b) => {
+                if (Math.abs(b.y - a.y) > 2) return b.y - a.y;
+                if (Math.abs(a.x - b.x) > 1) return a.x - b.x;
+                return a.index - b.index;
+            });
+
+            const lines = [];
+            cleaned.forEach(item => {
+                const lastLine = lines[lines.length - 1];
+                if (!lastLine || Math.abs(lastLine.y - item.y) > 2.5) {
+                    lines.push({ y: item.y, parts: [item] });
+                    return;
+                }
+                lastLine.parts.push(item);
+            });
+
+            return lines.map(line => {
+                const parts = line.parts.sort((a, b) => a.x - b.x);
+                let text = '';
+                let prev = null;
+                parts.forEach(part => {
+                    if (!prev) {
+                        text += part.text;
+                    } else {
+                        const gap = part.x - (prev.x + prev.width);
+                        text += gap > 8 ? ' ' + part.text : (/[/-]$/.test(text) ? '' : ' ') + part.text;
+                    }
+                    prev = part;
+                });
+                return text.replace(/\s+/g, ' ').trim();
+            }).filter(Boolean);
+        }
+
+        function buildPdfTextFromItems(items) {
+            if (looksTwoColumnLayout(items)) {
+                const minX = Math.min(...items.map(item => Number(item.transform && item.transform[4]) || 0));
+                const maxX = Math.max(...items.map(item => Number(item.transform && item.transform[4]) || 0));
+                const midX = minX + (maxX - minX) / 2;
+                const leftItems = items.filter(item => (Number(item.transform && item.transform[4]) || 0) <= midX);
+                const rightItems = items.filter(item => (Number(item.transform && item.transform[4]) || 0) > midX);
+                return sanitizeCampaignText([
+                    groupPdfItemsIntoLines(leftItems).join('\n'),
+                    groupPdfItemsIntoLines(rightItems).join('\n')
+                ].filter(Boolean).join('\n\n'));
+            }
+            return sanitizeCampaignText(groupPdfItemsIntoLines(items).join('\n'));
+        }
+
+        async function extractPdfDocument(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const meta = await pdf.getMetadata().catch(() => null);
+            const title = sanitizeCampaignText(
+                (meta && meta.info && meta.info.Title) ||
+                (meta && meta.metadata && meta.metadata.get && meta.metadata.get('dc:title')) ||
+                ''
+            );
+
+            const pages = [];
+            for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                const page = await pdf.getPage(pageNumber);
+                const content = await page.getTextContent();
+                pages.push({
+                    pageNumber,
+                    text: buildPdfTextFromItems(content.items || [])
+                });
+            }
+
+            return { title, pages, pageCount: pdf.numPages };
+        }
+
+        function isLikelyHeadingLine(line) {
+            const text = sanitizeCampaignText(line);
+            if (!text || text.length > 90) return false;
+            if (/^(chapter|part|appendix|prologue|epilogue|room|area|scene|act|encounter|appendix)\b/i.test(text)) return true;
+            if (/^\d+[\.\):]\s+[A-Z]/.test(text)) return true;
+            if (/^[IVXLC]+\.\s+[A-Z]/.test(text)) return true;
+            const words = text.split(/\s+/);
+            if (words.length > 10) return false;
+            const letterCount = text.replace(/[^A-Za-z]/g, '').length;
+            const upperCount = text.replace(/[^A-Z]/g, '').length;
+            const titleCaseCount = words.filter(word => /^[A-Z][a-z'’-]+$/.test(word)).length;
+            if (letterCount > 0 && upperCount / letterCount > 0.6) return true;
+            return words.length >= 2 && titleCaseCount >= Math.max(2, words.length - 1) && !/[.!?]$/.test(text);
+        }
+
+        function inferSectionType(title, text) {
+            const haystack = (String(title || '') + '\n' + String(text || '')).toLowerCase();
+            if (/\b(ac|armor class|hit points|hp|challenge|multiattack|saving throws)\b/.test(haystack)) return 'statblock';
+            if (/\b(room|area|chamber|hall|crypt|tomb|cavern|location|shrine)\b/.test(haystack)) return 'location';
+            if (/\b(encounter|ambush|battle|combat|guards|fight)\b/.test(haystack)) return 'encounter';
+            if (/\b(history|legend|lore|background|overview)\b/.test(haystack)) return 'lore';
+            if (/\bquest|hook|objective|goal\b/.test(haystack)) return 'quest';
+            return 'section';
+        }
+
+        function buildDocumentAwareSections(pages, titleHint) {
+            const sections = [];
+            let current = null;
+
+            function flushCurrent() {
+                if (!current) return;
+                current.text = sanitizeCampaignText(current.lines.join('\n'));
+                delete current.lines;
+                if (current.text) sections.push(current);
+                current = null;
+            }
+
+            pages.forEach(page => {
+                const rawLines = String(page.text || '').split('\n').map(line => line.trim()).filter(Boolean);
+                rawLines.forEach(line => {
+                    const heading = isLikelyHeadingLine(line);
+                    if (!current) {
+                        current = {
+                            id: '',
+                            title: heading ? line : (titleHint || 'Opening'),
+                            pageStart: page.pageNumber,
+                            pageEnd: page.pageNumber,
+                            lines: heading ? [] : [line],
+                            type: 'section',
+                        };
+                        return;
+                    }
+                    if (heading && current.lines.join(' ').length > 300) {
+                        flushCurrent();
+                        current = {
+                            id: '',
+                            title: line,
+                            pageStart: page.pageNumber,
+                            pageEnd: page.pageNumber,
+                            lines: [],
+                            type: 'section',
+                        };
+                        return;
+                    }
+                    current.lines.push(line);
+                    current.pageEnd = page.pageNumber;
+                });
+                if (current) current.pageEnd = page.pageNumber;
+            });
+
+            flushCurrent();
+
+            const normalized = [];
+            let sectionCounter = 1;
+            sections.forEach(section => {
+                const paragraphs = splitIntoParagraphs(section.text);
+                let buffer = [];
+                let bufferLen = 0;
+                let partIndex = 1;
+
+                function pushSectionChunk() {
+                    const text = sanitizeCampaignText(buffer.join('\n\n'));
+                    if (!text) return;
+                    const title = bufferLen > SECTION_TARGET_CHARS && paragraphs.length > 1
+                        ? section.title + ' (Part ' + partIndex + ')'
+                        : section.title;
+                    normalized.push({
+                        id: 'section_' + String(sectionCounter++).padStart(4, '0'),
+                        title,
+                        pageStart: section.pageStart,
+                        pageEnd: section.pageEnd,
+                        text,
+                        type: inferSectionType(section.title, text),
+                    });
+                    partIndex += 1;
+                }
+
+                paragraphs.forEach(paragraph => {
+                    if (buffer.length && bufferLen + paragraph.length > SECTION_TARGET_CHARS) {
+                        pushSectionChunk();
+                        buffer = [];
+                        bufferLen = 0;
+                    }
+                    buffer.push(paragraph);
+                    bufferLen += paragraph.length;
+                });
+                if (buffer.length) pushSectionChunk();
+            });
+
+            return normalized;
+        }
+
+        function buildChildChunks(parents) {
+            const children = [];
+            parents.forEach(parent => {
+                const paragraphs = splitIntoParagraphs(parent.text);
+                let buffer = [];
+                let chunkIndex = 1;
+                let currentLength = 0;
+
+                function pushChunk() {
+                    const text = sanitizeCampaignText(buffer.join('\n\n'));
+                    if (!text) return;
+                    children.push({
+                        id: parent.id + '_chunk_' + String(chunkIndex++).padStart(2, '0'),
+                        parentId: parent.id,
+                        title: parent.title,
+                        type: parent.type,
+                        pageStart: parent.pageStart,
+                        pageEnd: parent.pageEnd,
+                        text,
+                        tokenCount: estimateTokenCount(text),
+                    });
+                }
+
+                paragraphs.forEach(paragraph => {
+                    if (buffer.length && (currentLength + paragraph.length > CHILD_CHUNK_MAX_CHARS || currentLength >= CHILD_CHUNK_TARGET_CHARS)) {
+                        pushChunk();
+                        buffer = buffer.slice(-CHILD_CHUNK_OVERLAP_PARAGRAPHS);
+                        currentLength = buffer.join('\n\n').length;
+                    }
+                    buffer.push(paragraph);
+                    currentLength += paragraph.length;
+                });
+
+                if (buffer.length) pushChunk();
+            });
+            return children;
+        }
+
+        function buildSectionOutline(parents) {
+            return parents.map(parent => ({
+                id: parent.id,
+                title: parent.title,
+                type: parent.type,
+                pageStart: parent.pageStart,
+                pageEnd: parent.pageEnd,
+                preview: sanitizeCampaignText(parent.text).slice(0, OUTLINE_PREVIEW_CHARS),
+            }));
+        }
+
+        async function callClaudeJson(options) {
+            const res = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    model: options.model || API_MODEL,
+                    max_tokens: options.max_tokens || 4096,
+                    system: options.system || undefined,
+                    messages: options.messages || [],
+                }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error?.message || `API error ${res.status}`);
+            }
+
+            const data = await res.json();
+            recordPromptUsage(data);
+            return data;
+        }
+
+        function parseJsonObjectFromText(text) {
+            const match = String(text || '').match(/\{[\s\S]*\}/);
+            if (!match) throw new Error('Could not parse JSON from model response');
+            return JSON.parse(match[0]);
+        }
+
+        async function extractCampaignOutlinePartials(outline, fileName, titleHint) {
+            if (!outline.length) return [];
+            const renderedSections = outline.map(section => {
+                return '### [' + section.id + '] ' + section.title +
+                    ' (' + section.type + ', pages ' + section.pageStart + '-' + section.pageEnd + ')\n' +
+                    section.preview;
+            });
+
+            const batches = [];
+            let current = [];
+            let currentLength = 0;
+            renderedSections.forEach(sectionText => {
+                if (current.length && currentLength + sectionText.length > EXTRACTION_BATCH_MAX_CHARS) {
+                    batches.push(current.join('\n\n'));
+                    current = [];
+                    currentLength = 0;
+                }
+                current.push(sectionText);
+                currentLength += sectionText.length;
+            });
+            if (current.length) batches.push(current.join('\n\n'));
+
+            const partials = [];
+            for (const batch of batches) {
+                const prompt = `You are extracting partial structured campaign data from a D&D adventure outline.
+Return JSON only with this shape:
+{
+  "metaHints": {
+    "name": "",
+    "settingPoints": ["short factual bullets"],
+    "plotPoints": ["short factual bullets"]
+  },
+  "npcs": [{"name":"","role":"","description":"","personality":"","notes":""}],
+  "locations": [{"name":"","description":"","connections":["other location names"]}],
+  "encounters": [{"name":"","trigger":"","enemies":["enemy names"]}],
+  "enemyStats": [{"name":"","ac":0,"hp":0,"proficiency":0,"mods":{"STR":0,"DEX":0,"CON":0,"INT":0,"WIS":0,"CHA":0}}]
+}
+
+Rules:
+- Include only facts supported by the supplied outline.
+- Omit unknown values instead of inventing them.
+- Keep strings concise.
+- Use empty arrays when nothing relevant is present.
+
+Document title hint: ${titleHint || fileName}
+
+Outline:
+${batch}`;
+                const data = await callClaudeJson({
+                    max_tokens: 4096,
+                    messages: [{ role: 'user', content: prompt }],
+                });
+                partials.push(parseJsonObjectFromText(data.content && data.content[0] && data.content[0].text));
+            }
+            return partials;
+        }
+
+        function mergeCampaignOutlinePartials(partials) {
+            const merged = {
+                metaHints: {
+                    name: '',
+                    settingPoints: [],
+                    plotPoints: [],
+                },
+                npcs: {},
+                locations: {},
+                encounters: {},
+                enemyStats: {},
+            };
+
+            partials.forEach(partial => {
+                if (!partial || typeof partial !== 'object') return;
+                if (partial.metaHints && typeof partial.metaHints === 'object') {
+                    merged.metaHints.name = pickLongerString(merged.metaHints.name, partial.metaHints.name);
+                    merged.metaHints.settingPoints = Array.from(new Set([
+                        ...merged.metaHints.settingPoints,
+                        ...((partial.metaHints.settingPoints || []).map(v => sanitizeCampaignText(v)).filter(Boolean))
+                    ]));
+                    merged.metaHints.plotPoints = Array.from(new Set([
+                        ...merged.metaHints.plotPoints,
+                        ...((partial.metaHints.plotPoints || []).map(v => sanitizeCampaignText(v)).filter(Boolean))
+                    ]));
+                }
+
+                mergeNamedRecordMaps(merged.npcs, partial.npcs, 'npc');
+                mergeNamedRecordMaps(merged.locations, partial.locations, 'location');
+                mergeNamedRecordMaps(merged.encounters, partial.encounters, 'encounter');
+                mergeNamedRecordMaps(merged.enemyStats, partial.enemyStats, 'enemy');
+            });
+
+            return merged;
+        }
+
+        async function synthesizeCampaignData(merged, fileName, titleHint) {
+            const prompt = `You are turning extracted campaign facts into the app's final campaign JSON.
+Respond with JSON only in this exact shape:
+{
+  "meta": {
+    "name": "Campaign name",
+    "setting": "2-3 sentence world/setting description",
+    "plotSummary": "~200 word summary of the main plot arc"
+  },
+  "promptTemplates": {
+    "description": "Instructions for vivid narrative-only mode",
+    "action": "Instructions for mechanical resolution mode",
+    "both": "Instructions for combined narrative + mechanics mode",
+    "sessionEnd": "Instructions for generating the official session summary record"
+  },
+  "npcs": {
+    "npc_key": {
+      "name": "Full NPC Name",
+      "role": "",
+      "description": "",
+      "personality": "",
+      "notes": ""
+    }
+  },
+  "locations": {
+    "location_key": {
+      "name": "Location Name",
+      "description": "",
+      "connections": ["other_location_key"]
+    }
+  },
+  "encounters": {
+    "encounter_key": {
+      "name": "Encounter Name",
+      "trigger": "",
+      "enemies": ["Enemy Name"]
+    }
+  },
+  "enemyStats": {
+    "Enemy Name": {
+      "ac": 0,
+      "hp": 0,
+      "proficiency": 0,
+      "mods": {"STR":0,"DEX":0,"CON":0,"INT":0,"WIS":0,"CHA":0}
+    }
+  }
+}
+
+Rules:
+- Stay faithful to the extracted facts.
+- Do not invent unknown campaign specifics.
+- If some categories are sparse, return empty objects for them.
+- Use the file/title hint when the campaign name is missing.
+
+Title hint: ${titleHint || fileName}
+
+Extracted facts:
+${JSON.stringify(merged)}`;
+
+            const data = await callClaudeJson({
+                max_tokens: 4096,
+                messages: [{ role: 'user', content: prompt }],
+            });
+            return normalizeStructuredCampaign(
+                parseJsonObjectFromText(data.content && data.content[0] && data.content[0].text),
+                fileName,
+                titleHint
+            );
+        }
+
+        function buildFallbackCampaignData(merged, fileName, titleHint) {
+            const campaign = {
+                meta: {
+                    name: merged.metaHints.name || String(titleHint || fileName || 'Uploaded Campaign').replace(/\.pdf$/i, ''),
+                    setting: merged.metaHints.settingPoints.slice(0, 4).join(' '),
+                    plotSummary: merged.metaHints.plotPoints.slice(0, 8).join(' '),
+                },
+                promptTemplates: defaultCampaignPromptTemplates(),
+                npcs: merged.npcs,
+                locations: merged.locations,
+                encounters: merged.encounters,
+                enemyStats: {},
+            };
+
+            Object.values(merged.enemyStats || {}).forEach(stat => {
+                if (!stat || !stat.name) return;
+                campaign.enemyStats[stat.name] = {
+                    ac: Number(stat.ac) || 0,
+                    hp: Number(stat.hp) || 0,
+                    proficiency: Number(stat.proficiency) || 0,
+                    mods: {
+                        STR: Number(stat.mods && stat.mods.STR) || 0,
+                        DEX: Number(stat.mods && stat.mods.DEX) || 0,
+                        CON: Number(stat.mods && stat.mods.CON) || 0,
+                        INT: Number(stat.mods && stat.mods.INT) || 0,
+                        WIS: Number(stat.mods && stat.mods.WIS) || 0,
+                        CHA: Number(stat.mods && stat.mods.CHA) || 0,
+                    },
+                };
+            });
+
+            return normalizeStructuredCampaign(campaign, fileName, titleHint);
+        }
+
+        function normalizeEmbedding(vector) {
+            if (!Array.isArray(vector) || vector.length === 0) return null;
+            const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + (value * value), 0));
+            if (!magnitude) return null;
+            return vector.map(value => Number((value / magnitude).toFixed(6)));
+        }
+
+        async function embedTextsInBatches(texts) {
+            const indexed = texts
+                .map((text, index) => ({ text: sanitizeCampaignText(text), index }))
+                .filter(item => item.text);
+            const results = new Array(texts.length).fill(null);
+            const batches = chunkArray(indexed, 32);
+
+            for (const batch of batches) {
+                const res = await fetch(EMBEDDINGS_URL, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        model: EMBEDDING_MODEL,
+                        dimensions: EMBEDDING_DIMENSIONS,
+                        input: batch.map(item => item.text),
+                    }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error?.message || `Embedding API error ${res.status}`);
+                }
+
+                const data = await res.json();
+                (data.data || []).forEach((row, rowIndex) => {
+                    const target = batch[rowIndex];
+                    if (!target) return;
+                    results[target.index] = normalizeEmbedding(row.embedding);
+                });
+            }
+
+            return results;
+        }
+
+        function buildCampaignRagRecord(file, documentData, parents, children, embeddingsReady) {
+            const parentMap = {};
+            parents.forEach(parent => {
+                parentMap[parent.id] = {
+                    id: parent.id,
+                    title: parent.title,
+                    type: parent.type,
+                    pageStart: parent.pageStart,
+                    pageEnd: parent.pageEnd,
+                    text: parent.text,
+                    childIds: children.filter(chunk => chunk.parentId === parent.id).map(chunk => chunk.id),
+                    tokenCount: estimateTokenCount(parent.text),
+                };
+            });
+
+            const childMap = {};
+            children.forEach(child => {
+                childMap[child.id] = {
+                    id: child.id,
+                    parentId: child.parentId,
+                    title: child.title,
+                    type: child.type,
+                    pageStart: child.pageStart,
+                    pageEnd: child.pageEnd,
+                    text: child.text,
+                    tokenCount: child.tokenCount,
+                    embedding: child.embedding || null,
+                };
+            });
+
+            return {
+                version: CAMPAIGN_RAG_VERSION,
+                document: {
+                    sourceFileName: file.name,
+                    sourceTitle: documentData.title || '',
+                    pageCount: documentData.pageCount,
+                    parentCount: parents.length,
+                    chunkCount: children.length,
+                    embeddingModel: EMBEDDING_MODEL,
+                    embeddingDimensions: EMBEDDING_DIMENSIONS,
+                    embeddingsReady,
+                    retrievalMode: embeddingsReady ? 'keyword-plus-embeddings' : 'keyword-plus-claude-rerank',
+                    indexedAt: Date.now(),
+                },
+                parents: parentMap,
+                children: childMap,
+            };
+        }
+
+        function tokenizeSearchText(text) {
+            return String(text || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .split(/\s+/)
+                .map(token => token.trim())
+                .filter(token => token.length > 2 && !SEARCH_STOPWORDS.has(token));
+        }
+
+        function buildSearchCacheFromRag(rag) {
+            if (!rag || !rag.children) return null;
+            const parents = rag.parents || {};
+            const chunks = Object.values(rag.children);
+            if (!chunks.length) return null;
+
+            const docFrequency = {};
+            let totalLength = 0;
+
+            const preparedChunks = chunks.map(chunk => {
+                const searchText = (chunk.title || '') + '\n' + (chunk.text || '');
+                const tokens = tokenizeSearchText(searchText);
+                const termFrequency = {};
+                tokens.forEach(token => { termFrequency[token] = (termFrequency[token] || 0) + 1; });
+                Object.keys(termFrequency).forEach(token => { docFrequency[token] = (docFrequency[token] || 0) + 1; });
+                totalLength += tokens.length;
+                return {
+                    ...chunk,
+                    searchText,
+                    lowerTitle: String(chunk.title || '').toLowerCase(),
+                    tokens,
+                    termFrequency,
+                    docLength: tokens.length || 1,
+                    embedding: Array.isArray(chunk.embedding) ? chunk.embedding : null,
+                };
+            });
+
+            const averageDocLength = preparedChunks.length ? totalLength / preparedChunks.length : 1;
+            const idf = {};
+            Object.entries(docFrequency).forEach(([token, count]) => {
+                idf[token] = Math.log(1 + ((preparedChunks.length - count + 0.5) / (count + 0.5)));
+            });
+
+            return {
+                parents,
+                chunks: preparedChunks,
+                averageDocLength,
+                idf,
+                hasEmbeddings: preparedChunks.some(chunk => Array.isArray(chunk.embedding)),
+            };
+        }
+
+        function buildCampaignSearchState(rag) {
+            return buildSearchCacheFromRag(rag);
+        }
+
+        function computeBm25Score(queryTokens, chunk, searchState) {
+            const uniqueTokens = Array.from(new Set(queryTokens));
+            const k1 = 1.5;
+            const b = 0.75;
+            return uniqueTokens.reduce((score, token) => {
+                const tf = chunk.termFrequency[token] || 0;
+                if (!tf) return score;
+                const idf = searchState.idf[token] || 0;
+                const numerator = tf * (k1 + 1);
+                const denominator = tf + k1 * (1 - b + b * (chunk.docLength / (searchState.averageDocLength || 1)));
+                return score + idf * (numerator / denominator);
+            }, 0);
+        }
+
+        function dotProduct(left, right) {
+            if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return 0;
+            let sum = 0;
+            for (let i = 0; i < left.length; i += 1) sum += left[i] * right[i];
+            return sum;
+        }
+
+        function buildRetrievalSearchQuery(currentText) {
+            const recent = conversationHistory.slice(-4).map(entry => {
+                const label = entry.role === 'assistant' ? 'Assistant' : 'User';
+                return label + ': ' + entry.content;
+            }).join('\n');
+            return recent ? recent + '\nCurrent request: ' + currentText : currentText;
+        }
+
+        function formatRetrievedCampaignContext(parentResults) {
+            if (!parentResults.length) return '';
+            let remainingChars = MAX_RETRIEVED_CONTEXT_CHARS;
+            const blocks = ['### Retrieved Campaign Reference'];
+
+            parentResults.forEach(result => {
+                if (remainingChars <= 0) return;
+                const parent = result.parent;
+                if (!parent || !parent.text) return;
+                let body = sanitizeCampaignText(parent.text);
+                if (!body) return;
+                if (body.length > remainingChars) body = body.slice(0, remainingChars).trim();
+                if (!body) return;
+                const pageLabel = parent.pageStart === parent.pageEnd
+                    ? 'page ' + parent.pageStart
+                    : 'pages ' + parent.pageStart + '-' + parent.pageEnd;
+                blocks.push('#### ' + parent.title + ' (' + pageLabel + ', ' + parent.type + ')\n' + body);
+                remainingChars -= body.length;
+            });
+
+            return blocks.join('\n\n');
+        }
+
+        async function rerankCampaignParentsWithClaude(queryText, parentResults) {
+            if (!Array.isArray(parentResults) || parentResults.length <= 1) return parentResults;
+
+            const candidates = parentResults.slice(0, RERANK_PARENT_CANDIDATE_LIMIT).map(entry => {
+                const parent = entry.parent;
+                return {
+                    id: parent.id,
+                    title: parent.title,
+                    type: parent.type,
+                    pageStart: parent.pageStart,
+                    pageEnd: parent.pageEnd,
+                    preview: sanitizeCampaignText(parent.text).slice(0, RERANK_PREVIEW_CHARS),
+                };
+            });
+
+            const prompt = `You are reranking candidate campaign document sections for retrieval.
+Return JSON only in this shape:
+{"rankedIds":["section_id_1","section_id_2","section_id_3"]}
+
+Rules:
+- Only include ids from the candidate list.
+- Rank sections by usefulness for answering the query accurately.
+- Prefer sections with exact named entities, direct room details, hidden mechanics, stat blocks, clues, or explicit story facts.
+- Do not explain your reasoning.
+
+Query:
+${queryText}
+
+Candidates:
+${JSON.stringify(candidates)}`;
+
+            try {
+                const data = await callClaudeJson({
+                    max_tokens: 300,
+                    messages: [{ role: 'user', content: prompt }],
+                });
+                const parsed = parseJsonObjectFromText(data.content && data.content[0] && data.content[0].text);
+                const rankedIds = Array.isArray(parsed.rankedIds) ? parsed.rankedIds.map(id => String(id)) : [];
+                if (!rankedIds.length) return parentResults;
+
+                const byId = new Map(parentResults.map(entry => [entry.parent.id, entry]));
+                const reranked = [];
+                rankedIds.forEach(id => {
+                    const match = byId.get(id);
+                    if (match && !reranked.includes(match)) reranked.push(match);
+                });
+                parentResults.forEach(entry => {
+                    if (!reranked.includes(entry)) reranked.push(entry);
+                });
+                return reranked.slice(0, RETRIEVAL_PARENT_LIMIT);
+            } catch (err) {
+                return parentResults;
+            }
+        }
+
+        async function retrieveCampaignContext(currentText) {
+            if (!campaignSearchState || !campaignSearchState.chunks || !campaignSearchState.chunks.length) {
+                return { contextText: '', parentResults: [] };
+            }
+
+            const queryText = buildRetrievalSearchQuery(currentText);
+            const queryTokens = tokenizeSearchText(queryText);
+            let queryEmbedding = null;
+
+            if (campaignSearchState.hasEmbeddings) {
+                try {
+                    const embedded = await embedTextsInBatches([queryText]);
+                    queryEmbedding = embedded[0] || null;
+                } catch (err) {
+                    queryEmbedding = null;
+                }
+            }
+            const canUseEmbeddings = Boolean(queryEmbedding);
+
+            const scored = campaignSearchState.chunks.map(chunk => {
+                const lexicalScore = queryTokens.length ? computeBm25Score(queryTokens, chunk, campaignSearchState) : 0;
+                const semanticScore = canUseEmbeddings && chunk.embedding ? Math.max(0, dotProduct(queryEmbedding, chunk.embedding)) : 0;
+                const titleBoost = queryTokens.some(token => chunk.lowerTitle.includes(token)) ? 0.15 : 0;
+                return { chunk, lexicalScore, semanticScore, titleBoost };
+            });
+
+            const maxLexical = Math.max(0, ...scored.map(item => item.lexicalScore));
+            const maxSemantic = Math.max(0, ...scored.map(item => item.semanticScore));
+            const ranked = scored
+                .map(item => {
+                    const lexicalNorm = maxLexical > 0 ? item.lexicalScore / maxLexical : 0;
+                    const semanticNorm = maxSemantic > 0 ? item.semanticScore / maxSemantic : 0;
+                    return {
+                        ...item,
+                        combinedScore: canUseEmbeddings
+                            ? (semanticNorm * 0.65) + (lexicalNorm * 0.35) + item.titleBoost
+                            : lexicalNorm + item.titleBoost,
+                    };
+                })
+                .filter(item => item.combinedScore > 0.01)
+                .sort((a, b) => b.combinedScore - a.combinedScore)
+                .slice(0, RETRIEVAL_CHILD_CANDIDATE_LIMIT);
+
+            const parentScores = {};
+            ranked.forEach(item => {
+                const parentId = item.chunk.parentId;
+                if (!parentScores[parentId]) parentScores[parentId] = { score: 0, matches: [] };
+                parentScores[parentId].score += item.combinedScore;
+                parentScores[parentId].matches.push(item);
+            });
+
+            let parentResults = Object.entries(parentScores)
+                .map(([parentId, entry]) => ({
+                    parent: campaignSearchState.parents[parentId],
+                    score: entry.score,
+                    matches: entry.matches,
+                }))
+                .filter(entry => entry.parent)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, canUseEmbeddings ? RETRIEVAL_PARENT_LIMIT : RERANK_PARENT_CANDIDATE_LIMIT);
+
+            if (!canUseEmbeddings && parentResults.length > 1) {
+                parentResults = await rerankCampaignParentsWithClaude(queryText, parentResults);
+            } else {
+                parentResults = parentResults.slice(0, RETRIEVAL_PARENT_LIMIT);
+            }
+
+            return {
+                contextText: formatRetrievedCampaignContext(parentResults),
+                parentResults,
+            };
+        }
+
         // =========================================================
         // CAMPAIGN PDF PROCESSING
         // =========================================================
@@ -3552,89 +4642,76 @@
 
             try {
                 const file = input.files[0];
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                const pageTexts = await Promise.all(
-                    Array.from({ length: pdf.numPages }, (_, i) =>
-                        pdf.getPage(i + 1).then(p => p.getTextContent()).then(c => c.items.map(item => item.str).join(' '))
-                    )
-                );
-                const fullText = pageTexts.join('\n\n');
+                const documentData = await extractPdfDocument(file);
+                const titleHint = documentData.title || file.name.replace(/\.pdf$/i, '');
+                const populatedPages = documentData.pages.filter(page => page.text);
+                if (!populatedPages.length) throw new Error('No readable text was extracted from the PDF');
 
-                status.textContent = 'Sending to Claude for structuring...';
+                status.textContent = 'Building document sections...';
+                const parents = buildDocumentAwareSections(populatedPages, titleHint);
+                const children = buildChildChunks(parents);
+                if (!parents.length || !children.length) throw new Error('Could not build a searchable campaign index from the PDF');
 
-                const extractionPrompt = `You are extracting structured campaign data from a D&D adventure document.
-Given this campaign text, produce a JSON object with this exact structure:
-{
-  "meta": {
-    "name": "The campaign/adventure name",
-    "setting": "2-3 sentence world/setting description for AI context",
-    "plotSummary": "~200 word summary of the campaign arc and key events"
-  },
-  "promptTemplates": {
-    "description": "Instructions for vivid narrative-only mode (2-4 paragraphs, sensory details, no mechanics)",
-    "action": "Instructions for mechanical resolution mode (1-3 paragraphs, hit/miss/damage)",
-    "both": "Instructions for combined narrative + mechanics mode (3-5 paragraphs)",
-    "sessionEnd": "Instructions for generating an official session summary record"
-  },
-  "npcs": {
-    "npc_key": {
-      "name": "Full NPC Name",
-      "role": "innkeeper / villain / quest giver etc",
-      "description": "Physical appearance in 1-2 sentences",
-      "personality": "How they speak and behave in 1-2 sentences",
-      "notes": "Secrets, motivations, relationships"
-    }
-  },
-  "locations": {
-    "location_key": {
-      "name": "Location Name",
-      "description": "Atmosphere and key features in 2-3 sentences",
-      "connections": ["other_location_key"]
-    }
-  },
-  "encounters": {
-    "encounter_key": {
-      "name": "Encounter Name",
-      "trigger": "What causes this encounter",
-      "enemies": ["Enemy Type 1", "Enemy Type 2"]
-    }
-  },
-  "enemyStats": {
-    "Enemy Type 1": {
-      "ac": 15, "hp": 7, "proficiency": 2,
-      "mods": {"STR": -1, "DEX": 2, "CON": 0, "INT": 0, "WIS": -1, "CHA": -1}
-    }
-  }
-}
+                status.textContent = 'Summarising campaign structure...';
+                const outline = buildSectionOutline(parents);
+                let merged = {
+                    metaHints: { name: titleHint, settingPoints: [], plotPoints: [] },
+                    npcs: {},
+                    locations: {},
+                    encounters: {},
+                    enemyStats: {},
+                };
+                try {
+                    const partials = await extractCampaignOutlinePartials(outline, file.name, titleHint);
+                    merged = mergeCampaignOutlinePartials(partials);
+                    if (!merged.metaHints.name) merged.metaHints.name = titleHint;
+                } catch (err) {
+                    merged.metaHints.name = titleHint;
+                }
 
-Respond with ONLY the JSON, no markdown fences or extra text.
+                if (!merged.metaHints.settingPoints.length && parents[0] && parents[0].text) {
+                    merged.metaHints.settingPoints.push(parents[0].text.slice(0, 320));
+                }
+                if (!merged.metaHints.plotPoints.length) {
+                    merged.metaHints.plotPoints = parents.slice(0, 4).map(section => section.title).filter(Boolean);
+                }
 
-Campaign document:
-${fullText.slice(0, 30000)}`;
+                let campaign = null;
+                try {
+                    campaign = await synthesizeCampaignData(merged, file.name, titleHint);
+                } catch (err) {
+                    campaign = buildFallbackCampaignData(merged, file.name, titleHint);
+                }
 
-                const res = await fetch(WORKER_URL, {
-                    method: 'POST',
-                    headers: { 'content-type': 'application/json' },
-                    body: JSON.stringify({
-                        model: API_MODEL,
-                        max_tokens: 4096,
-                        messages: [{ role: 'user', content: extractionPrompt }],
-                    }),
+                status.textContent = 'Preparing retrieval index...';
+                let embeddingsReady = false;
+                const capabilities = await loadWorkerCapabilities();
+                if (capabilities.embeddings) {
+                    try {
+                        const embeddings = await embedTextsInBatches(children.map(chunk => chunk.title + '\n' + chunk.text));
+                        children.forEach((chunk, index) => {
+                            chunk.embedding = embeddings[index] || null;
+                        });
+                        embeddingsReady = children.some(chunk => Array.isArray(chunk.embedding));
+                    } catch (err) {
+                        children.forEach(chunk => { chunk.embedding = null; });
+                        embeddingsReady = false;
+                    }
+                } else {
+                    children.forEach(chunk => { chunk.embedding = null; });
+                    embeddingsReady = false;
+                }
+
+                status.textContent = 'Saving campaign to Firebase...';
+                const campaignRag = buildCampaignRagRecord(file, documentData, parents, children, embeddingsReady);
+                await firebaseDb.ref().update({
+                    campaign,
+                    campaignRag,
                 });
-
-                if (!res.ok) throw new Error('API error: ' + res.status);
-                const data = await res.json();
-                recordPromptUsage(data);
-                const responseText = data.content[0].text;
-
-                // Parse JSON from response
-                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                if (!jsonMatch) throw new Error('Could not parse campaign JSON from response');
-                const campaign = JSON.parse(jsonMatch[0]);
-
-                await firebaseDb.ref('campaign').set(campaign);
-                status.textContent = 'Campaign "' + campaign.meta.name + '" processed and saved!';
+                status.textContent = 'Campaign "' + campaign.meta.name + '" saved' +
+                    (embeddingsReady
+                        ? ' with keyword + embeddings retrieval.'
+                        : ' with keyword + Claude rerank retrieval using your existing Anthropic-backed worker.');
                 input.value = '';
                 dmPrompts = null;
                 await loadGameData();
@@ -3663,8 +4740,10 @@ ${fullText.slice(0, 30000)}`;
 
         async function executeDelete(type) {
             if (type === 'campaign') {
-                await firebaseDb.ref('campaign').remove();
+                await firebaseDb.ref().update({ campaign: null, campaignRag: null });
                 LOADED_CAMPAIGN = null;
+                LOADED_CAMPAIGN_RAG = null;
+                campaignSearchState = null;
                 dmPrompts = null;
                 document.getElementById('menuCampaignName').textContent = 'No campaign loaded';
             }
@@ -4737,7 +5816,8 @@ ${fullText.slice(0, 30000)}`;
                 const prompts = await loadPrompts();
                 const base = prompts['system'] || '';
                 const modeSection = prompts[currentMode] || '';
-                const systemPrompt = [base, modeSection].filter(Boolean).join('\n\n---\n\n');
+                const retrieved = await retrieveCampaignContext(text);
+                const systemPrompt = [base, retrieved.contextText, modeSection].filter(Boolean).join('\n\n---\n\n');
 
                 const res = await fetch(WORKER_URL, {
                     method: 'POST',
