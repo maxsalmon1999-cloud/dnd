@@ -4965,7 +4965,13 @@
                 if (cat.hasStats) {
                     let badgeText = '';
                     if (item.category === 'weapons' && item.damageDice) {
-                        const modStr = item.damageMod ? '+' + item.damageMod : '';
+                        let modStr = '';
+                        if (item.damageAbility && char.stats[item.damageAbility] != null) {
+                            const mod = char.stats[item.damageAbility];
+                            modStr = mod >= 0 ? '+' + mod : String(mod);
+                        } else if (item.damageMod) {
+                            modStr = '+' + item.damageMod;
+                        }
                         badgeText = item.damageDice + modStr + ' ' + (item.damageType || '');
                     } else if (item.category === 'armour' && item.ac != null) {
                         badgeText = 'AC ' + item.ac;
@@ -4981,7 +4987,13 @@
                             badge.title = 'Click to roll ' + item.damageDice + ' damage';
                             badge.addEventListener('click', (e) => {
                                 e.stopPropagation();
-                                rollWeaponDamage(item.name, item.damageDice, item.damageMod || 0, item.damageType, badge);
+                                let mod = 0;
+                                if (item.damageAbility && char.stats[item.damageAbility] != null) {
+                                    mod = char.stats[item.damageAbility];
+                                } else if (item.damageMod) {
+                                    mod = item.damageMod;
+                                }
+                                rollWeaponDamage(item.name, item.damageDice, mod, item.damageType, badge);
                             });
                         }
                         nameRow.appendChild(badge);
@@ -5116,14 +5128,16 @@
             const plusLbl = document.createElement('span');
             plusLbl.className = 'item-stats-plus-label';
             plusLbl.textContent = '+';
-            const modIn = document.createElement('input');
-            modIn.type = 'number';
-            modIn.className = 'item-stats-num';
-            modIn.id = 'isDmgMod';
-            modIn.value = '0'; modIn.min = '0'; modIn.max = '20';
-            modIn.placeholder = '0';
+            const modSelect = document.createElement('select');
+            modSelect.className = 'item-stats-sel';
+            modSelect.id = 'isDmgAbility';
+            [['', 'None'], ['STR','STR'], ['DEX','DEX'], ['CON','CON'], ['INT','INT'], ['WIS','WIS'], ['CHA','CHA']].forEach(([val, txt]) => {
+                const o = document.createElement('option');
+                o.value = val; o.textContent = txt;
+                modSelect.appendChild(o);
+            });
             dmgRow.appendChild(dmgLbl); dmgRow.appendChild(countIn); dmgRow.appendChild(dieSelect);
-            dmgRow.appendChild(plusLbl); dmgRow.appendChild(modIn);
+            dmgRow.appendChild(plusLbl); dmgRow.appendChild(modSelect);
             fields.appendChild(dmgRow);
 
             const typeRow = document.createElement('div');
@@ -5175,8 +5189,8 @@
                 const die = document.getElementById('isDieType').value;
                 itemData.damageDice = count + die;
                 itemData.damageType = document.getElementById('isDmgType').value;
-                const mod = parseInt(document.getElementById('isDmgMod').value) || 0;
-                if (mod) itemData.damageMod = mod;
+                const ability = document.getElementById('isDmgAbility').value;
+                if (ability) itemData.damageAbility = ability;
             } else {
                 itemData.ac = parseInt(document.getElementById('isAC').value) || 10;
             }
