@@ -1,5 +1,7 @@
 # FORDEE WHAX
 **Half-Elf Ranger (Gloom Stalker)**
+**Level 3**
+**XP:** 1,100 / 2,700
 
 ## Core Stats
 - AC: 15 (studded leather + DEX)
