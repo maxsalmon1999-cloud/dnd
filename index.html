@@ -3709,14 +3709,170 @@ ${fullText.slice(0, 30000)}`;
             await loadGameData();
         }
 
-        function exportCharacter(key) {
+        async function exportCharacter(key) {
             const c = LOADED_CHARS[key];
-            if (!c || !c.rawMarkdown) { alert('No raw markdown available for export'); return; }
-            const blob = new Blob([c.rawMarkdown], { type: 'text/markdown' });
+            if (!c) { alert('Character not found'); return; }
+
+            // Fetch current runtime state from Firebase
+            const rtSnap = await firebaseDb.ref('characters/' + key).once('value');
+            const rt = rtSnap.val() || {};
+            const currentHp = rt.hp != null ? rt.hp : (c.maxHp || '?');
+            const maxHp = c.maxHp || '?';
+            const gold = rt.gold != null ? rt.gold : (c.gold || 0);
+
+            // Runtime inventory (player-managed, has damageDice/damageAbility/ac etc.)
+            const rtInv = rt.inventory || {};
+            // Sheet inventory (original parsed)
+            const sheetInv = c.inventory || {};
+
+            // Runtime ability uses
+            const rtAbilities = rt.abilities || {};
+
+            // Build markdown
+            const lines = [];
+            lines.push('# ' + (c.name || 'Unknown'));
+            lines.push('**' + (c.cls || 'Unknown Class') + '**');
+            if (c.level) lines.push('**Level ' + c.level + '**');
+            if (c.xp) lines.push('**XP:** ' + c.xp);
+            lines.push('');
+
+            // Core stats
+            lines.push('## Core Stats');
+            lines.push('- AC: ' + (c.ac || '?'));
+            lines.push('- HP: ' + currentHp + ' / ' + maxHp);
+            if (c.proficiency) lines.push('- Proficiency: +' + c.proficiency);
+            if (c.spellSaveDC != null) lines.push('- Spell Save DC: ' + c.spellSaveDC);
+            if (c.spellAttack) lines.push('- Spell Attack: +' + c.spellAttack);
+            if (gold) lines.push('- Gold: ' + gold);
+            lines.push('');
+
+            // Ability scores
+            if (c.stats) {
+                lines.push('## Ability Modifiers');
+                Object.entries(c.stats).forEach(([stat, mod]) => {
+                    lines.push('- ' + stat + ' ' + (mod >= 0 ? '+' + mod : mod));
+                });
+                lines.push('');
+            }
+
+            // Saving throws
+            if (c.saves && c.saves.length > 0) {
+                lines.push('## Saving Throws');
+                c.saves.forEach(s => {
+                    lines.push('- ' + s.stat + ' ' + (s.mod >= 0 ? '+' + s.mod : s.mod) + (s.proficient ? ' (proficient)' : ''));
+                });
+                lines.push('');
+            }
+
+            // Skills
+            if (c.skills && c.skills.length > 0) {
+                lines.push('## Skills');
+                c.skills.forEach(s => {
+                    lines.push('- ' + s.name + ' ' + (s.mod >= 0 ? '+' + s.mod : s.mod));
+                });
+                lines.push('');
+            }
+
+            // Spell slots
+            if (c.spellSlots && c.spellSlots.length > 0) {
+                lines.push('## Spell Slots');
+                c.spellSlots.forEach(s => {
+                    lines.push('- ' + s.label + ': ' + s.count);
+                });
+                lines.push('');
+            }
+
+            // Spells
+            if (c.spells && c.spells.length > 0) {
+                lines.push('## Known Spells');
+                const byLevel = {};
+                c.spells.forEach(s => {
+                    const lvl = s.level || 'Other';
+                    if (!byLevel[lvl]) byLevel[lvl] = [];
+                    byLevel[lvl].push(s.name);
+                });
+                Object.entries(byLevel).forEach(([lvl, names]) => {
+                    lines.push('### ' + lvl);
+                    names.forEach(n => lines.push('- ' + n));
+                });
+                lines.push('');
+            }
+
+            // Abilities & Features
+            if (c.abilities && c.abilities.length > 0) {
+                const active = c.abilities.filter(a => !a.passive);
+                const passive = c.abilities.filter(a => a.passive);
+                if (active.length > 0) {
+                    lines.push('## Abilities');
+                    active.forEach(a => {
+                        const used = rtAbilities[a.key] || 0;
+                        const remaining = (a.max || 0) - used;
+                        let line = '- **' + a.name + '**';
+                        if (a.max) line += ' (' + remaining + '/' + a.max + ', ' + (a.rest || 'Long') + ' Rest)';
+                        if (a.desc) line += ' — ' + a.desc;
+                        lines.push(line);
+                    });
+                    lines.push('');
+                }
+                if (passive.length > 0) {
+                    lines.push('## Features');
+                    passive.forEach(a => {
+                        let line = '- **' + a.name + '**';
+                        if (a.desc) line += ' — ' + a.desc;
+                        lines.push(line);
+                    });
+                    lines.push('');
+                }
+            }
+
+            // Inventory (prefer runtime inventory, fall back to sheet inventory)
+            const invSource = Object.keys(rtInv).length > 0 ? rtInv : sheetInv;
+            const invItems = Object.values(invSource).filter(Boolean);
+            if (invItems.length > 0) {
+                lines.push('## Inventory');
+                const categories = ['weapons', 'armour', 'tools', 'consumables', 'loot', 'other'];
+                const byCat = {};
+                invItems.forEach(item => {
+                    const cat = item.category || 'other';
+                    if (!byCat[cat]) byCat[cat] = [];
+                    byCat[cat].push(item);
+                });
+                categories.forEach(cat => {
+                    if (!byCat[cat]) return;
+                    lines.push('### ' + cat.charAt(0).toUpperCase() + cat.slice(1));
+                    byCat[cat].forEach(item => {
+                        let line = '- ' + (item.name || '?');
+                        if (item.amount > 1) line += ' (x' + item.amount + ')';
+                        // Weapon stats
+                        if (item.category === 'weapons' && item.damageDice) {
+                            let modStr = '';
+                            if (item.damageAbility && c.stats && c.stats[item.damageAbility] != null) {
+                                const mod = c.stats[item.damageAbility];
+                                modStr = mod >= 0 ? '+' + mod : String(mod);
+                            } else if (item.damageMod) {
+                                modStr = '+' + item.damageMod;
+                            }
+                            line += ' — ' + item.damageDice + modStr + ' ' + (item.damageType || '');
+                        } else if (item.stats) {
+                            line += ' — ' + item.stats;
+                        }
+                        // Armour AC
+                        if (item.category === 'armour' && item.ac != null) {
+                            line += ' — AC ' + item.ac;
+                        }
+                        if (item.notes) line += ' (' + item.notes + ')';
+                        lines.push(line);
+                    });
+                });
+                lines.push('');
+            }
+
+            const md = lines.join('\n');
+            const blob = new Blob([md], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = c.name.replace(/\s+/g, '_') + '.md';
+            a.download = (c.name || 'character').replace(/\s+/g, '_') + '.md';
             a.click();
             URL.revokeObjectURL(url);
         }
