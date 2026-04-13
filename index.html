@@ -3025,6 +3025,24 @@
                 });
             }
 
+            // Migration: re-parse level for characters stuck at default level 1
+            const levelFixUpdates = {};
+            Object.entries(LOADED_CHARS).forEach(([key, c]) => {
+                if (!c.rawMarkdown || (c.level && c.level > 1)) return;
+                const parsed = parseCharacterSheet(c.rawMarkdown);
+                if (parsed.level > 1) {
+                    c.level = parsed.level;
+                    levelFixUpdates['characterSheets/' + key + '/level'] = parsed.level;
+                }
+                if (parsed.xp && !c.xp) {
+                    c.xp = parsed.xp;
+                    levelFixUpdates['characterSheets/' + key + '/xp'] = parsed.xp;
+                }
+            });
+            if (Object.keys(levelFixUpdates).length > 0) {
+                await firebaseDb.ref().update(levelFixUpdates);
+            }
+
             LOADED_CAMPAIGN = campSnap.val();
             if (LOADED_CAMPAIGN) {
                 if (LOADED_CAMPAIGN.meta && LOADED_CAMPAIGN.meta.name) {
@@ -3270,7 +3288,7 @@
             const proficiency = parseInt(extract(/Proficiency:\s*\+?(\d+)/)) || 2;
             const spellSaveDC = parseInt(extract(/Spell Save DC:\s*(\d+)/)) || null;
             const spellAttack = extract(/Spell Attack:\s*(\+?\d+)/);
-            const levelRaw = extract(/\(Level\s+(\d+)\)/i) || extract(/^Level\s*[:\s]\s*(\d+)/i);
+            const levelRaw = extract(/\(Level\s+(\d+)\)/i) || extract(/^\**Level\s*[:\s]\s*(\d+)/i);
             const level = parseInt(levelRaw) || 1;
             const xp = extract(/XP:\s*([^\n]+)/i);
 
