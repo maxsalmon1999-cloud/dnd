@@ -4890,6 +4890,12 @@
 
     function renderInventory(items) {
         const list = document.getElementById('invList');
+        // Preserve which categories are open before re-render
+        const openCats = new Set();
+        list.querySelectorAll('.inv-cat-section.open').forEach(s => {
+            const label = s.querySelector('.inv-cat-header span');
+            if (label) openCats.add(label.textContent);
+        });
         list.innerHTML = '';
         const keys = Object.keys(items);
         if (keys.length === 0) {
@@ -4933,6 +4939,10 @@
                 section.classList.toggle('open');
                 arrow.textContent = section.classList.contains('open') ? '\u25BE' : '\u25B8';
             };
+            if (openCats.has(cat.label)) {
+                section.classList.add('open');
+                arrow.textContent = '\u25BE';
+            }
             section.appendChild(header);
 
             const body = document.createElement('div');
