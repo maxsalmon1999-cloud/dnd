@@ -2018,6 +2018,14 @@
             text-transform: uppercase;
             letter-spacing: 0.04em;
         }
+        .inv-stat-badge.rollable {
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .inv-stat-badge.rollable:hover {
+            background: #1e0f18;
+            border-color: #c4a44e;
+        }
         .inv-item-notes {
             font-size: 10px;
             color: #6b5040;
@@ -2081,6 +2089,12 @@
             text-align: center;
         }
         .item-stats-num:focus { border-color: #8c2a3a; }
+        .item-stats-plus-label {
+            color: #c4a44e;
+            font-size: 14px;
+            padding: 0 4px;
+            align-self: center;
+        }
         .item-stats-sel {
             background: #0e0a0c;
             border: 1.5px solid #4a2030;
@@ -3094,6 +3108,48 @@
         }
     }
 
+    async function rollWeaponDamage(weaponName, damageDice, damageMod, damageType, sourceEl) {
+        const match = damageDice.match(/^(\d+)d(\d+)$/);
+        if (!match) return;
+        const count = parseInt(match[1], 10);
+        const sides = parseInt(match[2], 10);
+        const formula = count + 'd' + sides;
+        const modifier = damageMod || 0;
+        const label = weaponName + ' Damage';
+
+        try {
+            const summary = await rollWithFantasticDice(formula, label);
+            const diceTotal = summary.subtotal;
+            const total = diceTotal + modifier;
+            const breakdown = summary.dice.map(die => 'd' + die.sides + ':' + die.value).join('  ');
+            const modStr = modifier !== 0 ? (modifier > 0 ? '+' + modifier : String(modifier)) : '';
+            const typeStr = damageType ? ' ' + damageType : '';
+            showAbilityPopup(sourceEl, label, breakdown + modStr + ' = ' + total + typeStr);
+
+            const historyLabel = formula + (modifier !== 0 ? (modifier > 0 ? '+' + modifier : String(modifier)) : '');
+            pushRollHistoryEntry({
+                type: label,
+                label: historyLabel,
+                total,
+                isTotalCrit: false,
+                isTotalFail: false,
+                suffix: typeStr
+            });
+            db.ref('diceLog').push({
+                character: char.name,
+                charKey,
+                dice: historyLabel,
+                result: total,
+                type: label,
+                modifier,
+                timestamp: Date.now(),
+            });
+        } catch (error) {
+            console.error(error);
+            showAbilityPopup(sourceEl, label, 'Dice roll failed to load. Check the network/CDN path.');
+        }
+    }
+
     async function rollSavingThrow(stat, sourceEl) {
         const modifier = getSaveModifier(stat);
 
@@ -3635,6 +3691,9 @@
         'Message': '120 ft. Whisper a message to a creature — only they hear it and can whisper a reply.',
         'Mending': '1 min cast. Repairs a single break or tear in an object up to 1-ft in any dimension.',
         // 1st level
+        'Absorb Elements': 'Reaction (when you take acid, cold, fire, lightning, or thunder damage). Resistance to the triggering damage type until start of your next turn. First melee attack on your next turn deals +1d6 of that type.',
+        'Goodberry': 'Create 10 magical berries. Each berry restores 1 HP when eaten (action). Berries lose potency after 24 hours.',
+        'Hunter\'s Mark': 'Bonus action, 90 ft, concentration, 1 hr. Mark a creature — deal +1d6 damage on each weapon hit. Advantage on Perception and Survival checks to find it. Can transfer to a new creature as a bonus action when the target drops to 0 HP.',
         'Hex': 'Bonus action, 90 ft. Curse one creature for 1 hr (concentration). +1d6 necrotic on each hit. Choose one ability — target has disadvantage on checks using it.',
         'Charm Person': 'Humanoid within 30 ft makes a WIS save. Fail: charmed for 1 hr or until harmed. Regards you as a friendly acquaintance.',
         'Disguise Self': '1 hr. Alter your appearance — height, weight, features, and gear. Does not hold up to touch; Investigation vs. DC 13 to disbelieve.',
@@ -4906,7 +4965,8 @@
                 if (cat.hasStats) {
                     let badgeText = '';
                     if (item.category === 'weapons' && item.damageDice) {
-                        badgeText = item.damageDice + ' ' + (item.damageType || '');
+                        const modStr = item.damageMod ? '+' + item.damageMod : '';
+                        badgeText = item.damageDice + modStr + ' ' + (item.damageType || '');
                     } else if (item.category === 'armour' && item.ac != null) {
                         badgeText = 'AC ' + item.ac;
                     } else if (item.stats) {
@@ -4916,6 +4976,14 @@
                         const badge = document.createElement('span');
                         badge.className = 'inv-stat-badge';
                         badge.textContent = badgeText;
+                        if (item.category === 'weapons' && item.damageDice) {
+                            badge.classList.add('rollable');
+                            badge.title = 'Click to roll ' + item.damageDice + ' damage';
+                            badge.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                rollWeaponDamage(item.name, item.damageDice, item.damageMod || 0, item.damageType, badge);
+                            });
+                        }
                         nameRow.appendChild(badge);
                     }
                 }
@@ -5045,7 +5113,17 @@
                 if (d === 'd6') o.selected = true;
                 dieSelect.appendChild(o);
             });
+            const plusLbl = document.createElement('span');
+            plusLbl.className = 'item-stats-plus-label';
+            plusLbl.textContent = '+';
+            const modIn = document.createElement('input');
+            modIn.type = 'number';
+            modIn.className = 'item-stats-num';
+            modIn.id = 'isDmgMod';
+            modIn.value = '0'; modIn.min = '0'; modIn.max = '20';
+            modIn.placeholder = '0';
             dmgRow.appendChild(dmgLbl); dmgRow.appendChild(countIn); dmgRow.appendChild(dieSelect);
+            dmgRow.appendChild(plusLbl); dmgRow.appendChild(modIn);
             fields.appendChild(dmgRow);
 
             const typeRow = document.createElement('div');
@@ -5097,6 +5175,8 @@
                 const die = document.getElementById('isDieType').value;
                 itemData.damageDice = count + die;
                 itemData.damageType = document.getElementById('isDmgType').value;
+                const mod = parseInt(document.getElementById('isDmgMod').value) || 0;
+                if (mod) itemData.damageMod = mod;
             } else {
                 itemData.ac = parseInt(document.getElementById('isAC').value) || 10;
             }
