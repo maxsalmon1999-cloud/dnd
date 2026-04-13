@@ -4079,10 +4079,36 @@
             return data;
         }
 
+        function repairJsonString(raw) {
+            let s = raw;
+            // Strip JS-style single-line comments (not inside strings — best-effort)
+            s = s.replace(/^\s*\/\/.*$/gm, '');
+            // Remove trailing commas before } or ]
+            s = s.replace(/,\s*([\]}])/g, '$1');
+            // Fix unescaped newlines inside strings: replace literal newlines between
+            // unmatched quotes with \\n. Walk char-by-char to be safe.
+            let out = '', inStr = false, escaped = false;
+            for (let i = 0; i < s.length; i++) {
+                const ch = s[i];
+                if (escaped) { out += ch; escaped = false; continue; }
+                if (ch === '\\') { out += ch; escaped = true; continue; }
+                if (ch === '"') { inStr = !inStr; out += ch; continue; }
+                if (inStr && (ch === '\n' || ch === '\r')) {
+                    out += '\\n'; continue;
+                }
+                out += ch;
+            }
+            return out;
+        }
+
         function parseJsonObjectFromText(text) {
             const match = String(text || '').match(/\{[\s\S]*\}/);
             if (!match) throw new Error('Could not parse JSON from model response');
-            return JSON.parse(match[0]);
+            // Try strict parse first, then attempt repair
+            try { return JSON.parse(match[0]); } catch (_) { /* fall through */ }
+            try { return JSON.parse(repairJsonString(match[0])); } catch (e) {
+                throw new Error('Could not parse JSON from model response: ' + e.message);
+            }
         }
 
         async function extractCampaignOutlinePartials(outline, fileName, titleHint) {
@@ -4133,11 +4159,21 @@ Document title hint: ${titleHint || fileName}
 
 Outline:
 ${batch}`;
-                const data = await callClaudeJson({
-                    max_tokens: 4096,
-                    messages: [{ role: 'user', content: prompt }],
-                });
-                partials.push(parseJsonObjectFromText(data.content && data.content[0] && data.content[0].text));
+                let parsed;
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    const data = await callClaudeJson({
+                        max_tokens: 4096,
+                        messages: [{ role: 'user', content: prompt }],
+                    });
+                    try {
+                        parsed = parseJsonObjectFromText(data.content && data.content[0] && data.content[0].text);
+                        break;
+                    } catch (e) {
+                        if (attempt === 1) throw e;
+                        console.warn('JSON parse failed on campaign extraction batch, retrying...', e.message);
+                    }
+                }
+                partials.push(parsed);
             }
             return partials;
         }
@@ -4237,15 +4273,21 @@ Title hint: ${titleHint || fileName}
 Extracted facts:
 ${JSON.stringify(merged)}`;
 
-            const data = await callClaudeJson({
-                max_tokens: 4096,
-                messages: [{ role: 'user', content: prompt }],
-            });
-            return normalizeStructuredCampaign(
-                parseJsonObjectFromText(data.content && data.content[0] && data.content[0].text),
-                fileName,
-                titleHint
-            );
+            let parsed;
+            for (let attempt = 0; attempt < 2; attempt++) {
+                const data = await callClaudeJson({
+                    max_tokens: 4096,
+                    messages: [{ role: 'user', content: prompt }],
+                });
+                try {
+                    parsed = parseJsonObjectFromText(data.content && data.content[0] && data.content[0].text);
+                    break;
+                } catch (e) {
+                    if (attempt === 1) throw e;
+                    console.warn('JSON parse failed on campaign synthesis, retrying...', e.message);
+                }
+            }
+            return normalizeStructuredCampaign(parsed, fileName, titleHint);
         }
 
         function buildFallbackCampaignData(merged, fileName, titleHint) {
