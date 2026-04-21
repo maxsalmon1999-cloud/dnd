@@ -5134,7 +5134,7 @@
                 removeBtn.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    openDeleteModal(key);
+                    openDeleteModal(key, item.name);
                 });
                 row.appendChild(removeBtn);
 
@@ -5169,14 +5169,11 @@
 
     let pendingDeleteItemKey = null;
 
-    function openDeleteModal(key) {
-        const inv = char && char.inventory || {};
-        const item = inv[key];
-        const itemName = item ? item.name : key;
+    function openDeleteModal(key, itemName) {
         const overlay = document.getElementById('delete-confirm-overlay');
         const input = document.getElementById('deleteModalInput');
         pendingDeleteItemKey = key;
-        document.getElementById('deleteModalItemName').textContent = itemName;
+        document.getElementById('deleteModalItemName').textContent = itemName || key;
         input.value = '';
         document.getElementById('deleteModalConfirmBtn').disabled = true;
         overlay.classList.add('visible');
