@@ -1,0 +1,1584 @@
+<!--
+  ARCHIVED: DM Dice Table + AI Dice Automation Pipeline
+  ------------------------------------------------------
+  Extracted from index.html on 2026-04-21 when the DM page's dice section
+  was replaced by the 3D-dice transparent-canvas roller (same lib as the
+  player sheet) plus a manual roll builder.
+
+  What this captured:
+    - The "Dice Table" bottom panel: per-participant columns, draggable
+      dice chips with pixel-art animated canvases, drag-to-drop dice strip,
+      manual physical-roll entry.
+    - The NPC picker modal (only used to add portions to the table).
+    - The AI-driven dice automation pipeline: AI responses could embed a
+      ```dice_request JSON block; it was parsed, optionally gated by a
+      DM-confirmation modal, then populated into the dice table. After
+      rolling, results (with hit/miss + conditional damage-on-hit logic)
+      were auto-injected back into the DM's prompt input for the next turn.
+    - The pixel-art dice renderer (D4/D6/D8/D10/D12/D20/D100) and the
+      shared animation loop used by both the strip and the chips.
+
+  This file is a static reference — it does not run standalone. To resurrect
+  the feature, copy the CSS into the <style> block of index.html, copy the
+  HTML into the DM page body, and copy the JS into the main script. Restore
+  the call sites in the AI response handler (parseDiceRequest +
+  showDiceConfirmation/populateDiceTable), in postSidebarRebuild
+  (buildCharButtons), in executeReset (clear dice table), and in the global
+  keydown handler (cancelDiceConfirmation).
+
+  Also archived here: the "Dice Automation" instruction block from
+  Prompts/dm_prompts.md — if restoring, re-add it to the System prompt.
+-->
+
+<style>
+/* ========== DICE TABLE ========== */
+.dice-table {
+    height: 25vh;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    margin: 0 4px 4px 4px;
+}
+
+.dice-table-top {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    background: #100c0e;
+    border-left: 2px solid #4a2030;
+    border-right: 2px solid #4a2030;
+}
+
+.table-surface {
+    flex: 1;
+    display: flex;
+    overflow-x: auto;
+    padding: 4px;
+    gap: 4px;
+    min-height: 0;
+    background-image:
+        repeating-conic-gradient(#100c0e 0% 25%, #140e12 0% 50%) 0 0 / 4px 4px;
+}
+
+.table-empty-msg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: #5a4048;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.table-portion {
+    background: #1a1018;
+    border: 1.5px solid #4a2030;
+    min-width: 130px;
+    max-width: 190px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.table-portion.drag-over {
+    background: #c4a44e;
+    color: #000;
+}
+
+.table-portion.drag-over .portion-header {
+    background: #c4a44e;
+    color: #000;
+    border-bottom-color: #000;
+}
+
+.portion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 6px;
+    border-bottom: 1.5px solid #4a2030;
+    font-size: 11px;
+    font-weight: bold;
+    background: #1a1018;
+    color: #c4a44e;
+}
+
+.portion-header .portion-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.portion-delete {
+    background: none;
+    border: 1px solid #4a2030;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 12px;
+    text-align: center;
+    padding: 0;
+    color: #8a6050;
+}
+
+.portion-delete:hover {
+    background: #c4a44e;
+    color: #000;
+    border-color: #c4a44e;
+}
+
+.portion-dice {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 4px;
+    align-content: flex-start;
+    overflow-y: auto;
+}
+
+/* ========== DICE CHIPS ========== */
+.dice-chip {
+    background: #1a1018;
+    border: 1.5px solid #4a2030;
+    padding: 2px 5px;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #b8a080;
+}
+
+.dice-chip.rolled {
+    background: #c4a44e;
+    color: #000;
+    border-color: #c4a44e;
+}
+
+.dice-chip .chip-pixel-die {
+    image-rendering: pixelated;
+    flex-shrink: 0;
+}
+
+.dice-chip .chip-result {
+    font-size: 11px;
+}
+
+.dice-chip .chip-remove {
+    cursor: pointer;
+    font-size: 9px;
+    margin-left: 1px;
+    opacity: 0.6;
+}
+
+.dice-chip .chip-remove:hover {
+    opacity: 1;
+}
+
+.dice-chip.dragging {
+    opacity: 0.4;
+}
+
+/* ========== RIGHT ADD PANEL ========== */
+.table-add-panel {
+    width: 130px;
+    flex-shrink: 0;
+    border-left: 1.5px solid #4a2030;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow-y: auto;
+    background: #120c10;
+}
+
+.table-add-panel h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #4a2030;
+    padding-bottom: 2px;
+    margin-bottom: 2px;
+    color: #c4a44e;
+}
+
+.add-char-btn {
+    background: #1a1018;
+    border: 1.5px solid #4a2030;
+    color: #b8a080;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.add-char-btn:hover {
+    background: #c4a44e;
+    color: #000;
+    border-color: #c4a44e;
+}
+
+.add-char-btn.add-npc {
+    border-style: dashed;
+    border-color: #5a4048;
+}
+
+/* ========== NPC PICKER MODAL ========== */
+#npcPickerBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(14,10,12,0.7);
+    z-index: 999;
+    display: none;
+}
+
+#npcPickerBackdrop.open {
+    display: block;
+}
+
+#npcPicker {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    width: 360px;
+    background: #1a1018;
+    border: 2px solid #4a2030;
+    z-index: 1000;
+    box-shadow: 3px 3px 0 #000, 0 0 20px rgba(74,32,48,0.3);
+}
+
+#npcPicker.open {
+    display: flex;
+}
+
+.npc-picker-titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 6px;
+    background: linear-gradient(180deg, #2a1520 0%, #1a1018 100%);
+    border-bottom: 1.5px solid #4a2030;
+    flex-shrink: 0;
+}
+
+.npc-picker-titlebar span {
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #c4a44e;
+}
+
+.npc-picker-close {
+    background: none;
+    border: 1px solid #4a2030;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 12px;
+    text-align: center;
+    padding: 0;
+    font-family: inherit;
+    color: #8a6050;
+}
+
+.npc-picker-close:hover {
+    background: #c4a44e;
+    color: #000;
+}
+
+.npc-picker-columns {
+    display: flex;
+    min-height: 0;
+}
+
+.npc-picker-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: 1.5px solid #4a2030;
+}
+
+.npc-picker-col:last-child {
+    border-right: none;
+}
+
+.npc-picker-col-header {
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    background: #120c10;
+    border-bottom: 1px solid #4a2030;
+    flex-shrink: 0;
+    color: #8a6050;
+}
+
+.npc-picker-col-list {
+    overflow-y: auto;
+    max-height: 240px;
+}
+
+.npc-picker-section {
+    font-size: 9px;
+    text-transform: uppercase;
+    padding: 2px 8px 1px;
+    color: #5a4048;
+    background: #1a1018;
+    border-bottom: 1px solid #2a1520;
+}
+
+.npc-picker-name {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #2a1520;
+    padding: 4px 10px;
+    font-family: inherit;
+    font-size: 10px;
+    text-align: left;
+    cursor: pointer;
+    color: #b8a080;
+}
+
+.npc-picker-name:hover {
+    background: #c4a44e;
+    color: #000;
+}
+
+.npc-picker-custom {
+    display: flex;
+    border-top: 1.5px solid #4a2030;
+    flex-shrink: 0;
+}
+
+.npc-picker-custom input {
+    flex: 1;
+    border: none;
+    padding: 4px 6px;
+    font-family: inherit;
+    font-size: 10px;
+    outline: none;
+    background: #100c0e;
+    color: #b8a080;
+    min-width: 0;
+}
+
+.npc-picker-custom input::placeholder {
+    color: #5a4048;
+}
+
+.npc-picker-custom button {
+    background: #1a1018;
+    border: none;
+    border-left: 1px solid #4a2030;
+    padding: 4px 8px;
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+    color: #c4a44e;
+}
+
+.npc-picker-custom button:hover {
+    background: #c4a44e;
+    color: #000;
+}
+
+/* ========== DICE STRIP + SYMBOLS ========== */
+.dice-strip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border: 2px solid #4a2030;
+    border-top: none;
+    background: #120c10;
+    flex-shrink: 0;
+}
+
+.dice-strip-label {
+    font-size: 10px;
+    font-weight: bold;
+    margin-right: 2px;
+    color: #8a6050;
+}
+
+.die-sym {
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid #4a2030;
+    background: #1a1018;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    position: relative;
+}
+
+.die-sym canvas {
+    image-rendering: pixelated;
+}
+
+.die-sym .die-label {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 7px;
+    font-weight: bold;
+    color: #8a6050;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.die-sym:hover .die-label {
+    color: #c4a44e;
+}
+
+.die-sym:hover {
+    background: #2a1828;
+    border-color: #c4a44e;
+}
+
+.die-sym.dragging {
+    opacity: 0.4;
+}
+
+.portion-manual {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 4px;
+    border-top: 1px dashed #4a2030;
+    background: #100c0e;
+}
+
+.portion-manual .manual-die-select {
+    background: #1a1018;
+    color: #c8b070;
+    border: 1.5px solid #4a2030;
+    font-size: 9px;
+    font-family: inherit;
+    padding: 1px 2px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.portion-manual .manual-die-value {
+    background: #1a1018;
+    color: #c8b070;
+    border: 1.5px solid #4a2030;
+    font-size: 9px;
+    font-family: inherit;
+    padding: 1px 3px;
+    width: 28px;
+    height: 20px;
+    text-align: center;
+    -moz-appearance: textfield;
+}
+
+.portion-manual .manual-die-value::-webkit-inner-spin-button,
+.portion-manual .manual-die-value::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.portion-manual .manual-add-btn {
+    font-size: 9px;
+    padding: 1px 5px;
+    margin-left: auto;
+}
+
+.dice-chip .chip-sides {
+    font-size: 8px;
+    color: #8a6050;
+    margin-left: -2px;
+}
+
+.dice-chip.rolled .chip-sides {
+    color: #000;
+    opacity: 0.5;
+}
+
+/* ========== DICE AUTOMATION STATES ========== */
+.dice-chip .chip-label {
+    font-size: 8px;
+    color: #8a6050;
+    max-width: 65px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dice-chip.rolled .chip-label {
+    color: #000;
+    opacity: 0.6;
+}
+
+.dice-chip .chip-modifier {
+    font-size: 9px;
+    color: #c4a44e;
+    font-weight: bold;
+}
+
+.dice-chip.rolled .chip-modifier {
+    color: #000;
+}
+
+.dice-chip.conditional {
+    opacity: 0.35;
+    border-style: dashed;
+}
+
+.dice-chip.conditional.active {
+    opacity: 1;
+    border-style: solid;
+}
+
+.dice-chip.rolled.hit {
+    background: #4a8c3f;
+    border-color: #4a8c3f;
+    color: #e0ffe0;
+}
+
+.dice-chip.rolled.hit .chip-result,
+.dice-chip.rolled.hit .chip-modifier,
+.dice-chip.rolled.hit .chip-sides,
+.dice-chip.rolled.hit .chip-label {
+    color: #e0ffe0;
+}
+
+.dice-chip.rolled.miss {
+    background: #8c3f3f;
+    border-color: #8c3f3f;
+    color: #ffe0e0;
+}
+
+.dice-chip.rolled.miss .chip-result,
+.dice-chip.rolled.miss .chip-modifier,
+.dice-chip.rolled.miss .chip-sides,
+.dice-chip.rolled.miss .chip-label {
+    color: #ffe0e0;
+}
+
+.dice-chip.rolled.skipped {
+    opacity: 0.25;
+    text-decoration: line-through;
+}
+
+/* Result injection flash */
+#promptInput.results-injected {
+    border-color: #c4a44e;
+    animation: flash-border 0.5s ease-in-out 3;
+}
+
+@keyframes flash-border {
+    50% { border-color: #c8b070; background: #1a1018; }
+}
+
+/* Dice confirm modal (reuses session modal styles) */
+#diceConfirmBackdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(14,10,12,0.7);
+    z-index: 999;
+}
+#diceConfirmBackdrop.open { display: block; }
+
+#diceConfirmModal {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 420px; max-width: 90vw;
+    max-height: 70vh;
+    background: #1a1018;
+    border: 2px solid #4a2030;
+    box-shadow: 4px 4px 0 #000, 0 0 20px rgba(74,32,48,0.3);
+    flex-direction: column;
+    z-index: 1000;
+}
+#diceConfirmModal.open { display: flex; }
+</style>
+
+<!-- ========== DICE TABLE WINDOW ========== -->
+<div class="dice-table mac-window" style="margin: 0 4px 4px 4px;">
+    <div class="window-title">
+        <div class="close-box"></div>
+        <div class="stripes-left"></div>
+        <span class="title-text">Dice Table</span>
+        <div class="stripes-right"></div>
+    </div>
+    <div class="dice-table-top">
+        <div class="table-surface" id="tableSurface">
+            <div class="table-empty-msg" id="tableEmptyMsg">Add characters or NPCs to start an encounter</div>
+        </div>
+        <div class="table-add-panel">
+            <h3>Add to Table</h3>
+            <div id="charButtons"></div>
+            <button class="add-char-btn add-npc" onclick="toggleNpcPicker()">+ NPC / Enemy</button>
+        </div>
+    </div>
+    <div class="dice-strip">
+        <span class="dice-strip-label">Dice:</span>
+        <div class="die-sym" draggable="true" data-sides="4"></div>
+        <div class="die-sym" draggable="true" data-sides="6"></div>
+        <div class="die-sym" draggable="true" data-sides="8"></div>
+        <div class="die-sym" draggable="true" data-sides="10"></div>
+        <div class="die-sym" draggable="true" data-sides="12"></div>
+        <div class="die-sym" draggable="true" data-sides="20"></div>
+        <div class="die-sym" draggable="true" data-sides="100"></div>
+        <button class="mac-btn" id="rollAllBtn" onclick="rollAll()" disabled style="margin-left:auto;">Roll All</button>
+    </div>
+</div>
+
+<!-- ========== NPC PICKER MODAL ========== -->
+<div id="npcPickerBackdrop" onclick="closeNpcPicker()"></div>
+<div id="npcPicker">
+    <div class="npc-picker-titlebar">
+        <span>Pick NPC / Enemy</span>
+        <button class="npc-picker-close" onclick="closeNpcPicker()">&times;</button>
+    </div>
+    <div class="npc-picker-columns">
+        <div class="npc-picker-col">
+            <div class="npc-picker-col-header">NPCs</div>
+            <div class="npc-picker-col-list" id="npcPickerNpcs"></div>
+        </div>
+        <div class="npc-picker-col">
+            <div class="npc-picker-col-header">Enemies</div>
+            <div class="npc-picker-col-list" id="npcPickerEnemies"></div>
+        </div>
+    </div>
+    <div class="npc-picker-custom">
+        <input id="npcCustomInput" type="text" placeholder="Custom name..." onkeydown="npcCustomKey(event)">
+        <button onclick="addCustomNpc()">Add</button>
+    </div>
+</div>
+
+<!-- ========== DICE CONFIRM MODAL ========== -->
+<div id="diceConfirmBackdrop" onclick="cancelDiceConfirmation()"></div>
+<div id="diceConfirmModal">
+    <div class="session-modal-titlebar">
+        <span>DM Confirmation Needed</span>
+        <button class="session-modal-close" onclick="cancelDiceConfirmation()">&times;</button>
+    </div>
+    <div class="session-modal-body">
+        <div id="diceConfirmQuestions"></div>
+    </div>
+    <div class="session-modal-footer">
+        <button onclick="cancelDiceConfirmation()">Skip &amp; Load Anyway</button>
+        <button class="btn-save" onclick="submitDiceConfirmation()">Confirm &amp; Load Dice</button>
+    </div>
+</div>
+
+<script>
+/* ========== MODULE-LEVEL VARIABLES ==========
+   Originally declared in index.html's main script:
+     const tableSurface   = document.getElementById('tableSurface');
+     const tableEmptyMsg  = document.getElementById('tableEmptyMsg');
+     const charButtonsEl  = document.getElementById('charButtons');
+     let   pendingDiceRequest = null;
+   ============================================ */
+
+/* ========== PIXEL ART DICE RENDERER (dark fantasy palette) ========== */
+const PX = 2;
+
+const C = {
+    outline:    '#5a5040',
+    outlineDim: '#4a4030',
+    face:       '#0d0b08',
+    faceLight:  '#12100c',
+    dot:        '#c4a44e',
+    dotDim:     '#6a5e48',
+    text:       '#c4a44e',
+    textDim:    '#6a5e48',
+};
+
+// Rolled palette (amber/gold on dark)
+const CI = {
+    outline:    '#090c10',
+    outlineDim: '#6a5030',
+    face:       '#c4a44e',
+    faceLight:  '#b89840',
+    dot:        '#090c10',
+    dotDim:     '#5a4020',
+    text:       '#090c10',
+    textDim:    '#5a4020',
+};
+
+function px(ctx, x, y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x * PX, y * PX, PX, PX);
+}
+
+function drawD4(ctx, frame, rolled, value, inv) {
+    const p = inv ? CI : C;
+    const f = frame % 4;
+    const oc = rolled ? p.outline : p.outlineDim;
+    const fc = p.face;
+    const tc = rolled ? p.text : p.textDim;
+    ctx.clearRect(0, 0, 32, 32);
+    const offY = [0, -1, 0, 1][f];
+    for (let row = 0; row < 10; row++) {
+        const half = Math.floor(row * 0.7);
+        for (let col = 7 - half; col <= 8 + half; col++)
+            px(ctx, col, 4 + row + offY, fc);
+    }
+    for (let row = 0; row < 10; row++) {
+        const half = Math.floor(row * 0.7);
+        px(ctx, 7 - half, 4 + row + offY, oc);
+        px(ctx, 8 + half, 4 + row + offY, oc);
+    }
+    for (let col = 1; col <= 14; col++) px(ctx, col, 13 + offY, oc);
+    if (rolled && value != null) drawPixelNum(ctx, value, 7, 8 + offY, tc);
+}
+
+function drawD6(ctx, frame, rolled, value, inv) {
+    const p = inv ? CI : C;
+    const f = frame % 4;
+    const oc = rolled ? p.outline : p.outlineDim;
+    const fc = p.face;
+    const dc = rolled ? p.dot : p.dotDim;
+    ctx.clearRect(0, 0, 32, 32);
+    const offX = [0, 1, 0, -1][f];
+    for (let y = 3; y <= 13; y++)
+        for (let x = 3; x <= 13; x++)
+            px(ctx, x + offX, y, fc);
+    for (let i = 3; i <= 13; i++) {
+        px(ctx, i + offX, 3, oc); px(ctx, i + offX, 13, oc);
+        px(ctx, 3 + offX, i, oc); px(ctx, 13 + offX, i, oc);
+    }
+    if (rolled && value != null) {
+        drawPixelNum(ctx, value, 7 + offX, 7, dc);
+    } else {
+        const dots = [[5,5],[8,8],[11,11],[5,11],[11,5],[8,5]][f % 3];
+        px(ctx, dots[0] + offX, dots[1], dc);
+    }
+}
+
+function drawD8(ctx, frame, rolled, value, inv) {
+    const p = inv ? CI : C;
+    const f = frame % 4;
+    const oc = rolled ? p.outline : p.outlineDim;
+    const fc = p.face;
+    const tc = rolled ? p.text : p.textDim;
+    ctx.clearRect(0, 0, 32, 32);
+    const rot = [0, 1, 0, -1][f];
+    for (let row = 0; row < 12; row++) {
+        const half = row < 6 ? row : 11 - row;
+        for (let col = 7 - half; col <= 8 + half; col++)
+            px(ctx, col + rot, 2 + row, fc);
+        px(ctx, 7 - half + rot, 2 + row, oc);
+        px(ctx, 8 + half + rot, 2 + row, oc);
+    }
+    if (rolled && value != null) drawPixelNum(ctx, value, 7 + rot, 7, tc);
+}
+
+function drawD10(ctx, frame, rolled, value, inv) {
+    const p = inv ? CI : C;
+    const f = frame % 4;
+    const oc = rolled ? p.outline : p.outlineDim;
+    const fc = p.face;
+    const tc = rolled ? p.text : p.textDim;
+    ctx.clearRect(0, 0, 32, 32);
+    const offY = [0, -1, 0, 1][f];
+    for (let row = 0; row < 13; row++) {
+        const half = row < 5 ? row : Math.max(0, Math.floor((12 - row) * 1.2));
+        for (let col = 7 - half; col <= 8 + half; col++)
+            px(ctx, col, 2 + row + offY, fc);
+        px(ctx, 7 - half, 2 + row + offY, oc);
+        px(ctx, 8 + half, 2 + row + offY, oc);
+    }
+    if (rolled && value != null) drawPixelNum(ctx, value, 7, 7 + offY, tc);
+}
+
+function drawD12(ctx, frame, rolled, value, inv) {
+    const p = inv ? CI : C;
+    const f = frame % 4;
+    const oc = rolled ? p.outline : p.outlineDim;
+    const fc = p.face;
+    const tc = rolled ? p.text : p.textDim;
+    ctx.clearRect(0, 0, 32, 32);
+    const rot = [0, 1, 0, -1][f];
+    // Pentagon: pointed top, flat bottom
+    const shape = [
+        [7,8],[5,10],[4,11],[3,12],
+        [2,13],[2,13],[2,13],[2,13],
+        [3,12],[4,11],[4,11],[4,11]
+    ];
+    shape.forEach(([l, r], i) => {
+        const y = 2 + i;
+        const isFlat = i === 0 || i === shape.length - 1;
+        for (let x = l; x <= r; x++)
+            px(ctx, x + rot, y, (isFlat || x === l || x === r) ? oc : fc);
+    });
+    if (rolled && value != null) drawPixelNum(ctx, value, 7 + rot, 7, tc);
+}
+
+function drawD20(ctx, frame, rolled, value, inv) {
+    const p = inv ? CI : C;
+    const f = frame % 4;
+    const oc = rolled ? p.outline : p.outlineDim;
+    const fc = p.face;
+    const tc = rolled ? p.text : p.textDim;
+    const hc = p.faceLight;
+    ctx.clearRect(0, 0, 32, 32);
+    const offY = [0, -1, 0, 1][f];
+    // Octagon: flat top AND flat bottom
+    const shape = [
+        [5,10],[3,12],
+        [2,13],[2,13],[2,13],[2,13],[2,13],[2,13],[2,13],[2,13],
+        [3,12],[5,10]
+    ];
+    shape.forEach(([l, r], i) => {
+        const y = 2 + i + offY;
+        const isFlat = i === 0 || i === shape.length - 1;
+        for (let x = l; x <= r; x++)
+            px(ctx, x, y, (isFlat || x === l || x === r) ? oc : (i < 5 ? hc : fc));
+    });
+    if (rolled && value != null) drawPixelNum(ctx, value, 7, 7 + offY, tc);
+}
+
+function drawD100(ctx, frame, rolled, value, inv) {
+    const p = inv ? CI : C;
+    const f = frame % 4;
+    const oc = rolled ? p.outline : p.outlineDim;
+    const fc = p.face;
+    const tc = rolled ? p.text : p.textDim;
+    ctx.clearRect(0, 0, 32, 32);
+    const offX = [0, 1, 0, -1][f];
+    const cx1 = 6 + offX, cy1 = 8, cx2 = 10 + offX, cy2 = 8, r = 5;
+    for (let y = 1; y <= 15; y++) {
+        for (let x = 1; x <= 15; x++) {
+            const d1 = Math.sqrt((x-cx1)**2 + (y-cy1)**2);
+            const d2 = Math.sqrt((x-cx2)**2 + (y-cy2)**2);
+            if (d1 <= r || d2 <= r) {
+                const onEdge1 = Math.abs(d1 - r) < 1.0;
+                const onEdge2 = Math.abs(d2 - r) < 1.0;
+                if (onEdge1 || onEdge2) px(ctx, x, y, oc);
+                else px(ctx, x, y, fc);
+            }
+        }
+    }
+    if (rolled && value != null) drawPixelNum(ctx, value, 8 + offX, 8, tc);
+}
+
+const DIGITS = {
+    0: [0b111,0b101,0b101,0b101,0b111],
+    1: [0b010,0b110,0b010,0b010,0b111],
+    2: [0b111,0b001,0b111,0b100,0b111],
+    3: [0b111,0b001,0b111,0b001,0b111],
+    4: [0b101,0b101,0b111,0b001,0b001],
+    5: [0b111,0b100,0b111,0b001,0b111],
+    6: [0b111,0b100,0b111,0b101,0b111],
+    7: [0b111,0b001,0b010,0b010,0b010],
+    8: [0b111,0b101,0b111,0b101,0b111],
+    9: [0b111,0b101,0b111,0b001,0b111],
+};
+
+function drawPixelNum(ctx, num, cx, cy, color) {
+    const s = String(num);
+    const totalW = s.length * 4 - 1;
+    let startX = cx - Math.floor(totalW / 2);
+    for (let d = 0; d < s.length; d++) {
+        const glyph = DIGITS[s[d]];
+        if (!glyph) continue;
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 3; col++) {
+                if (glyph[row] & (1 << (2 - col)))
+                    px(ctx, startX + col, cy - 2 + row, color);
+            }
+        }
+        startX += 4;
+    }
+}
+
+const drawFns = {
+    4: drawD4, 6: drawD6, 8: drawD8, 10: drawD10,
+    12: drawD12, 20: drawD20, 100: drawD100
+};
+
+function drawDie(ctx, sides, frame, rolled, value, inv) {
+    (drawFns[sides] || drawD6)(ctx, frame, rolled, value, inv);
+}
+
+/* ========== ANIMATION LOOP ========== */
+const FPS = 4;
+let globalFrame = 0;
+let animCanvases = [];
+
+function registerAnim(canvas, sides, getRolled, getValue, getInv) {
+    animCanvases.push({ canvas, sides, getRolled, getValue, getInv: getInv || (() => false) });
+}
+
+function unregisterAnim(canvas) {
+    animCanvases = animCanvases.filter(a => a.canvas !== canvas);
+}
+
+setInterval(() => {
+    globalFrame++;
+    animCanvases.forEach(a => {
+        const ctx = a.canvas.getContext('2d');
+        const rolled = a.getRolled();
+        const val = a.getValue();
+        const inv = a.getInv();
+        drawDie(ctx, a.sides, rolled ? 0 : globalFrame, rolled, val, inv);
+    });
+}, 1000 / FPS);
+
+/* ========== INIT STRIP DICE ========== */
+document.querySelectorAll('.die-sym').forEach(die => {
+    const sides = parseInt(die.dataset.sides);
+    const c = document.createElement('canvas');
+    c.width = 32; c.height = 32;
+    c.style.width = '28px'; c.style.height = '28px';
+    die.appendChild(c);
+
+    const label = document.createElement('span');
+    label.className = 'die-label';
+    label.textContent = 'd' + sides;
+    die.appendChild(label);
+
+    let hovering = false;
+    die.addEventListener('mouseenter', () => { hovering = true; });
+    die.addEventListener('mouseleave', () => { hovering = false; });
+
+    registerAnim(c, sides, () => false, () => null, () => hovering);
+
+    die.addEventListener('dragstart', e => {
+        die.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', String(sides));
+    });
+    die.addEventListener('dragend', () => {
+        die.classList.remove('dragging');
+    });
+});
+
+/* ========== CHARACTER BUTTONS (for adding portions to the table) ========== */
+function getCharacters() {
+    return Object.entries(LOADED_CHARS).map(([key, c]) => ({
+        name: c.name, short: c.name.split(' ')[0]
+    }));
+}
+
+function buildCharButtons() {
+    charButtonsEl.innerHTML = '';
+    getCharacters().forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'add-char-btn';
+        btn.textContent = '+ ' + c.short;
+        btn.onclick = () => addPortion(c.name);
+        charButtonsEl.appendChild(btn);
+    });
+}
+// Called once at startup, and again from postSidebarRebuild()
+buildCharButtons();
+
+/* ========== DICE TABLE: PORTIONS ========== */
+function addPortion(name) {
+    tableEmptyMsg.style.display = 'none';
+    const portion = document.createElement('div');
+    portion.className = 'table-portion';
+
+    const header = document.createElement('div');
+    header.className = 'portion-header';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'portion-name';
+    nameSpan.textContent = name;
+    const delBtn = document.createElement('button');
+    delBtn.className = 'portion-delete';
+    delBtn.innerHTML = '&times;';
+    delBtn.title = 'Remove';
+    delBtn.onclick = () => {
+        portion.querySelectorAll('canvas').forEach(c => unregisterAnim(c));
+        portion.remove();
+        checkEmpty();
+    };
+    header.appendChild(nameSpan);
+    header.appendChild(delBtn);
+
+    const diceArea = document.createElement('div');
+    diceArea.className = 'portion-dice';
+    diceArea.addEventListener('dragover', e => {
+        e.preventDefault();
+        portion.classList.add('drag-over');
+    });
+    diceArea.addEventListener('dragleave', () => {
+        portion.classList.remove('drag-over');
+    });
+    diceArea.addEventListener('drop', e => {
+        e.preventDefault();
+        portion.classList.remove('drag-over');
+        const sides = e.dataTransfer.getData('text/plain');
+        if (sides) {
+            addDiceChip(diceArea, parseInt(sides), null);
+            updateRollButton();
+        }
+    });
+
+    // Manual dice input row
+    const manualRow = document.createElement('div');
+    manualRow.className = 'portion-manual';
+    manualRow.innerHTML = `
+        <select class="manual-die-select" title="Die type">
+            <option value="4">d4</option><option value="6">d6</option>
+            <option value="8">d8</option><option value="10">d10</option>
+            <option value="12">d12</option><option value="20" selected>d20</option>
+            <option value="100">d100</option>
+        </select>
+        <input type="number" class="manual-die-value" placeholder="#" min="1" title="Physical roll result">
+        <button class="mac-btn manual-add-btn" title="Add physical dice result">+</button>
+    `;
+    const manualBtn = manualRow.querySelector('.manual-add-btn');
+    const manualInput = manualRow.querySelector('.manual-die-value');
+    const manualSelect = manualRow.querySelector('.manual-die-select');
+    const doManualAdd = () => {
+        const sides = parseInt(manualSelect.value);
+        const value = parseInt(manualInput.value);
+        if (!value || value < 1 || value > sides) {
+            manualInput.style.borderColor = '#a04040';
+            setTimeout(() => manualInput.style.borderColor = '#3a3028', 800);
+            return;
+        }
+        addDiceChip(diceArea, sides, value, { label: 'Manual' });
+        updateRollButton();
+        manualInput.value = '';
+    };
+    manualBtn.onclick = doManualAdd;
+    manualInput.onkeydown = (e) => { if (e.key === 'Enter') doManualAdd(); };
+
+    portion.appendChild(header);
+    portion.appendChild(diceArea);
+    portion.appendChild(manualRow);
+    tableSurface.appendChild(portion);
+}
+
+/* ========== NPC PICKER ========== */
+function closeNpcPicker() {
+    document.getElementById('npcPicker').classList.remove('open');
+    document.getElementById('npcPickerBackdrop').classList.remove('open');
+}
+
+function toggleNpcPicker() {
+    const picker = document.getElementById('npcPicker');
+    if (picker.classList.contains('open')) { closeNpcPicker(); return; }
+
+    const makeNameBtn = (name, col) => {
+        const btn = document.createElement('button');
+        btn.className = 'npc-picker-name';
+        btn.textContent = name;
+        btn.onclick = () => { addPortion(name); closeNpcPicker(); };
+        col.appendChild(btn);
+    };
+    const makeSec = (label, col) => {
+        const s = document.createElement('div');
+        s.className = 'npc-picker-section';
+        s.textContent = label;
+        col.appendChild(s);
+    };
+
+    const npcCol = document.getElementById('npcPickerNpcs');
+    const enemyCol = document.getElementById('npcPickerEnemies');
+    npcCol.innerHTML = '';
+    enemyCol.innerHTML = '';
+
+    // DM option at the top
+    makeSec('DM', npcCol);
+    makeNameBtn(AI_ASSISTANT_NAME, npcCol);
+
+    makeSec('Campaign', npcCol);
+    CAMPAIGN_NPCS.npcs.forEach(n => makeNameBtn(n, npcCol));
+    CAMPAIGN_NPCS.enemies.forEach(n => makeNameBtn(n, enemyCol));
+
+    const noteNames = parseNamesFromNotes();
+    if (noteNames.length) {
+        makeSec('From Notes', npcCol);
+        noteNames.forEach(n => makeNameBtn(n, npcCol));
+    }
+
+    document.getElementById('npcPickerBackdrop').classList.add('open');
+    picker.classList.add('open');
+    const inp = document.getElementById('npcCustomInput');
+    inp.value = '';
+    inp.focus();
+}
+
+function addCustomNpc() {
+    const inp = document.getElementById('npcCustomInput');
+    const name = inp.value.trim();
+    if (name) { addPortion(name); closeNpcPicker(); }
+}
+
+function npcCustomKey(e) {
+    if (e.key === 'Enter') addCustomNpc();
+    if (e.key === 'Escape') closeNpcPicker();
+}
+
+/* Escape-key handler (originally in the global keydown listener):
+   if (e.key === 'Escape') { closeNpcPicker(); ...; cancelDiceConfirmation(); ... }
+*/
+
+/* ========== DICE CHIP ========== */
+function addDiceChip(container, sides, result, options) {
+    const opts = options || {};
+    const chip = document.createElement('div');
+    chip.className = 'dice-chip' + (result !== null ? ' rolled' : '');
+    if (opts.conditional) chip.classList.add('conditional');
+    chip.draggable = true;
+    chip.dataset.sides = sides;
+    chip.dataset.rolled = result !== null ? 'true' : 'false';
+    chip.dataset.value = result !== null ? result : '';
+
+    // Store automation metadata
+    if (opts.modifier !== undefined)      chip.dataset.modifier = opts.modifier;
+    if (opts.modifierBreakdown)            chip.dataset.modifierBreakdown = opts.modifierBreakdown;
+    if (opts.label)                        chip.dataset.label = opts.label;
+    if (opts.rollId)                       chip.dataset.rollId = opts.rollId;
+    if (opts.rollGroupId)                  chip.dataset.rollGroupId = opts.rollGroupId;
+    if (opts.targetValue !== undefined)    chip.dataset.targetValue = opts.targetValue;
+    if (opts.targetLabel)                  chip.dataset.targetLabel = opts.targetLabel;
+    if (opts.conditional)                  chip.dataset.conditional = opts.conditional;
+    if (opts.dependsOn)                    chip.dataset.dependsOn = opts.dependsOn;
+    if (opts.damageOnHit)                  chip.dataset.damageOnHit = opts.damageOnHit;
+    if (opts.damageType)                   chip.dataset.damageType = opts.damageType;
+
+    // Label row (e.g. "Rapier Atk")
+    if (opts.label) {
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'chip-label';
+        labelSpan.textContent = opts.label;
+        if (opts.modifierBreakdown) labelSpan.title = opts.modifierBreakdown;
+        chip.appendChild(labelSpan);
+    }
+
+    const c = document.createElement('canvas');
+    c.className = 'chip-pixel-die';
+    c.width = 32; c.height = 32;
+    c.style.width = '22px'; c.style.height = '22px';
+    chip.appendChild(c);
+
+    registerAnim(c, sides,
+        () => chip.dataset.rolled === 'true',
+        () => chip.dataset.value ? parseInt(chip.dataset.value) : null,
+        () => chip.dataset.rolled === 'true'
+    );
+
+    const sidesLabel = document.createElement('span');
+    sidesLabel.className = 'chip-sides';
+    sidesLabel.textContent = 'd' + sides;
+    chip.appendChild(sidesLabel);
+
+    // Modifier display (e.g. "+5")
+    if (opts.modifier !== undefined && opts.modifier !== 0) {
+        const modSpan = document.createElement('span');
+        modSpan.className = 'chip-modifier';
+        modSpan.textContent = (opts.modifier >= 0 ? '+' : '') + opts.modifier;
+        if (opts.modifierBreakdown) modSpan.title = opts.modifierBreakdown;
+        chip.appendChild(modSpan);
+    }
+
+    const resultSpan = document.createElement('span');
+    resultSpan.className = 'chip-result';
+    resultSpan.textContent = result !== null ? result : 'd' + sides;
+    chip.appendChild(resultSpan);
+
+    const removeSpan = document.createElement('span');
+    removeSpan.className = 'chip-remove';
+    removeSpan.title = 'Remove';
+    removeSpan.innerHTML = '&times;';
+    removeSpan.onclick = (e) => {
+        e.stopPropagation();
+        unregisterAnim(c);
+        chip.remove();
+        updateRollButton();
+    };
+    chip.appendChild(removeSpan);
+
+    chip.addEventListener('dragstart', e => {
+        chip.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', String(sides));
+        setTimeout(() => {
+            unregisterAnim(c);
+            chip.remove();
+            updateRollButton();
+        }, 0);
+    });
+    chip.addEventListener('dragend', () => {
+        chip.classList.remove('dragging');
+    });
+
+    container.appendChild(chip);
+}
+
+function getUnrolledChips() {
+    return tableSurface.querySelectorAll('.dice-chip[data-rolled="false"]');
+}
+
+function updateRollButton() {
+    document.getElementById('rollAllBtn').disabled = getUnrolledChips().length === 0;
+}
+
+function rollAll() {
+    const unrolled = getUnrolledChips();
+    if (unrolled.length === 0) return;
+    const duration = 600;
+    const tickRate = 1000 / FPS;
+    let elapsed = 0;
+    const interval = setInterval(() => {
+        elapsed += tickRate;
+        unrolled.forEach(chip => {
+            const sides = parseInt(chip.dataset.sides);
+            const tempVal = Math.floor(Math.random() * sides) + 1;
+            chip.dataset.value = tempVal;
+            chip.querySelector('.chip-result').textContent = tempVal;
+        });
+        if (elapsed >= duration) {
+            clearInterval(interval);
+            unrolled.forEach(chip => {
+                const sides = parseInt(chip.dataset.sides);
+                const result = Math.floor(Math.random() * sides) + 1;
+                chip.dataset.rolled = 'true';
+                chip.dataset.value = result;
+                chip.classList.add('rolled');
+                // Show total (value + modifier) if modifier exists
+                const mod = parseInt(chip.dataset.modifier) || 0;
+                const total = result + mod;
+                chip.dataset.total = total;
+                if (mod !== 0) {
+                    chip.querySelector('.chip-result').textContent = result + (mod >= 0 ? '+' : '') + mod + '=' + total;
+                } else {
+                    chip.querySelector('.chip-result').textContent = result;
+                }
+            });
+            updateRollButton();
+            // If any chips have automation metadata, calculate results
+            const hasAutomation = [...unrolled].some(c => c.dataset.rollId || c.dataset.rollGroupId);
+            if (hasAutomation) calculateResults();
+        }
+    }, tickRate);
+}
+
+function checkEmpty() {
+    const portions = tableSurface.querySelectorAll('.table-portion');
+    tableEmptyMsg.style.display = portions.length === 0 ? 'flex' : 'none';
+}
+
+/* Originally called from executeReset() to clear the table on session reset:
+     tableSurface.querySelectorAll('.table-portion').forEach(p => {
+         p.querySelectorAll('canvas').forEach(c => unregisterAnim(c));
+         p.remove();
+     });
+     checkEmpty();
+*/
+
+/* ========== DICE AUTOMATION — AI-driven dice loading & calculation ========== */
+
+function parseDiceRequest(responseText) {
+    const regex = /```dice_request\s*\n([\s\S]*?)\n```/;
+    const match = responseText.match(regex);
+    if (!match) return null;
+    try {
+        return JSON.parse(match[1]);
+    } catch (e) {
+        console.warn('Failed to parse dice_request JSON:', e);
+        return null;
+    }
+}
+
+function stripDiceRequest(responseText) {
+    return responseText.replace(/```dice_request\s*\n[\s\S]*?\n```/g, '').trim();
+}
+
+function populateDiceTable(diceRequest) {
+    // Clear existing table
+    tableSurface.querySelectorAll('.table-portion').forEach(p => {
+        p.querySelectorAll('canvas').forEach(c => unregisterAnim(c));
+        p.remove();
+    });
+    tableEmptyMsg.style.display = 'none';
+
+    diceRequest.participants.forEach(participant => {
+        addPortion(participant.name);
+        const portion = tableSurface.querySelector('.table-portion:last-child');
+        const diceArea = portion.querySelector('.portion-dice');
+
+        participant.rolls.forEach(roll => {
+            const parts = roll.dice.split('d');
+            const count = parseInt(parts[0]) || 1;
+            const sides = parseInt(parts[1]);
+
+            for (let i = 0; i < count; i++) {
+                addDiceChip(diceArea, sides, null, {
+                    modifier: (i === 0) ? (roll.modifier || 0) : 0,
+                    modifierBreakdown: roll.modifier_breakdown || '',
+                    label: roll.label || '',
+                    rollId: roll.id + (count > 1 ? '_' + i : ''),
+                    rollGroupId: roll.id,
+                    targetValue: roll.target_value,
+                    targetLabel: roll.target_label || '',
+                    conditional: roll.conditional || '',
+                    dependsOn: roll.depends_on || '',
+                    damageOnHit: roll.damage_on_hit || '',
+                    damageType: roll.damage_type || '',
+                });
+            }
+        });
+    });
+
+    updateRollButton();
+    document.querySelector('.dice-table').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function calculateResults() {
+    const allChips = tableSurface.querySelectorAll('.dice-chip[data-rolled="true"]');
+    const groups = {};
+
+    // First pass: group chips by rollGroupId
+    allChips.forEach(chip => {
+        const groupId = chip.dataset.rollGroupId || chip.dataset.rollId;
+        if (!groupId) return;
+        if (!groups[groupId]) groups[groupId] = { chips: [], modifier: 0, meta: {} };
+        groups[groupId].chips.push(chip);
+        const mod = parseInt(chip.dataset.modifier) || 0;
+        if (mod !== 0 && groups[groupId].modifier === 0) groups[groupId].modifier = mod;
+        ['label','targetValue','targetLabel','conditional','dependsOn','damageOnHit','damageType']
+            .forEach(k => { if (chip.dataset[k]) groups[groupId].meta[k] = chip.dataset[k]; });
+    });
+
+    // Second pass: calculate totals and hits
+    const rollValues = {};
+    for (const [groupId, group] of Object.entries(groups)) {
+        const rawSum = group.chips.reduce((sum, c) => sum + parseInt(c.dataset.value), 0);
+        const total = rawSum + group.modifier;
+        const target = parseInt(group.meta.targetValue) || null;
+        const hit = target ? total >= target : null;
+        rollValues[groupId] = { rawSum, modifier: group.modifier, total, hit, meta: group.meta, chips: group.chips };
+    }
+
+    // Third pass: resolve conditionals and apply CSS
+    for (const [groupId, rv] of Object.entries(rollValues)) {
+        if (rv.meta.conditional === 'on_hit' && rv.meta.dependsOn) {
+            const parent = rollValues[rv.meta.dependsOn];
+            if (parent && !parent.hit) {
+                rv.skipped = true;
+                rv.chips.forEach(c => c.classList.add('skipped'));
+                continue;
+            } else {
+                rv.chips.forEach(c => { c.classList.remove('conditional'); c.classList.add('active'); });
+            }
+        }
+        if (rv.hit === true)  rv.chips.forEach(c => c.classList.add('hit'));
+        if (rv.hit === false) rv.chips.forEach(c => c.classList.add('miss'));
+    }
+
+    // Format and inject
+    const resultText = formatDiceResults(rollValues);
+    if (resultText) injectResults(resultText);
+}
+
+function formatDiceResults(rollValues) {
+    // Group results by portion (participant)
+    const portions = tableSurface.querySelectorAll('.table-portion');
+    const lines = [];
+
+    portions.forEach(portion => {
+        const name = portion.querySelector('.portion-name').textContent;
+        const chips = portion.querySelectorAll('.dice-chip[data-rolled="true"]');
+        if (chips.length === 0) return;
+
+        // Collect results for this portion's roll groups
+        const seen = new Set();
+        const parts = [];
+
+        chips.forEach(chip => {
+            const groupId = chip.dataset.rollGroupId || chip.dataset.rollId;
+            if (!groupId || seen.has(groupId)) return;
+            seen.add(groupId);
+
+            const rv = rollValues[groupId];
+            if (!rv) return;
+
+            const label = rv.meta.label || 'Roll';
+            const diceStr = rv.chips.length > 1
+                ? rv.chips.map(c => c.dataset.value).join('+')
+                : String(rv.rawSum);
+            const modStr = rv.modifier !== 0
+                ? (rv.modifier > 0 ? '+' + rv.modifier : String(rv.modifier))
+                : '';
+
+            if (rv.skipped) {
+                parts.push(`${label}: [skipped — miss]`);
+            } else if (rv.hit === true) {
+                parts.push(`${label}: ${diceStr}${modStr}=${rv.total} (HIT vs ${rv.meta.targetLabel || 'AC ' + rv.meta.targetValue})`);
+            } else if (rv.hit === false) {
+                parts.push(`${label}: ${diceStr}${modStr}=${rv.total} (MISS vs ${rv.meta.targetLabel || 'AC ' + rv.meta.targetValue})`);
+            } else {
+                // No target (damage, healing, etc.)
+                const typeStr = rv.meta.damageType ? ' ' + rv.meta.damageType : '';
+                parts.push(`${label}: ${diceStr}${modStr}=${rv.total}${typeStr}`);
+            }
+        });
+
+        if (parts.length > 0) {
+            lines.push(`${name}: ${parts.join('. ')}.`);
+        }
+    });
+
+    return lines.join('\n');
+}
+
+function injectResults(resultText) {
+    promptInput.value = resultText;
+    promptInput.focus();
+    promptInput.classList.add('results-injected');
+    setTimeout(() => promptInput.classList.remove('results-injected'), 2000);
+}
+
+/* ========== DICE CONFIRMATION MODAL ========== */
+function showDiceConfirmation(diceRequest) {
+    pendingDiceRequest = diceRequest;
+    const container = document.getElementById('diceConfirmQuestions');
+    container.innerHTML = '';
+
+    diceRequest.confirmations.forEach((q, i) => {
+        const div = document.createElement('div');
+        div.style.marginBottom = '8px';
+        div.innerHTML = '<div class="session-modal-label">' + escapeHtml(q) + '</div>' +
+            '<input type="text" class="confirm-answer" data-index="' + i + '" ' +
+            'placeholder="Your answer..." style="width:100%;background:#0d0b08;border:1.5px solid #3a3028;color:#ccc8d8;padding:4px 6px;font-family:inherit;font-size:11px;">';
+        container.appendChild(div);
+    });
+
+    document.getElementById('diceConfirmBackdrop').classList.add('open');
+    document.getElementById('diceConfirmModal').classList.add('open');
+    const first = container.querySelector('.confirm-answer');
+    if (first) first.focus();
+}
+
+function submitDiceConfirmation() {
+    const answers = [];
+    document.querySelectorAll('.confirm-answer').forEach(input => {
+        answers.push(input.value.trim());
+    });
+
+    const answerText = pendingDiceRequest.confirmations
+        .map((q, i) => 'Q: ' + q + '\nA: ' + (answers[i] || '(no answer)'))
+        .join('\n');
+
+    closeDiceConfirmation();
+    promptInput.value = '[DM Clarification]\n' + answerText + '\n\nPlease revise the dice request with these answers.';
+    sendPrompt();
+}
+
+function closeDiceConfirmation() {
+    document.getElementById('diceConfirmModal').classList.remove('open');
+    document.getElementById('diceConfirmBackdrop').classList.remove('open');
+}
+
+function cancelDiceConfirmation() {
+    closeDiceConfirmation();
+    // Still populate the table with what we have
+    if (pendingDiceRequest) {
+        populateDiceTable(pendingDiceRequest);
+        pendingDiceRequest = null;
+    }
+}
+
+/* ========== AI RESPONSE HOOK (originally in sendPrompt / response handler) ========== */
+/*
+    // Check for dice automation request
+    const diceRequest = parseDiceRequest(fullReply);
+    const cleanReply  = stripDiceRequest(fullReply);
+    addStoryEntry('assistant', AI_ASSISTANT_NAME, cleanReply, currentMode);
+
+    if (diceRequest) {
+        if (diceRequest.confirmations && diceRequest.confirmations.length > 0) {
+            showDiceConfirmation(diceRequest);
+        } else {
+            populateDiceTable(diceRequest);
+        }
+    }
+*/
+
+/* ========== CLICK-SOUND SELECTORS (from click-sound selector list) ==========
+   The following were removed from the click-sound SEL list when this feature
+   was archived (they played the "clunk" button sound on click):
+     '[onclick*="rollAll"]'
+     '[onclick*="closeNpcPicker"]'
+     '[onclick*="addCustomNpc"]'
+     '[onclick*="submitDiceConfirmation"]'
+     '[onclick*="cancelDiceConfirmation"]'
+     '.chip-remove'
+     '.portion-delete'
+*/
+</script>
+
+<!-- ========== DICE AUTOMATION PROMPT (removed from Prompts/dm_prompts.md) ==========
+     This section of the System prompt instructed the AI to emit
+     ```dice_request blocks. Removed when the pipeline was archived.
+
+### Dice Automation
+
+When a situation requires dice rolls (combat, skill checks, saving throws, ability checks, initiative),
+include a structured dice request block at the END of your response after all narrative text. Format it
+as a fenced code block tagged `dice_request` containing valid JSON.
+
+**When to include a dice request:**
+- Any attack roll, damage roll, or combat action
+- Skill checks (Perception, Stealth, Persuasion, etc.)
+- Saving throws
+- Initiative rolls at the start of combat
+- Contested checks
+
+**When NOT to include a dice request:**
+- Pure narrative or description with no mechanical resolution needed
+- When the DM has already provided roll results in their prompt
+- When describing the outcome of rolls that were already resolved
+- In Description mode
+
+**JSON structure:**
+```json
+{
+  "type": "combat" | "skill_check" | "saving_throw" | "ability_check" | "initiative",
+  "context": "Brief one-sentence description of the situation",
+  "participants": [
+    {
+      "name": "Character short name",
+      "rolls": [
+        {
+          "id": "unique_snake_case_id",
+          "label": "Human-readable label",
+          "dice": "NdS format (for example 1d20 or 2d6)",
+          "modifier": 5,
+          "modifier_breakdown": "for example DEX +3, Prof +2",
+          "target_value": 14,
+          "target_label": "Enemy AC",
+          "damage_type": "slashing",
+          "conditional": "on_hit",
+          "depends_on": "attack_roll_id",
+          "damage_on_hit": "damage_roll_id"
+        }
+      ]
+    }
+  ],
+  "confirmations": []
+}
+```
+
+**Important:** Calculate modifiers from the supplied character data whenever possible. If a key detail
+is genuinely ambiguous, add a question to the `confirmations` array instead of guessing blindly.
+
+(The Rules prompt also had: "- Do not include dice_request blocks." and the Action prompt had:
+ "- When the DM provides dice roll results, narrate the outcome from those numbers and do not include
+ a new dice_request block." — both removed along with this section.)
+============================================================================= -->
