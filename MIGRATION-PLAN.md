@@ -25,8 +25,18 @@
 **Remaining Phase 0 item (needs owner):** wiring up deployment to Cloudflare. This publishes
 publicly and uses your account, so it's left for you to approve/configure.
 
-**Next:** Phase 1 — write down the Firebase game-state shape and build the Zustand store + a
-real AI client (with streaming).
+**Phase 1 — DONE.** Completed:
+- Documented the live Firebase game-state shape → `react/DATA-MODEL.md` (captured from the
+  real database, incl. the unused `campaignRag` node, flagged out of scope).
+- Built the Zustand store + Firebase live connection → `react/src/store/gameStore.js`
+  (mirrors characterSheets/characters/campaign/request-queues; core write helpers incl. a
+  transaction-backed HP change).
+- Built the real AI client with streaming → `react/src/lib/ai.js` (SSE + token-usage tracking).
+- Verified against the real backend: the DM screen renders the live roster (read), an HP
+  change round-tripped 21→20→21 through a Firebase transaction (write + live sync), and a
+  streaming AI call returned correctly with usage reported. No console errors.
+
+**Next:** Phase 2 — rebuild the player screen, component by component, on top of this store.
 
 ---
 
