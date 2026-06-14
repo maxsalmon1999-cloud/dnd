@@ -1,0 +1,20 @@
+:root {
+  font-family: 'Geneva', 'Chicago', 'Monaco', 'Courier New', monospace;
+  color: #b8a080;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #0e0a0c;
+  background-image: radial-gradient(ellipse at center, #150e12 0%, #0e0a0c 60%);
+  color: #b8a080;
+}
+
+a {
+  color: #c4a44e;
+}
