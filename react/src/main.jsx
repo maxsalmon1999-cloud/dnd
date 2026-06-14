@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import Home from './routes/Home'
 import DmScreen from './routes/DmScreen'
-import PlayerScreen from './routes/PlayerScreen'
+import PlayerApp from './player/PlayerApp'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -12,7 +12,7 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/dm" element={<DmScreen />} />
-        <Route path="/play" element={<PlayerScreen />} />
+        <Route path="/play" element={<PlayerApp />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

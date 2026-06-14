@@ -81,4 +81,82 @@ export const useGameStore = create((store, get) => ({
   removeAt(path) {
     return remove(ref(db, path))
   },
+
+  // ---- player-screen write helpers ----
+
+  // Active conditions: stored as characters/{key}/conditions/{Name_with_underscores} = true.
+  setCondition(key, name, on) {
+    const nodeKey = name.replace(/ /g, '_')
+    const path = `characters/${key}/conditions/${nodeKey}`
+    return on ? fbSet(ref(db, path), true) : remove(ref(db, path))
+  },
+
+  // Proficiency arrays (saving throws / skills). Stored as null when empty.
+  setProficiencies(key, field, arr) {
+    return fbSet(ref(db, `characters/${key}/${field}`), arr.length ? arr : null)
+  },
+
+  // Active ability "used" count.
+  setAbilityUsed(key, abilityKey, used) {
+    return fbSet(ref(db, `characters/${key}/abilities/${abilityKey}`), used)
+  },
+
+  // Spell-slot pip toggle. slotId is like "w_0" or "1_2".
+  setSlotSpent(key, slotId, spent) {
+    return fbSet(ref(db, `characters/${key}/slots/${slotId}`), spent)
+  },
+
+  // Notes (player calls this debounced).
+  saveNotes(key, text) {
+    return fbSet(ref(db, `characters/${key}/notes`), text || null)
+  },
+
+  // Roll history (capped, newest first).
+  persistRollHistory(key, entries) {
+    return fbSet(ref(db, `characters/${key}/rollHistory`), entries)
+  },
+
+  // Inventory: add / remove items.
+  addInventoryItem(key, item) {
+    return push(ref(db, `characters/${key}/inventory`), item)
+  },
+  removeInventoryItem(key, itemKey) {
+    // Also clear any pending requests for this item.
+    const reqs = get().inventoryRequests[key] || {}
+    Object.entries(reqs).forEach(([rid, r]) => {
+      if (r.itemKey === itemKey) remove(ref(db, `inventoryRequests/${key}/${rid}`))
+    })
+    return remove(ref(db, `characters/${key}/inventory/${itemKey}`))
+  },
+
+  // Inventory quantity request (player -> DM). Accumulates onto an existing
+  // pending request for the same item; removes it if the net delta hits 0.
+  adjustInventoryRequest(key, item, itemKey, deltaStep) {
+    const reqs = get().inventoryRequests[key] || {}
+    const existing = Object.entries(reqs).find(([, r]) => r.itemKey === itemKey)
+    if (existing) {
+      const [rid, r] = existing
+      const newDelta = (r.delta || 0) + deltaStep
+      if (newDelta === 0) return remove(ref(db, `inventoryRequests/${key}/${rid}`))
+      return update(ref(db, `inventoryRequests/${key}/${rid}`), { delta: newDelta })
+    }
+    return push(ref(db, `inventoryRequests/${key}`), {
+      itemKey,
+      itemName: item.name,
+      currentAmount: item.amount ?? 1,
+      delta: deltaStep,
+      timestamp: serverTimestamp(),
+    })
+  },
+
+  // Gold change request (player -> DM).
+  requestGoldChange(key, charName, currentGold, delta) {
+    return push(ref(db, `goldRequests/${key}`), {
+      charKey: key,
+      charName,
+      currentGold: currentGold ?? 0,
+      delta,
+      timestamp: serverTimestamp(),
+    })
+  },
 }))

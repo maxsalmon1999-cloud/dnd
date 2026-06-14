@@ -36,7 +36,27 @@ publicly and uses your account, so it's left for you to approve/configure.
   change round-tripped 21→20→21 through a Firebase transaction (write + live sync), and a
   streaming AI call returned correctly with usage reported. No console errors.
 
-**Next:** Phase 2 — rebuild the player screen, component by component, on top of this store.
+**Phase 2 — DONE (player screen).** Built on the Phase 1 store, verified against live data:
+- Character **select screen** (real roster + class icons).
+- **Player screen** with mobile 3-tab layout + desktop 3-column layout (responsive).
+- **Stats:** HP (+/- transaction), core stats, ability-score checks, saving throws (prof
+  toggle, max 2), conditions (15, live toggle + descriptions).
+- **Character:** abilities (cast/uses), spells + spell slots (cast, pip toggle, multi-slot
+  picker), skills (18, prof toggle max 4), inventory (6 categories, add, remove, quantity
+  requests to DM, item-stats modal), gold (request flow).
+- **Dice:** manual roller, notes (debounced save), roll history (live, cap 8). All rolls push
+  to the shared dice log + history.
+- Reference data (conditions, skills, XP table, ~90 spell + ability descriptions) ported from
+  the original into `react/src/data/gameData.js`.
+- Verified: full screen renders real data, slot-pip write hit Firebase and was restored, mobile
+  + desktop layouts both correct, build + lint clean.
+
+Deferred (tracked): the 3D WebGL dice *animation* (roll logic + sync works now; the physics
+visual is a Phase 5 polish item) and a few small spell/ability descriptions not in the ported
+tables. The DM-side *approval* of player inventory/gold requests is part of Phase 3.
+
+**Next:** Phase 3 — rebuild the DM screen (storyboard, prompts/AI, dice automation, request
+approvals, music/timer, setup) on the same store.
 
 ---
 
