@@ -84,8 +84,20 @@ Phase 3 (part 3) — added + verified:
 - **Session-end summary**: AI recap (sessionEnd template + history + meta/notes), editable,
   saved to localStorage + downloaded as markdown. Verified the modal generates + is editable.
 
-Remaining Phase 3 (minor): NPC/enemy picker for manually building the dice table, and
-music/timer/sound. Then Phase 4 (shared engine) + Phase 5 (UI overhaul + 3D dice).
+Phase 3 (part 4) — COMPLETE. Added + verified:
+- **Timer** (presets + custom, warning/done states) with the synthesised **war horn** on
+  completion; **click sounds** installed globally (shared `lib/sounds.js`).
+- **Manual dice table + NPC/enemy picker**: add participants (characters / campaign NPCs /
+  enemies / custom) and manual rolls; verified a manual roll computed MISS + injected summary.
+- **Music (Spotify)**: full PKCE auth + Web Playback SDK + mood playlists + transport, with a
+  `/callback` route. ⚠️ Untestable here — needs the redirect URI `<app-origin>/callback`
+  registered in the Spotify app dashboard + Premium. Flagged for the owner.
+
+**Phase 3 DONE.** The DM + player screens are at functional parity with the original (minus the
+3D dice *visual*, deferred to Phase 5).
+
+**Next:** Phase 4 — consolidate the shared engine (shared modules into a neutral layer, sounds
+on both screens). Then Phase 5 (UI overhaul + 3D dice).
 
 ---
 

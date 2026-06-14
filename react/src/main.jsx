@@ -5,6 +5,7 @@ import './index.css'
 import Home from './routes/Home'
 import DmApp from './dm/DmApp'
 import PlayerApp from './player/PlayerApp'
+import Callback from './routes/Callback'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/" element={<Home />} />
         <Route path="/dm" element={<DmApp />} />
         <Route path="/play" element={<PlayerApp />} />
+        <Route path="/callback" element={<Callback />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

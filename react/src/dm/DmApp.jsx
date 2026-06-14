@@ -12,6 +12,9 @@ import RestButtons from './RestButtons'
 import SetupModal from './SetupModal'
 import SessionEndModal from './SessionEndModal'
 import { MetaPanel, NotesPanel } from './SidePanels'
+import Timer from './Timer'
+import Music from './Music'
+import { installClickSounds } from '../lib/sounds'
 import '../player/player.css'
 import './dm.css'
 
@@ -24,6 +27,7 @@ export default function DmApp() {
 
   useEffect(() => {
     subscribe()
+    installClickSounds()
   }, [subscribe])
 
   if (loading) return <div className="pl"><p>Loading game…</p></div>
@@ -42,6 +46,8 @@ export default function DmApp() {
         <div>
           <CharacterSidebar />
           <DiceLog />
+          <Timer />
+          <Music />
         </div>
         <Storyboard />
         <div>
