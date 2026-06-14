@@ -5,24 +5,30 @@ import { DM_MODES, buildSystemPrompt } from './prompts'
 import { renderAssistantMarkdown, renderUserText } from './markdown'
 import { useBudget } from './budget'
 import { useDmSession } from './dmSession'
+import { Modal } from '../player/ui'
+import DiceTable from './DiceTable'
 import { AI_ASSISTANT_NAME } from '../config'
 
 const modeLabel = (m) => DM_MODES.find((x) => x.key === m)?.label || ''
-const stripDiceRequest = (t) => t.replace(/```dice_request[\s\S]*?```/g, '').trim()
+const stripDiceRequest = (t) => t.replace(/```dice_request\s*\n[\s\S]*?\n```/g, '').trim()
+function parseDiceRequest(t) {
+  const m = t.match(/```dice_request\s*\n([\s\S]*?)\n```/)
+  if (!m) return null
+  try { return JSON.parse(m[1]) } catch { return null }
+}
 
 export default function Storyboard() {
   const campaign = useGameStore((s) => s.campaign)
   const sheets = useGameStore((s) => s.sheets)
+  const { history, pushHistory, setHistory, addMeta, promptDraft, setPromptDraft, setDiceRequest } = useDmSession()
 
-  const [entries, setEntries] = useState([]) // {role,label,text,mode}
+  const [entries, setEntries] = useState([])
   const [mode, setMode] = useState('description')
-  const [input, setInput] = useState('')
-  const [streaming, setStreaming] = useState('') // live partial reply
+  const [streaming, setStreaming] = useState('')
   const [busy, setBusy] = useState(false)
-  const [redoStack, setRedoStack] = useState([]) // undone exchanges, for redo
-  const historyRef = useRef([]) // [{role, content}] — ephemeral conversation
+  const [redoStack, setRedoStack] = useState([])
+  const [confirm, setConfirm] = useState(null) // {questions, answers}
   const scrollRef = useRef(null)
-  const addMeta = useDmSession((s) => s.addMeta)
 
   const placeholder = DM_MODES.find((m) => m.key === mode)?.placeholder
 
@@ -30,15 +36,14 @@ export default function Storyboard() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [entries, streaming])
 
-  // Undo: remove the last user+assistant exchange and the matching history.
   const undo = () => {
     setEntries((e) => {
       const lastAssistant = [...e].reverse().findIndex((x) => x.role === 'assistant')
       if (lastAssistant === -1) return e
-      const cut = e.length - 1 - lastAssistant - 1 // index of the user entry before it
+      const cut = e.length - 1 - lastAssistant - 1
       const removed = e.slice(Math.max(0, cut))
-      setRedoStack((r) => [...r, { entries: removed, history: historyRef.current.slice(-2) }])
-      historyRef.current = historyRef.current.slice(0, -2)
+      setRedoStack((r) => [...r, { entries: removed, history: history.slice(-2) }])
+      setHistory(history.slice(0, -2))
       return e.slice(0, Math.max(0, cut))
     })
   }
@@ -47,47 +52,58 @@ export default function Storyboard() {
       if (!r.length) return r
       const last = r[r.length - 1]
       setEntries((e) => [...e, ...last.entries])
-      historyRef.current = [...historyRef.current, ...last.history]
+      setHistory([...history, ...last.history])
       return r.slice(0, -1)
     })
   }
 
-  const send = async () => {
-    const text = input.trim()
-    if (!text || busy) return
-    setInput('')
-    setRedoStack([])
-
-    // Meta mode: local comment, no AI.
-    if (mode === 'meta') {
-      addMeta(text)
-      return
-    }
-
-    setEntries((e) => [...e, { role: 'user', label: 'You', text, mode }])
-    historyRef.current.push({ role: 'user', content: text })
-
+  const runPrompt = async (text, useMode) => {
     setBusy(true)
     setStreaming('…')
     try {
-      const system = buildSystemPrompt({ campaign, sheets, mode })
+      const system = buildSystemPrompt({ campaign, sheets, mode: useMode })
       let acc = ''
       const { text: reply, usage } = await stream({
         system,
-        messages: historyRef.current,
+        messages: useDmSession.getState().history,
         maxTokens: 1024,
         onToken: (chunk) => { acc += chunk; setStreaming(stripDiceRequest(acc)) },
       })
       useBudget.getState().record(usage)
-      historyRef.current.push({ role: 'assistant', content: reply })
+      pushHistory({ role: 'assistant', content: reply })
       const clean = stripDiceRequest(reply)
-      setEntries((e) => [...e, { role: 'assistant', label: AI_ASSISTANT_NAME, text: clean, mode }])
+      setEntries((e) => [...e, { role: 'assistant', label: AI_ASSISTANT_NAME, text: clean, mode: useMode }])
+
+      const dice = parseDiceRequest(reply)
+      if (dice) {
+        if (dice.confirmations?.length) setConfirm({ questions: dice.confirmations, answers: dice.confirmations.map(() => ''), pending: dice })
+        else setDiceRequest(dice)
+      }
     } catch (err) {
-      setEntries((e) => [...e, { role: 'assistant', label: AI_ASSISTANT_NAME, text: `[Error: ${err.message}]`, mode }])
+      setEntries((e) => [...e, { role: 'assistant', label: AI_ASSISTANT_NAME, text: `[Error: ${err.message}]`, mode: useMode }])
     } finally {
       setStreaming('')
       setBusy(false)
     }
+  }
+
+  const send = async () => {
+    const text = promptDraft.trim()
+    if (!text || busy) return
+    setPromptDraft('')
+    setRedoStack([])
+    if (mode === 'meta') { addMeta(text); return }
+    setEntries((e) => [...e, { role: 'user', label: 'You', text, mode }])
+    pushHistory({ role: 'user', content: text })
+    await runPrompt(text, mode)
+  }
+
+  const submitConfirm = () => {
+    const text = '[DM Clarification]\n' + confirm.questions.map((q, i) => `Q: ${q}\nA: ${confirm.answers[i] || '(no answer)'}`).join('\n') + '\n\nPlease revise the dice request with these answers.'
+    setConfirm(null)
+    setEntries((e) => [...e, { role: 'user', label: 'You', text, mode }])
+    pushHistory({ role: 'user', content: text })
+    runPrompt(text, mode)
   }
 
   return (
@@ -128,14 +144,32 @@ export default function Storyboard() {
         <textarea
           className="input"
           placeholder={placeholder}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+          value={promptDraft}
+          onChange={(e) => setPromptDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
         />
         <button className="btn" disabled={busy} onClick={send}>{busy ? '…' : 'Send'}</button>
       </div>
 
       <BudgetBar />
+      <DiceTable />
+
+      {confirm && (
+        <Modal onClose={() => setConfirm(null)}>
+          <h3>DM Confirmation Needed</h3>
+          {confirm.questions.map((q, i) => (
+            <div key={i} style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 13 }}>{q}</div>
+              <input className="input" style={{ width: '100%' }} value={confirm.answers[i]}
+                onChange={(e) => setConfirm((c) => ({ ...c, answers: c.answers.map((a, j) => (j === i ? e.target.value : a)) }))} />
+            </div>
+          ))}
+          <div className="row" style={{ gap: 8, marginTop: 12 }}>
+            <button className="btn" onClick={submitConfirm}>Confirm & Load Dice</button>
+            <button className="btn" onClick={() => { setDiceRequest(confirm.pending); setConfirm(null) }}>Skip & Load Anyway</button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

@@ -75,9 +75,17 @@ Phase 3 (part 2) — added + verified:
 - **Undo/redo** for the storyboard, **meta-comments panel**, and **story-notes** scratchpad
   (ephemeral DM-session store).
 
-Remaining Phase 3 chunks (next turns): AI-driven dice-table automation + NPC/enemy picker,
-session-end summary, and music/timer/sound. Then Phase 4 (shared engine) + Phase 5 (UI
-overhaul, incl. the deferred 3D dice animation).
+Phase 3 (part 3) — added + verified:
+- **AI-driven dice automation**: parses a `dice_request` block from the AI, loads it into a
+  dice table, rolls, resolves hit/miss vs target + on-hit conditionals, and injects a result
+  summary back into the prompt. Plus the DM **confirmation** flow (questions → re-prompt).
+  Verified end-to-end: AI emitted a request → rolled 2+5=7 MISS vs AC 13 → conditional damage
+  correctly skipped → summary injected.
+- **Session-end summary**: AI recap (sessionEnd template + history + meta/notes), editable,
+  saved to localStorage + downloaded as markdown. Verified the modal generates + is editable.
+
+Remaining Phase 3 (minor): NPC/enemy picker for manually building the dice table, and
+music/timer/sound. Then Phase 4 (shared engine) + Phase 5 (UI overhaul + 3D dice).
 
 ---
 
