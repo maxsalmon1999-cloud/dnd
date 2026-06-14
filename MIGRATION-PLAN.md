@@ -67,10 +67,17 @@ tables. The DM-side *approval* of player inventory/gold requests is part of Phas
   verified a seeded gold request appeared, approved → gold updated → queue cleared.
 - **Player dice log** (live) and **Short/Long Rest** (resets abilities + slots across the party).
 
-Remaining Phase 3 chunks (next turns): game-setup modal (campaign PDF + character upload),
-AI-driven dice table automation, undo/redo, meta-comments + story-notes panels, NPC/enemy
-picker, session-end summary, and music/timer/sound. Then Phase 4 (shared engine) + Phase 5
-(UI overhaul, incl. the deferred 3D dice animation).
+Phase 3 (part 2) — added + verified:
+- **Game-setup modal**: campaign PDF processing (pdfjs-dist → AI extraction → Firebase) and
+  character-sheet upload (full markdown parser ported from the original; verified it reproduces
+  Flicker's exact stats/slots/spells/abilities/inventory), plus per-character export/delete and
+  campaign delete (type-to-confirm).
+- **Undo/redo** for the storyboard, **meta-comments panel**, and **story-notes** scratchpad
+  (ephemeral DM-session store).
+
+Remaining Phase 3 chunks (next turns): AI-driven dice-table automation + NPC/enemy picker,
+session-end summary, and music/timer/sound. Then Phase 4 (shared engine) + Phase 5 (UI
+overhaul, incl. the deferred 3D dice animation).
 
 ---
 

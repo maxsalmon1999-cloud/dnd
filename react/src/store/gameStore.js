@@ -85,6 +85,12 @@ export const useGameStore = create((store, get) => ({
   removeAt(path) {
     return remove(ref(db, path))
   },
+  setAt(path, value) {
+    return fbSet(ref(db, path), value)
+  },
+  batchUpdate(updates) {
+    return update(ref(db), updates)
+  },
 
   // ---- player-screen write helpers ----
 

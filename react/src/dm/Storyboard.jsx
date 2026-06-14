@@ -4,6 +4,7 @@ import { stream } from '../lib/ai'
 import { DM_MODES, buildSystemPrompt } from './prompts'
 import { renderAssistantMarkdown, renderUserText } from './markdown'
 import { useBudget } from './budget'
+import { useDmSession } from './dmSession'
 import { AI_ASSISTANT_NAME } from '../config'
 
 const modeLabel = (m) => DM_MODES.find((x) => x.key === m)?.label || ''
@@ -18,8 +19,10 @@ export default function Storyboard() {
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState('') // live partial reply
   const [busy, setBusy] = useState(false)
+  const [redoStack, setRedoStack] = useState([]) // undone exchanges, for redo
   const historyRef = useRef([]) // [{role, content}] — ephemeral conversation
   const scrollRef = useRef(null)
+  const addMeta = useDmSession((s) => s.addMeta)
 
   const placeholder = DM_MODES.find((m) => m.key === mode)?.placeholder
 
@@ -27,14 +30,37 @@ export default function Storyboard() {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [entries, streaming])
 
+  // Undo: remove the last user+assistant exchange and the matching history.
+  const undo = () => {
+    setEntries((e) => {
+      const lastAssistant = [...e].reverse().findIndex((x) => x.role === 'assistant')
+      if (lastAssistant === -1) return e
+      const cut = e.length - 1 - lastAssistant - 1 // index of the user entry before it
+      const removed = e.slice(Math.max(0, cut))
+      setRedoStack((r) => [...r, { entries: removed, history: historyRef.current.slice(-2) }])
+      historyRef.current = historyRef.current.slice(0, -2)
+      return e.slice(0, Math.max(0, cut))
+    })
+  }
+  const redo = () => {
+    setRedoStack((r) => {
+      if (!r.length) return r
+      const last = r[r.length - 1]
+      setEntries((e) => [...e, ...last.entries])
+      historyRef.current = [...historyRef.current, ...last.history]
+      return r.slice(0, -1)
+    })
+  }
+
   const send = async () => {
     const text = input.trim()
     if (!text || busy) return
     setInput('')
+    setRedoStack([])
 
     // Meta mode: local comment, no AI.
     if (mode === 'meta') {
-      setEntries((e) => [...e, { role: 'meta', label: 'Meta', text, mode }])
+      addMeta(text)
       return
     }
 
@@ -87,10 +113,16 @@ export default function Storyboard() {
         )}
       </div>
 
-      <div className="prompt-tabs">
-        {DM_MODES.map((m) => (
-          <button key={m.key} className={mode === m.key ? 'active' : ''} onClick={() => setMode(m.key)}>{m.label}</button>
-        ))}
+      <div className="row spread" style={{ marginTop: 6 }}>
+        <div className="prompt-tabs" style={{ marginTop: 0 }}>
+          {DM_MODES.map((m) => (
+            <button key={m.key} className={mode === m.key ? 'active' : ''} onClick={() => setMode(m.key)}>{m.label}</button>
+          ))}
+        </div>
+        <span className="row" style={{ gap: 4 }}>
+          <button className="btn" disabled={!entries.some((e) => e.role === 'assistant')} onClick={undo}>↩ Undo</button>
+          <button className="btn" disabled={!redoStack.length} onClick={redo}>↪ Redo</button>
+        </span>
       </div>
       <div className="prompt-box">
         <textarea
