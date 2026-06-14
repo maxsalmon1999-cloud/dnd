@@ -1,0 +1,43 @@
+/* DM screen layout. Reuses the .pl palette/utilities from player.css. */
+
+.dm-top {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  border-bottom: 2px solid var(--line); padding-bottom: 8px; margin-bottom: 10px;
+}
+.dm-campaign { font-size: 18px; color: var(--gold); font-weight: bold; flex: 1; }
+
+.dm-grid { display: grid; grid-template-columns: 290px 1fr 300px; gap: 12px; align-items: start; }
+@media (max-width: 1100px) { .dm-grid { grid-template-columns: 1fr; } }
+
+/* storyboard */
+.story-area {
+  border: 1px solid var(--line); border-radius: 8px; background: var(--panel);
+  padding: 12px; min-height: 320px; max-height: 60vh; overflow-y: auto;
+}
+.story-entry { margin-bottom: 14px; }
+.story-entry .label { font-weight: bold; color: var(--gold); font-size: 12px; margin-bottom: 3px; }
+.story-entry.user .label { color: #9ab; }
+.story-entry .text p { margin: 0 0 8px; line-height: 1.5; }
+.story-entry .text h2, .story-entry .text h3, .story-entry .text h4 { color: var(--gold); margin: 8px 0 4px; }
+.story-entry .text ul { margin: 4px 0 8px 18px; }
+.mode-badge { font-size: 10px; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; opacity: 0.8; }
+.mode-badge.mode-action { color: var(--gold); }
+.welcome-message { opacity: 0.6; text-align: center; padding: 30px 10px; }
+
+/* prompt area */
+.prompt-tabs { display: flex; gap: 4px; margin-top: 10px; flex-wrap: wrap; }
+.prompt-tabs button { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px 6px 0 0; background: var(--panel2); color: var(--text); font-size: 12px; }
+.prompt-tabs button.active { border-color: var(--gold); color: var(--gold); }
+.prompt-box { display: flex; gap: 8px; margin-top: 6px; }
+.prompt-box textarea { flex: 1; min-height: 56px; resize: vertical; }
+
+/* budget */
+.budget { margin-top: 8px; font-size: 12px; }
+.budget-track { height: 8px; border-radius: 4px; background: #1a0f12; overflow: hidden; margin-top: 4px; }
+.budget-fill { height: 100%; background: linear-gradient(90deg, #3fa34d, #c4a44e, #c0392b); }
+
+/* request rows */
+.req-row { display: flex; align-items: center; gap: 6px; padding: 5px 0; font-size: 13px; }
+.req-row .approve { color: var(--green); }
+.req-row .reject { color: var(--red); }
+.badge-count { font-size: 11px; opacity: 0.7; }

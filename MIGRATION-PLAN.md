@@ -55,8 +55,22 @@ Deferred (tracked): the 3D WebGL dice *animation* (roll logic + sync works now; 
 visual is a Phase 5 polish item) and a few small spell/ability descriptions not in the ported
 tables. The DM-side *approval* of player inventory/gold requests is part of Phase 3.
 
-**Next:** Phase 3 — rebuild the DM screen (storyboard, prompts/AI, dice automation, request
-approvals, music/timer, setup) on the same store.
+**Phase 3 — IN PROGRESS (core session loop done).** Built + verified against live data:
+- DM layout + top bar (live campaign name "Book of the Raven"), home link.
+- **Storyboard**: AI prompt with the 5 modes (Description/Action/Both/Meta/Rules), streaming
+  responses, campaign-aware system prompt (ported from the original `loadPrompts`), markdown
+  rendering, and the **budget tracker** (localStorage, opus-4-6 pricing) — verified a real
+  streamed reply that updated spend to $0.02.
+- **Character sidebar**: live roster, expandable cards (HP +/- transaction, AC/stats, abilities
+  with live uses, spells), description popups.
+- **Request approvals** (completes the Phase 2 player→DM loop): inventory + gold queues, live;
+  verified a seeded gold request appeared, approved → gold updated → queue cleared.
+- **Player dice log** (live) and **Short/Long Rest** (resets abilities + slots across the party).
+
+Remaining Phase 3 chunks (next turns): game-setup modal (campaign PDF + character upload),
+AI-driven dice table automation, undo/redo, meta-comments + story-notes panels, NPC/enemy
+picker, session-end summary, and music/timer/sound. Then Phase 4 (shared engine) + Phase 5
+(UI overhaul, incl. the deferred 3D dice animation).
 
 ---
 

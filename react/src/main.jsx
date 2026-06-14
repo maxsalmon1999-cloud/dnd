@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import Home from './routes/Home'
-import DmScreen from './routes/DmScreen'
+import DmApp from './dm/DmApp'
 import PlayerApp from './player/PlayerApp'
 
 createRoot(document.getElementById('root')).render(
@@ -11,7 +11,7 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/dm" element={<DmScreen />} />
+        <Route path="/dm" element={<DmApp />} />
         <Route path="/play" element={<PlayerApp />} />
       </Routes>
     </BrowserRouter>

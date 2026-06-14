@@ -12,6 +12,8 @@ import { create } from 'zustand'
 import {
   ref,
   onValue,
+  query,
+  limitToLast,
   runTransaction,
   push,
   set as fbSet,
@@ -28,6 +30,7 @@ export const useGameStore = create((store, get) => ({
   campaign: null, // campaign
   inventoryRequests: {}, // inventoryRequests/{charKey}/{id}
   goldRequests: {}, // goldRequests/{charKey}/{id}
+  diceLog: {}, // diceLog/{id} — player rolls
   loading: true,
   _unsubs: [],
 
@@ -44,6 +47,7 @@ export const useGameStore = create((store, get) => ({
         store({ inventoryRequests: s.val() || {} }),
       ),
       onValue(ref(db, 'goldRequests'), (s) => store({ goldRequests: s.val() || {} })),
+      onValue(query(ref(db, 'diceLog'), limitToLast(50)), (s) => store({ diceLog: s.val() || {} })),
     ]
     store({ _unsubs: unsubs })
   },
@@ -158,5 +162,48 @@ export const useGameStore = create((store, get) => ({
       delta,
       timestamp: serverTimestamp(),
     })
+  },
+
+  // ---- DM-side approvals (resolve player requests) ----
+  approveInventoryRequest(charKey, reqId) {
+    const req = get().inventoryRequests[charKey]?.[reqId]
+    if (!req) return
+    const newAmount = Math.max(0, (req.currentAmount ?? 0) + (req.delta || 0))
+    return fbSet(ref(db, `characters/${charKey}/inventory/${req.itemKey}/amount`), newAmount).then(() =>
+      remove(ref(db, `inventoryRequests/${charKey}/${reqId}`)),
+    )
+  },
+  rejectInventoryRequest(charKey, reqId) {
+    return remove(ref(db, `inventoryRequests/${charKey}/${reqId}`))
+  },
+  approveGoldRequest(charKey, reqId) {
+    const req = get().goldRequests[charKey]?.[reqId]
+    if (!req) return
+    const newGold = Math.max(0, (req.currentGold ?? 0) + (req.delta || 0))
+    return fbSet(ref(db, `characters/${charKey}/gold`), newGold).then(() =>
+      remove(ref(db, `goldRequests/${charKey}/${reqId}`)),
+    )
+  },
+  rejectGoldRequest(charKey, reqId) {
+    return remove(ref(db, `goldRequests/${charKey}/${reqId}`))
+  },
+
+  // Short/long rest: reset ability uses and spell slots across the party.
+  // Short rest resets short-rest abilities + warlock (key 'w') slots; long rest resets all.
+  doRest(type) {
+    const { sheets } = get()
+    const updates = {}
+    Object.keys(sheets).forEach((key) => {
+      const sheet = sheets[key]
+      ;(sheet.abilities || []).filter((a) => !a.passive && a.key).forEach((a) => {
+        if (type === 'long' || a.rest === 'Short') updates[`characters/${key}/abilities/${a.key}`] = 0
+      })
+      ;(sheet.spellSlots || []).forEach((slot) => {
+        if (type === 'long' || slot.key === 'w') {
+          for (let i = 0; i < slot.count; i++) updates[`characters/${key}/slots/${slot.key}_${i}`] = false
+        }
+      })
+    })
+    if (Object.keys(updates).length) return update(ref(db), updates)
   },
 }))
