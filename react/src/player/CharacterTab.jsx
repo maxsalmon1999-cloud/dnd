@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { fmtMod, profFromLevel, normalizeName, slotLevel, slotPipId } from './helpers'
-import { Section, Modal } from './ui'
-import { useDescPopup } from './useDescPopup'
+import { fmtMod, profFromLevel, normalizeName, slotLevel, slotPipId } from '../shared/helpers'
+import { Section, Modal } from '../shared/ui'
+import { useDescPopup } from '../shared/useDescPopup'
 import { ABILITY_DESCRIPTIONS, SPELL_DESCRIPTIONS, SKILLS, INV_CATEGORIES } from '../data/gameData'
 
 export default function CharacterTab({ charKey, sheet, live, roll }) {

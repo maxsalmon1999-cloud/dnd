@@ -96,8 +96,18 @@ Phase 3 (part 4) — COMPLETE. Added + verified:
 **Phase 3 DONE.** The DM + player screens are at functional parity with the original (minus the
 3D dice *visual*, deferred to Phase 5).
 
-**Next:** Phase 4 — consolidate the shared engine (shared modules into a neutral layer, sounds
-on both screens). Then Phase 5 (UI overhaul + 3D dice).
+**Phase 4 — DONE (shared engine consolidation).**
+- Moved the genuinely cross-screen modules into a neutral `react/src/shared/` layer
+  (`helpers.js`, `ui.jsx`, `useDescPopup.jsx`, `styles.css`) so neither screen "owns" them and
+  the dependency direction is clean. Updated all imports.
+- Shared sound engine (`lib/sounds.js`) now installed on **both** the DM and player screens.
+- Verified both screens still render after the refactor; build + lint clean.
+
+(Other "shared engine" pieces were already shared by construction: the Zustand store, AI client,
+Firebase, dice-roll helpers, and the reference-data tables.)
+
+**Next:** Phase 5 — the UI overhaul (the original goal): richer visuals, animations
+(Framer Motion / Motion), and the 3D dice renderer. This is open-ended design work.
 
 ---
 

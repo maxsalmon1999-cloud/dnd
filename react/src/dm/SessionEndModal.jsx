@@ -3,7 +3,7 @@ import { useGameStore } from '../store/gameStore'
 import { useDmSession } from './dmSession'
 import { useBudget } from './budget'
 import { complete } from '../lib/ai'
-import { Modal } from '../player/ui'
+import { Modal } from '../shared/ui'
 
 const DEFAULT_SESSION_END =
   'Write a structured session record using the conversation, meta notes, story notes, and campaign context supplied. Be specific, chronological, and grounded in events that actually happened.'

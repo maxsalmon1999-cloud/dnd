@@ -6,7 +6,7 @@
 // visual polish item (tracked in FEATURE-CHECKLIST.md).
 import { useState, useCallback } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { rollDice, fmtMod } from './helpers'
+import { rollDice, fmtMod } from '../shared/helpers'
 
 export function useRoll(charKey, charName) {
   const pushDiceLog = useGameStore((s) => s.pushDiceLog)

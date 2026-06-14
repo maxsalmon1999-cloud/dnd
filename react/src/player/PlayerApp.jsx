@@ -5,7 +5,8 @@ import { useSearchParams } from 'react-router-dom'
 import { useGameStore } from '../store/gameStore'
 import SelectScreen from './SelectScreen'
 import PlayerScreen from './PlayerScreen'
-import './player.css'
+import { installClickSounds } from '../lib/sounds'
+import '../shared/styles.css'
 
 export default function PlayerApp() {
   const [params] = useSearchParams()
@@ -16,6 +17,7 @@ export default function PlayerApp() {
 
   useEffect(() => {
     subscribe()
+    installClickSounds()
   }, [subscribe])
 
   if (loading) return <div className="pl"><p>Loading…</p></div>

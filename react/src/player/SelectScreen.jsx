@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useGameStore } from '../store/gameStore'
-import { classIcon } from './helpers'
+import { classIcon } from '../shared/helpers'
 
 export default function SelectScreen() {
   const sheets = useGameStore((s) => s.sheets)

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGameStore } from '../store/gameStore'
-import { Modal } from './ui'
+import { Modal } from '../shared/ui'
 import { useRoll } from './useRoll'
 import { XP_THRESHOLDS } from '../data/gameData'
 import StatsTab from './StatsTab'

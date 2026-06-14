@@ -1,5 +1,5 @@
 import { useDmSession } from './dmSession'
-import { Section } from '../player/ui'
+import { Section } from '../shared/ui'
 
 export function MetaPanel() {
   const metaComments = useDmSession((s) => s.metaComments)

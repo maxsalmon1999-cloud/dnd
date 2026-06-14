@@ -1,7 +1,7 @@
 import { useGameStore } from '../store/gameStore'
-import { fmtMod, profFromLevel } from './helpers'
-import { Section, Switch } from './ui'
-import { useDescPopup } from './useDescPopup'
+import { fmtMod, profFromLevel } from '../shared/helpers'
+import { Section, Switch } from '../shared/ui'
+import { useDescPopup } from '../shared/useDescPopup'
 import { CONDITIONS } from '../data/gameData'
 
 const ABILITY_KEYS = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { fmtMod } from '../player/helpers'
-import { useDescPopup } from '../player/useDescPopup'
+import { fmtMod } from '../shared/helpers'
+import { useDescPopup } from '../shared/useDescPopup'
 import { ABILITY_DESCRIPTIONS, SPELL_DESCRIPTIONS } from '../data/gameData'
 
 const descFor = (table, name, fb) => table[name] || fb || 'No description available.'

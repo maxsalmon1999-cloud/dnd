@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { Section } from './ui'
+import { Section } from '../shared/ui'
 
 export default function DiceTab({ charKey, live, roll }) {
   return (

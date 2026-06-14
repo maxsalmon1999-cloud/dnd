@@ -5,7 +5,7 @@ import { DM_MODES, buildSystemPrompt } from './prompts'
 import { renderAssistantMarkdown, renderUserText } from './markdown'
 import { useBudget } from './budget'
 import { useDmSession } from './dmSession'
-import { Modal } from '../player/ui'
+import { Modal } from '../shared/ui'
 import DiceTable from './DiceTable'
 import { AI_ASSISTANT_NAME } from '../config'
 

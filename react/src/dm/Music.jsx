@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Section } from '../player/ui'
+import { Section } from '../shared/ui'
 import { useSpotify, initSpotify, connectSpotify, playMood, togglePlay, nextTrack, prevTrack, setVolume, MOOD_PLAYLISTS } from './spotify'
 
 export default function Music() {

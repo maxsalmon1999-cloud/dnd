@@ -15,7 +15,7 @@ import { MetaPanel, NotesPanel } from './SidePanels'
 import Timer from './Timer'
 import Music from './Music'
 import { installClickSounds } from '../lib/sounds'
-import '../player/player.css'
+import '../shared/styles.css'
 import './dm.css'
 
 export default function DmApp() {

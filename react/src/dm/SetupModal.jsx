@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { Modal } from '../player/ui'
+import { Modal } from '../shared/ui'
 import { complete } from '../lib/ai'
 import { useBudget } from './budget'
 import { parseCharacterSheet, resolveCharacterKey } from './parseCharacterSheet'

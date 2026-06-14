@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/gameStore'
-import { fmtMod } from '../player/helpers'
+import { fmtMod } from '../shared/helpers'
 
 // Flatten {charKey: {reqId: req}} into [{charKey, reqId, ...req}] sorted by time.
 function flatten(byChar) {

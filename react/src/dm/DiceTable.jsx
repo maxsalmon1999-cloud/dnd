@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { useDmSession } from './dmSession'
-import { rollDice, fmtMod } from '../player/helpers'
+import { rollDice, fmtMod } from '../shared/helpers'
 
 // Dice table: loads the AI's dice_request (when present) and also lets the DM
 // build an encounter by hand (add participants from characters / campaign NPCs /
