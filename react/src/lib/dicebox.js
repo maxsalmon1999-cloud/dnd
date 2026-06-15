@@ -36,6 +36,7 @@ function ensureBox() {
   box = new DiceBox('#dice-box', {
     assetPath: '/assets/',
     theme: 'default',
+    themeColor: '#c4a44e', // gold dice with dark (black) engraved numbers
     scale: 5,
     gravity: 1.6,
     throwForce: 6.2,
