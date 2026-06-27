@@ -459,6 +459,7 @@ function App() {
   const [pOpen, setPOpen] = useState(false);
   const pTimer = useRef(null);
   const [rolls, setRolls] = useState({});
+  const [statRoll, setStatRoll] = useState(null); // {key, d, total} flashed on a stat tile
   const [conds, setConds] = useState({});
 
   // journal: roll history + notes (persisted)
@@ -494,6 +495,27 @@ function App() {
     setRolls((r) => ({ ...r, [key]: { d, total: d + mod } }));
     pushRoll({ sides: 20, label: "d20", value: d, total: d + mod, src: "save", note: key + " save" });
     setTimeout(() => setRolls((r) => { const n = { ...r }; delete n[key]; return n; }), 1900);
+  };
+  // Ability check: tap a stat tile → roll the 3D dice (d20 + that stat's mod),
+  // flash the total on the tile, log it locally + to the shared dice log.
+  const rollStat = async (key, mod) => {
+    let value;
+    try {
+      const vals = await rollLabDice("1d20");
+      value = Array.isArray(vals) && vals.length ? vals[0] : 1 + Math.floor(Math.random() * 20);
+    } catch {
+      value = 1 + Math.floor(Math.random() * 20);
+    }
+    const total = value + mod;
+    const modStr = (mod >= 0 ? "+" : "") + mod;
+    setStatRoll({ key, d: value, total });
+    pushRoll({ sides: 20, label: "d20" + modStr, value, total, src: "check", note: key + " check" });
+    try {
+      useGameStore.getState().pushDiceLog({
+        character: C.name, charKey: LAB_CHAR_KEY, label: "1d20" + modStr, result: total, type: key + " Check", modifier: mod,
+      });
+    } catch { /* ignore */ }
+    setTimeout(() => setStatRoll((s) => (s && s.key === key ? null : s)), 2600);
   };
   const toggleCond = (c) => setConds((p) => ({ ...p, [c]: !p[c] }));
 
@@ -592,13 +614,26 @@ function App() {
 
           <div className="body">
             <div className="stat-grid">
-              {C.stats.map((s) => (
-                <div className="stat" key={s.key}>
-                  <span className="sc">{s.score}</span>
-                  <span className="mod">{s.mod}</span>
-                  <span className="k">{s.key}</span>
-                </div>
-              ))}
+              {C.stats.map((s) => {
+                const rolled = statRoll && statRoll.key === s.key;
+                return (
+                  <div className={"stat" + (rolled ? " rolled" : "")} key={s.key}
+                    onClick={() => rollStat(s.key, parseInt(s.mod, 10) || 0)} title={`Roll ${s.key} check`}>
+                    {rolled ? (
+                      <React.Fragment>
+                        <span className="mod">{statRoll.total}</span>
+                        <span className="k">{s.key} CHECK</span>
+                      </React.Fragment>
+                    ) : (
+                      <React.Fragment>
+                        <span className="sc">{s.score}</span>
+                        <span className="mod">{s.mod}</span>
+                        <span className="k">{s.key}</span>
+                      </React.Fragment>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </React.Fragment>

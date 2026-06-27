@@ -470,3 +470,9 @@
 /* ---- in-phone 3D dice roll surface (clipped to the phone) ---- */
 .lab-root .phone .lab-dice { position: absolute; inset: 0; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .2s; }
 .lab-root .phone .lab-dice canvas { width: 100% !important; height: 100% !important; display: block; }
+
+/* ---- tappable stat tiles (ability checks) ---- */
+.lab-root .stat { cursor: pointer; transition: transform .1s var(--ease), border-color .15s; }
+.lab-root .stat:active { transform: scale(.96); }
+.lab-root .stat.rolled { border-color: var(--gold); }
+.lab-root .stat.rolled .mod { color: var(--gold); }
