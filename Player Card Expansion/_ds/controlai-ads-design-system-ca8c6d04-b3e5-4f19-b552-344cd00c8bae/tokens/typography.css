@@ -1,0 +1,42 @@
+/* ControlAI — Typography tokens.
+   One family does everything: Neue Haas Display. Two voices —
+   (1) POSTER: weight 900, all-caps, tight tracking, often italic for punch.
+   (2) EDITORIAL: weight 700/500 title-case for the calmer black-ground ads.
+   Body / supporting copy is Roman 400. */
+
+:root {
+  --font-display: "Neue Haas Display", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Neue Haas Display", system-ui, -apple-system, sans-serif;
+
+  /* Weights */
+  --fw-xxthin: 100; /* @kind font */
+  --fw-thin: 300; /* @kind font */
+  --fw-light: 350; /* @kind font */
+  --fw-roman: 400; /* @kind font */
+  --fw-medium: 500; /* @kind font */
+  --fw-bold: 700; /* @kind font */
+  --fw-black: 900; /* @kind font */
+
+  /* Display ramp — built for 1080px ad canvases, scales with rem elsewhere */
+  --fs-mega: 132px;     /* one-word hero shouts (AI?, LUCKY?) */
+  --fs-hero: 88px;      /* poster headline */
+  --fs-h1: 64px;
+  --fs-h2: 48px;
+  --fs-h3: 36px;
+  --fs-lead: 30px;      /* sub-headline / supporting line */
+  --fs-body: 22px;
+  --fs-label: 18px;     /* CTA + logo lockup label */
+  --fs-caption: 14px;
+
+  /* Line heights — headlines are set TIGHT */
+  --lh-tight: 0.92; /* @kind other */
+  --lh-snug: 1.02; /* @kind other */
+  --lh-normal: 1.15; /* @kind other */
+  --lh-body: 1.4; /* @kind other */
+
+  /* Tracking */
+  --ls-tight: -0.02em; /* @kind other */
+  --ls-normal: 0; /* @kind other */
+  --ls-cta: 0.01em; /* @kind other */
+  --ls-eyebrow: 0.08em; /* @kind other */
+}

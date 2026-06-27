@@ -23,3 +23,18 @@ Also dropped from the rebuild: the dormant 2D dice board and orphaned roll-count
 `player.html` (present in the file but never shown to users).
 
 See `../FEATURE-CHECKLIST.md` for the full feature inventory and `../MIGRATION-PLAN.md` for the plan.
+
+---
+
+## Sunset note (later)
+
+Once the React app (DM dashboard + **refreshed player screen**) became the product,
+the following were retired here:
+
+- `index.html`, `player.html`, `combat-map.html`, `dice-lab.html`, `callback.html` — the
+  original single-file HTML app (removed from the repo root; copies kept above).
+- `old-react-player-screen/` — the first React rebuild of the player screen (Phase 2),
+  superseded by the refreshed player card (`react/src/refreshed/`).
+
+The live app is now the React build (DM screen + refreshed player screen) on Cloudflare Pages.
+The Cloudflare **worker** (AI proxy) and the React app under `react/` are unaffected.

@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Player Screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="character.js"></script>
+<style>
+  :root {
+    --ink: #18181b;
+    --ink-soft: #3f3f46;
+    --line: #e6e6ea;
+    --line-strong: #18181b;
+    --paper: #fbfbfc;
+    --tile: #f3f3f5;
+    --muted: #9a9aa3;
+    --hp: #4f9d69;
+    --skills: #2f7d74;
+    --combat: #c04a33;
+    --magic: #6a55c7;
+    --gold: #b0811f;
+    --cond: #b23a4a;
+    --sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+    --ease: cubic-bezier(.22,1,.36,1);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #d7d7d9;
+    font-family: var(--sans);
+    color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #root { display: flex; align-items: center; justify-content: center; }
+
+  .phone {
+    position: relative;
+    width: 393px; height: 852px;
+    background: var(--paper);
+    border-radius: 46px;
+    box-shadow: 0 30px 70px rgba(0,0,0,.30), 0 0 0 1px rgba(0,0,0,.05);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+
+  /* ---- status bar ---- */
+  .statusbar {
+    height: 48px; flex: 0 0 auto; display: flex; align-items: flex-end;
+    justify-content: space-between; padding: 0 30px 5px;
+    font-size: 14px; font-weight: 700; letter-spacing: -.01em;
+  }
+  .statusbar .dots { display: flex; gap: 5px; align-items: center; }
+  .statusbar .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+  .statusbar .dots i:last-child { width: 16px; border-radius: 3px; }
+
+  /* ---- top bar (health orb · nav · spell wheel) ---- */
+  .topbar {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 4px 22px 16px; border-bottom: 2px solid var(--line-strong);
+  }
+  .navset { display: flex; align-items: center; gap: 4px; }
+  .cluster { display: flex; align-items: center; gap: 5px; }
+  .glyph {
+    width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s var(--ease), transform .12s var(--ease);
+  }
+  .glyph svg { width: 25px; height: 25px; }
+  .glyph.angel { color: var(--gold); }
+  .glyph.demon { color: var(--cond); }
+  .glyph:active { background: var(--tile); transform: scale(.92); }
+  .tab {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); cursor: pointer; transition: all .15s var(--ease);
+  }
+  .tab svg { width: 20px; height: 20px; }
+  .tab.active { background: var(--ink); color: #fff; }
+  .tab:not(.active):active { background: var(--tile); }
+
+  /* health orb */
+  .orb {
+    position: relative; width: 56px; height: 56px; flex: 0 0 auto;
+    border-radius: 50%; border: 2.5px solid var(--line-strong);
+    overflow: hidden; background: #efe9eb; cursor: pointer;
+  }
+  .orb .liquid {
+    position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill);
+    background: linear-gradient(180deg, #e2564b 0%, #b22f23 100%);
+    transition: height .45s var(--ease);
+  }
+  .orb .liquid::before {
+    content: ""; position: absolute; left: -10%; right: -10%; top: -7px; height: 14px;
+    border-radius: 50%; background: #e2564b;
+    animation: bob 2.6s ease-in-out infinite;
+  }
+  .orb .liquid::after {
+    content: ""; position: absolute; left: -10%; right: -10%; top: -5px; height: 10px;
+    border-radius: 50%; background: rgba(255,255,255,.28);
+    animation: bob 2.6s ease-in-out infinite reverse;
+  }
+  @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2.5px) } }
+  .orb .gloss {
+    position: absolute; left: 9px; top: 7px; width: 18px; height: 13px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, rgba(255,255,255,.85), rgba(255,255,255,0) 70%);
+    z-index: 2; pointer-events: none;
+  }
+  .orb .orb-num {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 16px; font-weight: 700; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.5); z-index: 3;
+  }
+
+  /* spell wheel */
+  .wheel { flex: 0 0 auto; cursor: default; }
+  .wheel path { transition: fill .15s, stroke .15s; }
+  .wheel path:active { opacity: .7; }
+
+  /* ---- char line ---- */
+  .charline { flex: 0 0 auto; text-align: center; padding: 14px 0 0; }
+  .charline .cn { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+  .charline .cc { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 4px; }
+  .charstats { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+  .cbadge {
+    display: flex; align-items: baseline; gap: 5px;
+    border: 1.5px solid var(--line-strong); border-radius: 9px; padding: 5px 10px;
+    font-family: var(--mono); line-height: 1;
+  }
+  .cbadge .bk { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .cbadge .bv { font-size: 14px; font-weight: 700; }
+
+  /* ---- placeholder tab pages ---- */
+  .tabpage {
+    flex: 1 1 auto; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px; color: var(--muted);
+  }
+  .tabpage .ph-icon svg { width: 52px; height: 52px; stroke-width: 1.4; }
+  .tabpage .ph-title { font-size: 21px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+  .tabpage .ph-sub {
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700;
+  }
+
+  /* ---- inventory (tab 2) ---- */
+  .inv { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .sack-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; cursor: pointer; animation: pop .4s var(--ease); }
+  .sack { width: 150px; height: 165px; transition: transform .15s var(--ease); }
+  .sack svg { width: 100%; height: 100%; overflow: visible; }
+  .sack-wrap:active .sack { transform: scale(.94) translateY(2px); }
+  .sack-label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+
+  .ring { position: relative; width: 300px; height: 300px; }
+  .inv-item {
+    position: absolute; width: 64px; display: flex; flex-direction: column; align-items: center; gap: 7px;
+    cursor: pointer; animation: pop .42s var(--ease) backwards;
+  }
+  .inv-item.center { width: 88px; }
+  .inv-item .disc {
+    width: 64px; height: 64px; border-radius: 50%; border: 2.5px solid var(--line-strong);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 18px rgba(0,0,0,.16); transition: transform .14s var(--ease);
+  }
+  .inv-item.center .disc { width: 88px; height: 88px; }
+  .inv-item .disc svg { width: 30px; height: 30px; color: rgba(255,255,255,.96); }
+  .inv-item.center .disc svg { width: 42px; height: 42px; }
+  .inv-item.add .disc { border-style: dashed; }
+  .inv-item:active .disc { transform: scale(.9); }
+  .inv-item .ilabel { font-size: 11px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; white-space: nowrap; }
+  @keyframes pop { from { opacity: 0; transform: scale(.35); } to { opacity: 1; transform: scale(1); } }
+
+  .tie {
+    margin-top: 8px; font-size: 12px; font-weight: 700; letter-spacing: .02em;
+    color: var(--muted); background: none; border: none; cursor: pointer; padding: 8px 12px;
+    animation: pop .5s var(--ease) backwards; animation-delay: .42s;
+  }
+  .tie:active { color: var(--ink); }
+
+  /* add-item view */
+  .addview { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 14px 8px 6px; }
+  .addview .add-ico { width: 60px; height: 60px; border-radius: 16px; border: 2px dashed var(--line); display: flex; align-items: center; justify-content: center; color: var(--muted); margin-bottom: 16px; }
+  .addview .add-ico svg { width: 28px; height: 28px; }
+  .addview .add-t { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+  .addview .add-s { font-size: 13px; color: var(--muted); font-weight: 500; margin-top: 8px; max-width: 250px; line-height: 1.4; }
+  .add-opts { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 22px; }
+  .add-opt {
+    border: 1px solid var(--line); border-radius: 13px; padding: 15px 16px; text-align: left;
+    font-size: 14.5px; font-weight: 700; cursor: pointer; transition: background .14s, border-color .14s;
+  }
+  .add-opt:active { background: var(--tile); border-color: var(--line-strong); }
+
+  /* ---- body : ability scores ---- */
+  .body {
+    flex: 1 1 auto; overflow: hidden; padding: 0 26px 226px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .stat {
+    position: relative; height: 104px; border-radius: 17px;
+    background: var(--tile); border: 1px solid var(--line);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .stat .mod { font-family: var(--mono); font-size: 31px; font-weight: 600; letter-spacing: -.02em; }
+  .stat .k { font-size: 10.5px; letter-spacing: .14em; font-weight: 800; color: var(--muted); margin-top: 6px; }
+  .stat .sc {
+    position: absolute; top: 10px; right: 12px; font-family: var(--mono);
+    font-size: 11px; color: var(--muted); font-weight: 500;
+  }
+  /* ---- card fan ---- */
+  .hint {
+    position: absolute; left: 0; right: 0; bottom: 232px; text-align: center;
+    font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: .02em;
+    pointer-events: none; transition: opacity .25s ease;
+  }
+  .fan { position: absolute; left: 50%; bottom: 22px; width: 320px; height: 204px; transform: translateX(-50%); }
+  .card {
+    position: absolute; width: 152px; height: 190px; border-radius: 19px;
+    border: 2.5px solid var(--line-strong); background: #fff; cursor: pointer; overflow: hidden;
+    transform-origin: bottom center;
+    transition: transform .2s var(--ease), box-shadow .2s ease;
+    box-shadow: 0 10px 22px rgba(0,0,0,.16);
+    will-change: transform;
+  }
+  .card:hover { box-shadow: 0 16px 32px rgba(0,0,0,.22); }
+  .card .cap { height: 100%; position: relative; display: flex; align-items: center; justify-content: center; }
+  .card .cap svg { width: 62px; height: 62px; color: rgba(255,255,255,.95); }
+  .card .foot { padding: 13px 14px; }
+  .card .ct { font-weight: 800; font-size: 15.5px; letter-spacing: -.02em; line-height: 1.1; }
+  .card .cs { font-size: 10.5px; color: var(--muted); font-weight: 600; margin-top: 5px; line-height: 1.25; }
+
+  /* ---- scrim + expanded sheet ---- */
+  .scrim { position: absolute; inset: 0; background: rgba(20,20,24,0); transition: background .42s ease; pointer-events: none; z-index: 40; }
+  .scrim.open { background: rgba(20,20,24,.46); pointer-events: auto; cursor: pointer; }
+
+  .sheet {
+    position: absolute; z-index: 50; overflow: hidden; background: #fff;
+    border: 2.5px solid var(--line-strong); box-shadow: 0 26px 64px rgba(0,0,0,.34);
+    display: flex; flex-direction: column;
+    transition: left .5s var(--ease), top .5s var(--ease), width .5s var(--ease),
+                height .5s var(--ease), border-radius .5s var(--ease), transform .5s var(--ease);
+    will-change: left, top, width, height, transform;
+  }
+  .s-head {
+    position: relative; flex: 0 0 auto; overflow: hidden;
+    transition: height .5s var(--ease);
+    display: flex; align-items: flex-end; padding: 0 22px 18px;
+  }
+  .s-head .wm { position: absolute; right: -18px; top: -22px; opacity: .16; }
+  .s-head .wm svg { width: 150px; height: 150px; color: #fff; }
+  .s-close {
+    position: absolute; top: 16px; right: 16px; width: 38px; height: 38px; border-radius: 11px;
+    background: rgba(255,255,255,.2); border: none; color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; z-index: 2;
+    transition: opacity .3s ease; backdrop-filter: blur(2px);
+  }
+  .s-title { color: #fff; transition: opacity .26s ease; position: relative; z-index: 2; max-width: 270px; }
+  .s-title .t { font-size: 24px; font-weight: 800; letter-spacing: -.025em; line-height: 1.05; }
+  .s-title .s { font-size: 12.5px; font-weight: 600; opacity: .92; margin-top: 8px; }
+
+  .s-body { flex: 1 1 auto; overflow-y: auto; padding: 22px 22px 30px; -webkit-overflow-scrolling: touch; }
+
+  .sec { margin-bottom: 24px; }
+  .sec:last-child { margin-bottom: 0; }
+  .sec-h {
+    font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+    font-weight: 800; margin: 0 0 11px 1px; display: flex; align-items: baseline; justify-content: space-between;
+  }
+
+  /* skill rows — light dividers */
+  .skill { display: flex; align-items: center; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
+  .skill:last-child { border-bottom: none; }
+  .skill .dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); flex: 0 0 auto; }
+  .skill .dot.on { background: var(--skills); border-color: var(--skills); }
+  .skill .sn { font-size: 14.5px; font-weight: 600; flex: 1 1 auto; }
+  .skill .sa { font-family: var(--mono); font-size: 10px; color: var(--muted); font-weight: 500; letter-spacing: .04em; }
+  .skill .sm { font-family: var(--mono); font-size: 15px; font-weight: 600; width: 42px; text-align: right; }
+
+  /* item card rows */
+  .item {
+    display: flex; align-items: center; gap: 12px; padding: 13px 15px;
+    border: 1px solid var(--line); border-radius: 13px; margin-bottom: 9px;
+  }
+  .item:last-child { margin-bottom: 0; }
+  .item .qty {
+    font-family: var(--mono); font-size: 13px; font-weight: 700; width: 32px; height: 32px; flex: 0 0 auto;
+    border-radius: 9px; background: var(--tile); display: flex; align-items: center; justify-content: center;
+  }
+  .item .main { flex: 1 1 auto; min-width: 0; }
+  .item .in { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
+  .item .im { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+  .item .stats { display: flex; gap: 7px; flex: 0 0 auto; }
+  .tag {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 5px 8px;
+    border: 1px solid var(--line); border-radius: 8px; white-space: nowrap;
+  }
+  .tag.solid { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tag.ghost { color: var(--muted); }
+
+  /* ---- saves / conditions panel ---- */
+  .panel {
+    position: absolute; z-index: 50; left: 31px; right: 31px; top: 88px; max-height: 676px;
+    display: flex; flex-direction: column; background: #fff;
+    border: 2.5px solid var(--line-strong); border-radius: 24px; overflow: hidden;
+    box-shadow: 0 26px 64px rgba(0,0,0,.34);
+    opacity: 0; transform: translateY(16px) scale(.96);
+    transition: opacity .3s var(--ease), transform .3s var(--ease);
+  }
+  .panel.open { opacity: 1; transform: none; }
+  .p-head {
+    position: relative; flex: 0 0 auto; height: 84px; overflow: hidden;
+    display: flex; align-items: flex-end; padding: 0 20px 16px;
+  }
+  .p-wm { position: absolute; right: -6px; top: -12px; opacity: .2; }
+  .p-wm svg { width: 104px; height: 104px; color: #fff; }
+  .p-title { color: #fff; font-size: 23px; font-weight: 800; letter-spacing: -.025em; position: relative; z-index: 2; }
+  .p-close {
+    position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; border-radius: 11px;
+    background: rgba(255,255,255,.2); border: none; color: #fff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; z-index: 3;
+  }
+  .p-body { flex: 1 1 auto; overflow-y: auto; padding: 6px 20px 18px; -webkit-overflow-scrolling: touch; }
+
+  /* saving-throw rows */
+  .srow { display: flex; align-items: center; gap: 13px; padding: 13px 2px; border-bottom: 1px solid var(--line); }
+  .srow:last-child { border-bottom: none; }
+  .sdia { width: 13px; height: 13px; flex: 0 0 auto; border: 2px solid var(--line); border-radius: 2px; transform: rotate(45deg); }
+  .sdia.on { background: var(--gold); border-color: var(--gold); }
+  .skey { font-family: var(--mono); font-size: 12px; font-weight: 700; width: 32px; letter-spacing: .03em; }
+  .smod { font-family: var(--mono); font-size: 21px; font-weight: 600; width: 44px; }
+  .sname { flex: 1 1 auto; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .sroll {
+    font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    border: 1.5px solid var(--line-strong); border-radius: 9px; padding: 8px 0; width: 64px; text-align: center;
+    background: #fff; color: var(--ink); cursor: pointer;
+    transition: transform .1s var(--ease), background .15s, color .15s, border-color .15s;
+  }
+  .sroll:active { transform: scale(.95); }
+  .sroll.hit { background: var(--gold); border-color: var(--gold); color: #fff; }
+
+  /* condition rows */
+  .crow { display: flex; align-items: center; justify-content: space-between; padding: 13px 2px; border-bottom: 1px solid var(--line); }
+  .crow:last-child { border-bottom: none; }
+  .cname { font-size: 15px; font-weight: 600; color: var(--ink); transition: color .15s; }
+  .cname.on { color: var(--cond); font-weight: 700; }
+  .sw {
+    width: 44px; height: 26px; border-radius: 13px; flex: 0 0 auto; cursor: pointer; position: relative;
+    background: var(--tile); border: 1.5px solid var(--line); transition: background .18s, border-color .18s;
+  }
+  .sw.on { background: var(--cond); border-color: var(--cond); }
+  .sw::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .18s var(--ease);
+  }
+  .sw.on::after { transform: translateX(18px); }
+</style>
+<style id="ornate-theme">
+  /* ===== Ornate Retro / Pixel-Fantasy reskin ===== */
+  :root{
+    --bg:#0c0908; --paper:#161010; --panel:#1f1611; --tile:#281d16;
+    --ink:#ece0c6; --ink-soft:#cabb98; --muted:#8c7a5e;
+    --line:#473628; --line-strong:#6e5a40;
+    --gold:#dcb968; --gold-2:#b89140;
+    --blood:#bb3b32; --hp:#bb3b32;
+    --skills:#356b63; --combat:#8a3a2c; --magic:#574a86; --cond:#8a3340;
+    --armour:#3c536e; --consumables:#3a5a40; --misc:#4e4658;
+    --sans:"Pixelify Sans", system-ui, sans-serif;
+    --mono:"Pixelify Sans", ui-monospace, monospace;
+    --cap:"Silkscreen","Pixelify Sans", sans-serif;
+  }
+  body{ background:#0c0908; }
+  .sheet, .panel, .stat, .sroll, .add-opt, .charline::after { image-rendering:pixelated; }
+
+  .phone{ background:var(--paper); border-radius:30px;
+    box-shadow:0 30px 80px rgba(0,0,0,.6), inset 0 0 0 2px #2a1f17, inset 0 0 70px rgba(0,0,0,.5); }
+
+  .statusbar{ color:var(--ink); font-family:var(--cap); font-size:11px; font-weight:400; }
+  .statusbar .dots i{ background:var(--muted); border-radius:0; }
+  .statusbar .dots i:last-child{ border-radius:0; }
+  .topbar{ border-bottom:2px solid var(--line-strong); box-shadow:0 2px 0 #000; }
+  .glyph.angel{ color:var(--gold); }
+  .glyph.demon{ color:var(--blood); }
+  .glyph:active{ background:var(--tile); }
+
+  .tab{ color:var(--muted); border-radius:0; border-bottom:3px solid transparent; }
+  .tab.active{ background:transparent; color:var(--gold); border-bottom-color:var(--gold-2); }
+  .tab:not(.active):active{ background:var(--tile); }
+
+  .orb{ background:#0b0908; border:3px solid var(--gold-2);
+    box-shadow:0 0 0 1px #000, inset 0 2px 6px rgba(0,0,0,.7); }
+  .orb-num{ font-family:var(--sans); font-weight:700; color:var(--ink); text-shadow:0 1px 2px #000; }
+
+  .charline{ padding-top:16px; }
+  .charline .cn{ font-family:var(--sans); font-weight:700; font-size:25px; color:var(--ink); letter-spacing:.01em; text-shadow:0 2px 0 #000; }
+  .charline .cc{ color:var(--muted); font-family:var(--sans); font-weight:500; }
+  .charline::after{ content:none; }
+  .cbadge{ border:2px solid var(--gold-2); border-radius:0; background:var(--panel); color:var(--ink); font-family:var(--sans); }
+  .cbadge .bk{ color:var(--gold); font-family:var(--cap); font-size:8px; }
+  .cbadge .bv{ color:var(--ink); font-weight:700; }
+
+  .tabpage .ph-title{ color:var(--ink); font-family:var(--sans); font-weight:700; }
+  .tabpage .ph-sub{ color:var(--muted); font-family:var(--cap); letter-spacing:.06em; font-weight:400; }
+  .tabpage .ph-icon svg{ color:var(--gold-2); }
+
+  .stat{ background:var(--tile); border:8px solid transparent;
+    border-image:url('assets/ui/sqbtn_b.png') 8 stretch; border-radius:0; height:100px; }
+  .stat .mod{ font-family:var(--sans); font-weight:700; color:var(--ink); }
+  .stat .k{ font-family:var(--cap); color:var(--gold); font-size:9px; letter-spacing:0; }
+  .stat .sc{ font-family:var(--sans); color:var(--muted); }
+
+  .sack-label{ color:var(--muted); font-family:var(--cap); font-size:10px; }
+  .inv-item .disc{ border:3px solid var(--gold-2); border-radius:50%;
+    box-shadow:0 4px 10px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.35); }
+  .inv-item.add .disc{ border-style:dashed; border-color:var(--line-strong); background:var(--panel)!important; }
+  .inv-item .disc svg{ color:var(--ink); }
+  .inv-item .ilabel{ color:var(--ink-soft); font-family:var(--cap); font-size:9px; }
+  .tie{ color:var(--muted); font-family:var(--cap); font-size:10px; }
+  .addview .add-t{ color:var(--ink); font-family:var(--sans); font-weight:700; }
+  .addview .add-s{ color:var(--muted); }
+  .addview .add-ico{ border:2px dashed var(--line-strong); color:var(--gold-2); border-radius:0; }
+  .add-opt{ border:0; border-image:url('assets/ui/btn_b.png') 7 16 fill / 7px 16px stretch; border-radius:0;
+    color:#2a2016; font-family:var(--sans); font-weight:600; }
+  .add-opt:active{ border-image:url('assets/ui/btn_press_b.png') 6 16 fill / 6px 16px stretch; background:transparent; }
+
+  .hint{ color:var(--muted); font-family:var(--cap); font-size:10px; letter-spacing:.05em; }
+
+  .card{ background:transparent; border:3px solid var(--gold-2); border-radius:0;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.45), 0 10px 24px rgba(0,0,0,.55); }
+  .card:hover{ box-shadow:inset 0 0 0 2px rgba(0,0,0,.45), 0 16px 30px rgba(0,0,0,.65); }
+  .card .cap svg{ color:var(--ink); filter:drop-shadow(0 2px 0 rgba(0,0,0,.4)); }
+
+  .scrim.open{ background:rgba(6,4,3,.62); }
+
+  .sheet{ background:var(--panel); border:30px solid transparent;
+    border-image:url('assets/ui/frame_g.png') 30 stretch; border-radius:0; box-shadow:0 26px 64px rgba(0,0,0,.6); }
+  .panel{ background:var(--panel); border:30px solid transparent;
+    border-image:url('assets/ui/frame_g.png') 30 stretch; border-radius:0; box-shadow:0 26px 64px rgba(0,0,0,.6);
+    top:76px; left:22px; right:22px; max-height:700px; }
+  .s-head{ padding:0 12px 12px; box-shadow:inset 0 -2px 0 var(--gold-2); }
+  .s-head .wm svg{ color:var(--ink); }
+  .s-title{ color:var(--ink); }
+  .s-title .t{ font-family:var(--sans); font-weight:700; }
+  .s-close{ background:rgba(0,0,0,.3); border-radius:0; color:var(--ink); backdrop-filter:none; }
+  .s-body{ padding:14px 14px 22px; }
+  .p-head{ padding:0 14px 12px; box-shadow:inset 0 -2px 0 var(--gold-2); }
+  .p-wm svg{ color:var(--ink); }
+  .p-title{ color:var(--ink); font-family:var(--sans); font-weight:700; }
+  .p-close{ background:rgba(0,0,0,.3); border-radius:0; color:var(--ink); }
+  .p-body{ padding:6px 14px 14px; }
+
+  .sec-h{ color:var(--gold); font-family:var(--cap); font-size:9px; letter-spacing:.02em; font-weight:400; }
+  .skill{ border-bottom:1px solid var(--line); }
+  .skill .dot.on{ background:var(--gold); border-color:var(--gold); }
+  .skill .sn{ color:var(--ink); font-family:var(--sans); }
+  .skill .sa{ color:var(--muted); font-family:var(--cap); font-size:8px; }
+  .skill .sm{ color:var(--ink); font-family:var(--sans); font-weight:600; }
+  .item{ background:var(--panel); border:1px solid var(--line); border-radius:0; }
+  .item .in{ color:var(--ink); font-family:var(--sans); font-weight:700; }
+  .item .im{ color:var(--muted); }
+  .item .qty{ background:var(--tile); color:var(--ink); border-radius:0; font-family:var(--sans); font-weight:700; }
+  .tag{ border:1px solid var(--line-strong); border-radius:0; color:var(--ink-soft); font-family:var(--sans); }
+  .tag.solid{ background:var(--gold); color:#241809; border-color:var(--gold); }
+  .tag.ghost{ color:var(--muted); }
+
+  .srow{ border-bottom:1px solid var(--line); }
+  .sdia{ border-radius:0; border-color:var(--line-strong); }
+  .sdia.on{ background:var(--gold); border-color:var(--gold); }
+  .skey{ color:var(--gold); font-family:var(--cap); font-size:10px; }
+  .smod{ color:var(--ink); font-family:var(--sans); font-weight:700; }
+  .sname{ color:var(--muted); font-family:var(--sans); }
+  .sroll{ border:0; border-image:url('assets/ui/btn_b.png') 7 16 fill / 7px 16px stretch; border-radius:0;
+    background:transparent; color:#2a2016; font-family:var(--cap); font-size:9px; padding:11px 0; }
+  .sroll.hit{ border-image:none; background:var(--gold); color:#241809; }
+
+  .crow{ border-bottom:1px solid var(--line); }
+  .cname{ color:var(--ink); font-family:var(--sans); }
+  .cname.on{ color:var(--blood); font-weight:700; }
+  .sw{ border-radius:0; background:var(--tile); border:1.5px solid var(--line-strong); }
+  .sw.on{ background:var(--blood); border-color:var(--blood); }
+  .sw::after{ border-radius:0; background:var(--ink); }
+
+  /* ---- journal (tab 3) ---- */
+  .journal{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; padding:14px 24px 18px; gap:14px; }
+  .jh{ font-family:var(--cap); font-size:9px; letter-spacing:.06em; color:var(--gold); margin:0 0 10px 1px; }
+  .die-row{ display:flex; gap:5px; }
+  .die{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:5px; padding:9px 0 6px;
+    background:var(--tile); border:2px solid var(--line-strong); border-radius:0; cursor:pointer; color:var(--ink-soft);
+    transition:transform .1s var(--ease), color .12s, border-color .12s; }
+  .die:hover{ color:var(--gold); border-color:var(--gold-2); }
+  .die:active{ transform:translateY(2px) scale(.94); }
+  .die .dl{ font-family:var(--cap); font-size:8px; color:inherit; }
+
+  .readout{ margin-top:14px; height:120px; position:relative; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; background:var(--tile); border:3px solid var(--gold-2);
+    box-shadow:inset 0 0 24px rgba(0,0,0,.55); }
+  .readout .rv{ font-family:var(--sans); font-weight:700; font-size:60px; line-height:1; color:var(--ink); text-shadow:0 2px 0 #000; }
+  .readout .rv.pop{ animation:rvpop .32s var(--ease); }
+  @keyframes rvpop{ 0%{ transform:scale(.55); } 60%{ transform:scale(1.16); } 100%{ transform:scale(1); } }
+  .readout .rl{ font-family:var(--cap); font-size:9px; color:var(--muted); margin-top:9px; letter-spacing:.04em; }
+  .readout .crit-tag{ position:absolute; top:9px; font-family:var(--cap); font-size:8px; letter-spacing:.12em; }
+  .readout.crit-max{ border-color:var(--gold); box-shadow:inset 0 0 26px rgba(220,185,104,.35); }
+  .readout.crit-max .rv{ color:var(--gold); text-shadow:0 0 16px rgba(220,185,104,.7), 0 2px 0 #000; }
+  .readout.crit-min{ border-color:var(--blood); }
+  .readout.crit-min .rv{ color:var(--blood); }
+
+  .jtoggle{ display:flex; border:2px solid var(--line-strong); }
+  .jtoggle button{ flex:1 1 0; padding:11px 0; background:var(--panel); border:none; cursor:pointer;
+    font-family:var(--cap); font-size:9px; letter-spacing:.05em; color:var(--muted); transition:color .12s, background .12s; }
+  .jtoggle button.on{ background:var(--tile); color:var(--gold); }
+  .jtoggle button + button{ border-left:2px solid var(--line-strong); }
+
+  .jpane{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+  .rlog{ flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; }
+  .rlog .empty{ margin:auto; color:var(--muted); font-family:var(--sans); text-align:center; font-size:13px; line-height:1.6; }
+  .rlog-clear{ align-self:flex-end; background:none; border:none; cursor:pointer; padding:2px 2px 8px;
+    font-family:var(--cap); font-size:8px; letter-spacing:.06em; color:var(--muted); }
+  .rlog-clear:hover{ color:var(--blood); }
+  .rlog-row{ display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); }
+  .rlog-die{ font-family:var(--cap); font-size:9px; color:var(--gold); width:30px; flex:0 0 auto; }
+  .rlog-val{ font-family:var(--sans); font-weight:700; font-size:18px; color:var(--ink); width:74px; flex:0 0 auto; }
+  .rlog-val .rlog-tot{ color:var(--muted); font-size:14px; }
+  .rlog-val.max{ color:var(--gold); }
+  .rlog-val.min{ color:var(--blood); }
+  .rlog-src{ flex:1 1 auto; min-width:0; font-family:var(--sans); font-size:12.5px; color:var(--muted); text-transform:capitalize;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rlog-time{ font-family:var(--cap); font-size:8px; color:var(--muted); flex:0 0 auto; }
+  .notes-area{ flex:1 1 auto; width:100%; min-height:0; resize:none; background:var(--tile); border:2px solid var(--line-strong);
+    border-radius:0; color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.55; padding:14px; outline:none; }
+  .notes-area::placeholder{ color:var(--muted); }
+  .notes-area:focus{ border-color:var(--gold-2); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useRef, useCallback, useEffect } = React;
+const C = window.CHARACTER;
+const CARD_W = 152, CARD_H = 190;
+
+/* ---------- icons (thin Lucide-style placeholders) ---------- */
+const S = ({ children }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
+const TABS = [
+  { id:1, label:"Character", el:<S><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3.1-6.4 7-6.4s7 2.8 7 6.4"/></S> },
+  { id:2, label:"Inventory", el:<S><path d="M6.5 8h11l-1 11.4a1.6 1.6 0 0 1-1.6 1.5H9.1a1.6 1.6 0 0 1-1.6-1.5L6.5 8z"/><path d="M9 8V6.4a3 3 0 0 1 6 0V8"/></S> },
+  { id:3, label:"Journal", el:<S><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3V4z"/><path d="M5 17a3 3 0 013-3h11"/><path d="M9 8h6M9 11h4"/></S> },
+];
+
+const ICON = {
+  skills: <S><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.4"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></S>,
+  combat: <S><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" y1="14" x2="9" y2="18"/><line x1="7" y1="17" x2="4" y2="20"/><line x1="3" y1="19" x2="5" y2="21"/></S>,
+  magic:  <S><path d="M12 2.5l2.3 6.2 6.2 2.3-6.2 2.3L12 19.5l-2.3-6.2L3.5 11l6.2-2.3L12 2.5z"/></S>,
+  // inventory
+  weapons: <S><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" y1="14" x2="9" y2="18"/><line x1="7" y1="17" x2="4" y2="20"/><line x1="3" y1="19" x2="5" y2="21"/></S>,
+  armour: <S><path d="M5 12a7 7 0 0 1 14 0v3a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M5 13.6h14"/><path d="M12 6.2v7.4"/></S>,
+  cash:   <S><ellipse cx="12" cy="6.5" rx="7" ry="3"/><path d="M5 6.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/><path d="M5 11.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></S>,
+  misc:   <S><circle cx="8" cy="8" r="3.4"/><path d="M10.4 10.4L20 20M16.5 16.5l2-2M14 14l1.6-1.6"/></S>,
+  consumables: <S><path d="M9.5 3h5M11 3v4.2L7.6 15a3.2 3.2 0 0 0 2.9 4.7h3a3.2 3.2 0 0 0 2.9-4.7L13 7.2V3"/><path d="M8.2 13.5h7.6"/></S>,
+  add:    <S><path d="M12 5v14M5 12h14"/></S>,
+};
+
+const SACK = (
+  <svg viewBox="0 0 120 132" fill="none" stroke="#b89140" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
+    <path d="M44 26c-4-3-6-8-3-12 3 4 9 5 14 5h10c5 0 11-1 14-5 3 4 1 9-3 12" fill="#33271c"/>
+    <path d="M30 40c8-7 19-9 30-9s22 2 30 9c10 17 9 42-3 58-7 9-17 14-27 14s-20-5-27-14C21 82 20 57 30 40Z" fill="#2a1f17"/>
+    <path d="M34 38c8 5 17 7 26 7s18-2 26-7" stroke="#dcb968" />
+    <path d="M48 66c4 4 8 6 12 6s8-2 12-6" stroke="#6e5a40" strokeWidth="2.4"/>
+    <path d="M52 92c3 2 5 3 8 3s5-1 8-3" stroke="#5a4630" strokeWidth="2.2"/>
+  </svg>
+);
+
+// little angel (saving throws) + demon (conditions) — placeholder glyphs
+const GLYPH = {
+  angel: <S><ellipse cx="12" cy="3.6" rx="3" ry="1"/><circle cx="12" cy="7.6" r="2"/><path d="M12 10c-1.7 0-3 1.4-3 3.2V19h6v-5.8c0-1.8-1.3-3.2-3-3.2z"/><path d="M9 12.6c-2.8.2-4.6 2.2-4.6 4.7 2.2.2 4-.9 4.9-2.7M15 12.6c2.8.2 4.6 2.2 4.6 4.7-2.2.2-4-.9-4.9-2.7"/></S>,
+  demon: <S><path d="M8 6.6C6.6 4.7 4.8 4.3 4.8 4.3c.2 1.7 1 3 2.2 3.8"/><path d="M16 6.6c1.4-1.9 3.2-2.3 3.2-2.3-.2 1.7-1 3-2.2 3.8"/><path d="M5.6 12.6a6.4 6.4 0 0 1 12.8 0c0 3.5-2.9 6.4-6.4 6.4s-6.4-2.9-6.4-6.4z"/><circle cx="9.6" cy="12" r=".95" fill="currentColor"/><circle cx="14.4" cy="12" r=".95" fill="currentColor"/><path d="M9.7 15c.7.7 1.5 1 2.3 1s1.6-.3 2.3-1"/></S>,
+};
+
+const STAT_NAMES = { STR:"Strength", DEX:"Dexterity", CON:"Constitution", INT:"Intelligence", WIS:"Wisdom", CHA:"Charisma" };
+const CONDITIONS = ["Blinded","Charmed","Deafened","Exhaustion","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
+const PANELS = {
+  saves:      { title:"Saving Throws", color:"#6f5320", glyph:"angel" },
+  conditions: { title:"Conditions",    color:"var(--cond)", glyph:"demon" },
+};
+
+const CARDS = [
+  { id:"skills", color:"var(--skills)", title:"Skills",
+    sub:`${C.skills.filter(s=>s.p).length} proficient · ${C.skills.length} total` },
+  { id:"combat", color:"var(--combat)", title:"Weapons &\nCantrips",
+    sub:`${C.weapons.length} weapons · ${C.cantrips.length} cantrips` },
+  { id:"magic", color:"var(--magic)", title:"Spells &\nItems",
+    sub:`prepared · abilities · gear` },
+];
+const FAN = [
+  { left:0,   bottom:2,  rot:-12, z:1 },
+  { left:84,  bottom:16, rot:0,   z:3 },
+  { left:168, bottom:2,  rot:12,  z:2 },
+];
+
+/* ---------- inventory layout (sword center, 5 around) ---------- */
+const INV_CENTER = { id:"weapons", color:"var(--combat)", title:"Weapons" };
+const INV_RING = [
+  { id:"armour",      color:"var(--armour)",      title:"Armour",         angle:-90 },
+  { id:"consumables", color:"var(--consumables)", title:"Consumables",    angle:-18 },
+  { id:"cash",        color:"#7a5a24",      title:"Coins & Cash",   angle:54  },
+  { id:"misc",        color:"var(--misc)",        title:"Misc & Tools",   angle:126 },
+  { id:"add",         color:"#1c1510",            title:"Add Item",       angle:198 },
+];
+const ringPos = (angle, R, size) => {
+  const a = angle * Math.PI / 180;
+  return { left: 150 + R * Math.cos(a) - size / 2, top: 150 + R * Math.sin(a) - size / 2 };
+};
+
+/* ---------- expanded content per category ---------- */
+function SkillsView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Ability Checks</span><span style={{textTransform:"none",letterSpacing:".02em",fontWeight:600}}>● proficient</span></div>
+      {C.skills.map((s) => (
+        <div className="skill" key={s.n}>
+          <div className={"dot" + (s.p ? " on" : "")} />
+          <span className="sn">{s.n}</span>
+          <span className="sa">{s.a}</span>
+          <span className="sm">{s.m}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+function CombatView() {
+  return (
+    <>
+      <div className="sec">
+        <div className="sec-h"><span>Weapons</span></div>
+        {C.weapons.map((w) => (
+          <div className="item" key={w.n}>
+            <div className="main"><div className="in">{w.n}</div><div className="im">{w.meta} · {w.type}</div></div>
+            <div className="stats"><span className="tag solid">{w.hit}</span><span className="tag">{w.dmg}</span></div>
+          </div>
+        ))}
+      </div>
+      <div className="sec">
+        <div className="sec-h"><span>Cantrips</span><span style={{letterSpacing:".02em",textTransform:"none",fontWeight:600}}>at will</span></div>
+        {C.cantrips.map((c) => (
+          <div className="item" key={c.n}>
+            <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+            <div className="stats"><span className="tag ghost">{c.tag}</span></div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+function MagicView() {
+  return (
+    <>
+      <div className="sec">
+        <div className="sec-h"><span>Abilities</span><span style={{letterSpacing:".02em"}}>DC {C.spellDC} · ATK {C.spellAtk}</span></div>
+        {C.abilities.map((a) => (
+          <div className="item" key={a.n}>
+            <div className="main"><div className="in">{a.n}</div><div className="im">{a.meta}</div></div>
+            <div className="stats"><span className="tag ghost">{a.tag}</span></div>
+          </div>
+        ))}
+      </div>
+      {Object.keys(C.spells).map((lv) => (
+        <div className="sec" key={lv}>
+          <div className="sec-h"><span>Level {lv} Spells</span></div>
+          {C.spells[lv].map((sp) => (
+            <div className="item" key={sp.n}>
+              <div className="main"><div className="in">{sp.n}</div><div className="im">{sp.tag}</div></div>
+            </div>
+          ))}
+        </div>
+      ))}
+      <div className="sec">
+        <div className="sec-h"><span>Consumables</span></div>
+        {C.consumables.map((c) => (
+          <div className="item" key={c.n}>
+            <div className="qty">×{c.qty}</div>
+            <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+function ArmourView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Worn &amp; Carried</span></div>
+      {C.armour.map((a) => (
+        <div className="item" key={a.n}>
+          <div className="main"><div className="in">{a.n}</div><div className="im">{a.slot} · {a.note}</div></div>
+          <div className="stats"><span className="tag">{a.ac}</span></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function WeaponsView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Weapons</span></div>
+      {C.weapons.map((w) => (
+        <div className="item" key={w.n}>
+          <div className="main"><div className="in">{w.n}</div><div className="im">{w.meta} · {w.type}</div></div>
+          <div className="stats"><span className="tag solid">{w.hit}</span><span className="tag">{w.dmg}</span></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function CashView() {
+  const c = C.coins;
+  const total = (c.pp * 10 + c.gp + c.sp / 10 + c.cp / 100).toFixed(2);
+  const rows = [["Platinum", "pp", c.pp], ["Gold", "gp", c.gp], ["Silver", "sp", c.sp], ["Copper", "cp", c.cp]];
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Purse</span><span style={{ letterSpacing:".02em", textTransform:"none", fontWeight:600 }}>{total} gp total</span></div>
+      {rows.map(([name, k, v]) => (
+        <div className="item" key={k}>
+          <div className="qty">{k}</div>
+          <div className="main"><div className="in">{name}</div></div>
+          <div className="stats"><span className="tag">{v}</span></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function MiscView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Tools &amp; Sundries</span></div>
+      {C.misc.map((m) => (
+        <div className="item" key={m.n}>
+          <div className="qty">×{m.qty}</div>
+          <div className="main"><div className="in">{m.n}</div><div className="im">{m.meta}</div></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function InvConsumablesView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Potions &amp; Herbs</span></div>
+      {C.consumables.map((c) => (
+        <div className="item" key={c.n}>
+          <div className="qty">×{c.qty}</div>
+          <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function AddView() {
+  return (
+    <div className="addview">
+      <div className="add-ico">{ICON.add}</div>
+      <div className="add-t">Add an item</div>
+      <div className="add-s">Search the compendium or enter a custom item to drop into the sack.</div>
+      <div className="add-opts">
+        <div className="add-opt">Search compendium</div>
+        <div className="add-opt">Custom item</div>
+        <div className="add-opt">Scan loot</div>
+      </div>
+    </div>
+  );
+}
+
+const VIEW = { skills: SkillsView, combat: CombatView, magic: MagicView,
+  armour: ArmourView, weapons: WeaponsView, cash: CashView, misc: MiscView, consumables: InvConsumablesView, add: AddView };
+
+/* ---------- saving throws + conditions panels ---------- */
+function SavesView({ rolls, roll }) {
+  const pb = parseInt(C.prof, 10);
+  return (
+    <React.Fragment>
+      {C.stats.map((s) => {
+        const base = parseInt(s.mod, 10);
+        const prof = C.saveProf.includes(s.key);
+        const total = base + (prof ? pb : 0);
+        const f = (total >= 0 ? "+" : "") + total;
+        const r = rolls[s.key];
+        return (
+          <div className="srow" key={s.key}>
+            <span className={"sdia" + (prof ? " on" : "")} />
+            <span className="skey">{s.key}</span>
+            <span className="smod">{f}</span>
+            <span className="sname">{STAT_NAMES[s.key]}</span>
+            <button className={"sroll" + (r ? " hit" : "")} onClick={() => roll(s.key, total)}>
+              {r ? r.total : "ROLL"}
+            </button>
+          </div>
+        );
+      })}
+    </React.Fragment>
+  );
+}
+function ConditionsView({ conds, toggle }) {
+  return (
+    <React.Fragment>
+      {CONDITIONS.map((c) => (
+        <div className="crow" key={c}>
+          <span className={"cname" + (conds[c] ? " on" : "")}>{c}</span>
+          <span className={"sw" + (conds[c] ? " on" : "")} onClick={() => toggle(c)} />
+        </div>
+      ))}
+    </React.Fragment>
+  );
+}
+
+/* ---------- health orb (liquid-filled) ---------- */
+function HealthOrb() {
+  const frac = Math.max(0, Math.min(1, C.hp.cur / C.hp.max));
+  return (
+    <div className="orb" title={`${C.hp.cur} / ${C.hp.max} HP`}>
+      <div className="liquid" style={{ "--fill": (frac * 100) + "%" }} />
+      <div className="gloss" />
+      <span className="orb-num">{C.hp.cur}</span>
+    </div>
+  );
+}
+
+/* ---------- spell wheel (each chunk = one slot) ---------- */
+function SpellWheel({ slots, toggle }) {
+  const flat = [];
+  C.spellSlots.forEach((s, li) => slots[li].forEach((spent, pi) => flat.push({ li, pi, level: s.level, spent })));
+  const N = flat.length;
+  const cx = 29, cy = 29, rOut = 27, rIn = 14.5, gap = 6;
+  const seg = (360 - N * gap) / N;
+  // darker = higher spell-slot level (gold ramp, supports levels 1-9)
+  const shadeRamp = ["#efd089", "#e3bd6a", "#d0a44b", "#ba8d37", "#a37828", "#8a631d", "#704f15", "#583e10", "#422f0b"];
+  const shadeFor = (lv) => shadeRamp[Math.max(0, Math.min(8, lv - 1))];
+  const remaining = flat.filter((f) => !f.spent).length;
+  const rad = (d) => (d - 90) * Math.PI / 180;
+  const pt = (r, d) => [cx + r * Math.cos(rad(d)), cy + r * Math.sin(rad(d))];
+  const arc = (a0, a1) => {
+    const [x0, y0] = pt(rOut, a0), [x1, y1] = pt(rOut, a1);
+    const [x2, y2] = pt(rIn, a1), [x3, y3] = pt(rIn, a0);
+    const big = a1 - a0 > 180 ? 1 : 0;
+    return `M${x0} ${y0} A${rOut} ${rOut} 0 ${big} 1 ${x1} ${y1} L${x2} ${y2} A${rIn} ${rIn} 0 ${big} 0 ${x3} ${y3} Z`;
+  };
+  return (
+    <svg className="wheel" viewBox="0 0 58 58" width="56" height="56" title={`${remaining} spell slots left`}>
+      {flat.map((f, i) => {
+        const a0 = i * (seg + gap) + gap / 2, a1 = a0 + seg;
+        return (
+          <path key={i} d={arc(a0, a1)}
+            fill={f.spent ? "#241a12" : shadeFor(f.level)}
+            stroke={f.spent ? "var(--line-strong)" : "none"} strokeWidth="1.4"
+            style={{ cursor: "pointer" }} onClick={() => toggle(f.li, f.pi)} />
+        );
+      })}
+      <circle cx={cx} cy={cy} r="11.5" fill="#120d0a" stroke="var(--gold-2)" strokeWidth="1.4" />
+      <text x={cx} y={cy + 0.5} textAnchor="middle" dominantBaseline="central"
+        fill="var(--gold)" fontFamily="var(--mono)" fontSize="13" fontWeight="700">{remaining}</text>
+    </svg>
+  );
+}
+
+/* ---------- journal (tab 3): dice roller, roll log, notes ---------- */
+const DICE = [
+  { label:"d4",  sides:4,   poly:"12,3 21,20 3,20" },
+  { label:"d6",  sides:6,   poly:"4.5,4.5 19.5,4.5 19.5,19.5 4.5,19.5" },
+  { label:"d8",  sides:8,   poly:"12,2 21,12 12,22 3,12" },
+  { label:"d10", sides:10,  poly:"12,2 19,10 12,22 5,10" },
+  { label:"d12", sides:12,  poly:"12,2.5 20.5,9 17,20.5 7,20.5 3.5,9" },
+  { label:"d20", sides:20,  poly:"6,4.5 18,4.5 22,12 18,19.5 6,19.5 2,12" },
+  { label:"d%",  sides:100, poly:"12,2 20,7 20,17 12,22 4,17 4,7" },
+];
+const DieShape = ({ poly, size }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+    <polygon points={poly} />
+  </svg>
+);
+function relTime(t) {
+  const s = Math.floor((Date.now() - t) / 1000);
+  if (s < 8) return "just now";
+  if (s < 60) return s + "s";
+  if (s < 3600) return Math.floor(s / 60) + "m";
+  if (s < 86400) return Math.floor(s / 3600) + "h";
+  return Math.floor(s / 86400) + "d";
+}
+
+function JournalTab({ history, pushRoll, clearHistory, notes, setNotes }) {
+  const [pane, setPane] = useState("log");
+  const [last, setLast] = useState(null);
+  const [pop, setPop] = useState(0);
+  const spinRef = useRef(null);
+  useEffect(() => () => clearInterval(spinRef.current), []);
+
+  const roll = (die) => {
+    clearInterval(spinRef.current);
+    const final = 1 + Math.floor(Math.random() * die.sides);
+    let ticks = 0;
+    spinRef.current = setInterval(() => {
+      ticks++;
+      if (ticks > 8) {
+        clearInterval(spinRef.current);
+        const crit = die.sides === 20 ? (final === 20 ? "max" : final === 1 ? "min" : null) : null;
+        setLast({ label: die.label, sides: die.sides, value: final, crit, rolling: false });
+        setPop((p) => p + 1);
+        pushRoll({ sides: die.sides, label: die.label, value: final, src: "manual" });
+      } else {
+        setLast({ label: die.label, sides: die.sides, value: 1 + Math.floor(Math.random() * die.sides), rolling: true });
+      }
+    }, 55);
+  };
+
+  const critCls = last && !last.rolling && last.crit ? " crit-" + last.crit : "";
+  return (
+    <div className="journal">
+      <div className="jroller">
+        <div className="jh">Manual Roll</div>
+        <div className="die-row">
+          {DICE.map((d) => (
+            <button className="die" key={d.label} onClick={() => roll(d)}>
+              <DieShape poly={d.poly} size={26} />
+              <span className="dl">{d.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className={"readout" + critCls} key={pop}>
+          {last && !last.rolling && last.crit === "max" && <span className="crit-tag" style={{ color: "var(--gold)" }}>★ CRITICAL ★</span>}
+          {last && !last.rolling && last.crit === "min" && <span className="crit-tag" style={{ color: "var(--blood)" }}>FUMBLE</span>}
+          <span className={"rv" + (last && !last.rolling ? " pop" : "")}>{last ? last.value : "—"}</span>
+          <span className="rl">{last ? (last.rolling ? "rolling " + last.label + "…" : "rolled " + last.label) : "tap a die to roll"}</span>
+        </div>
+      </div>
+
+      <div className="jtoggle">
+        <button className={pane === "log" ? "on" : ""} onClick={() => setPane("log")}>Roll Log</button>
+        <button className={pane === "notes" ? "on" : ""} onClick={() => setPane("notes")}>Notes</button>
+      </div>
+
+      <div className="jpane">
+        {pane === "log" ? (
+          history.length === 0 ? (
+            <div className="rlog"><div className="empty">No rolls yet.<br/>Cast a die above, or roll a saving throw.</div></div>
+          ) : (
+            <div className="rlog">
+              <button className="rlog-clear" onClick={clearHistory}>✕ clear log</button>
+              {history.map((h) => {
+                const critCls2 = h.sides === 20 ? (h.value === 20 ? " max" : h.value === 1 ? " min" : "") : "";
+                return (
+                  <div className="rlog-row" key={h.id}>
+                    <span className="rlog-die">{h.label}</span>
+                    <span className={"rlog-val" + critCls2}>{h.value}{h.total != null && h.total !== h.value ? <span className="rlog-tot"> → {h.total}</span> : null}</span>
+                    <span className="rlog-src">{h.note || "manual roll"}</span>
+                    <span className="rlog-time">{relTime(h.t)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          <textarea className="notes-area" value={notes} onChange={(e) => setNotes(e.target.value)}
+            placeholder="Quest notes, NPCs met, clues, loot owed…" spellCheck={false} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- main app ---------- */
+function App() {
+  const phoneRef = useRef(null);
+  const closeTimer = useRef(null);
+  const [tab, setTab] = useState(1);
+  const [sackOpen, setSackOpen] = useState(false);
+  const [expanded, setExpanded] = useState(null); // {card, cx, cy, rot}
+  const [open, setOpen] = useState(false);
+  const [showContent, setShowContent] = useState(false);
+
+  // saves / conditions panels
+  const [panel, setPanel] = useState(null);
+  const [pOpen, setPOpen] = useState(false);
+  const pTimer = useRef(null);
+  const [rolls, setRolls] = useState({});
+  const [conds, setConds] = useState({});
+
+  // journal: roll history + notes (persisted)
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("akwan_roll_history")) || []; } catch (e) { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("akwan_roll_history", JSON.stringify(history.slice(0, 80))); } catch (e) {}
+  }, [history]);
+  const pushRoll = useCallback((entry) => {
+    setHistory((h) => [{ id: Date.now() + "-" + Math.random().toString(36).slice(2, 6), t: Date.now(), ...entry }, ...h].slice(0, 80));
+  }, []);
+  const clearHistory = useCallback(() => setHistory([]), []);
+  const [notes, setNotes] = useState(() => {
+    try { return localStorage.getItem("akwan_journal_notes") || ""; } catch (e) { return ""; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("akwan_journal_notes", notes); } catch (e) {}
+  }, [notes]);
+  const openPanel = (id) => { clearTimeout(pTimer.current); setPanel(id); };
+  const closePanel = useCallback(() => {
+    setPOpen(false);
+    clearTimeout(pTimer.current);
+    pTimer.current = setTimeout(() => setPanel(null), 320);
+  }, []);
+  useEffect(() => {
+    if (!panel) return;
+    const t = setTimeout(() => setPOpen(true), 20);
+    return () => clearTimeout(t);
+  }, [panel]);
+  const rollSave = (key, mod) => {
+    const d = 1 + Math.floor(Math.random() * 20);
+    setRolls((r) => ({ ...r, [key]: { d, total: d + mod } }));
+    pushRoll({ sides: 20, label: "d20", value: d, total: d + mod, src: "save", note: key + " save" });
+    setTimeout(() => setRolls((r) => { const n = { ...r }; delete n[key]; return n; }), 1900);
+  };
+  const toggleCond = (c) => setConds((p) => ({ ...p, [c]: !p[c] }));
+
+  // spell slots: boolean array per level (true = expended)
+  const [slots, setSlots] = useState(() =>
+    C.spellSlots.map((s) => Array.from({ length: s.total }, (_, i) => i < s.used))
+  );
+  const toggleSlot = (li, pi) => setSlots((prev) => {
+    const next = prev.map((a) => a.slice());
+    next[li][pi] = !next[li][pi];
+    return next;
+  });
+
+  const openCard = useCallback((card, e) => {
+    clearTimeout(closeTimer.current);
+    const ph = phoneRef.current.getBoundingClientRect();
+    const r = e.currentTarget.getBoundingClientRect();
+    setShowContent(false);
+    setOpen(false);
+    setExpanded({
+      card,
+      cx: r.left + r.width / 2 - ph.left,
+      cy: r.top + r.height / 2 - ph.top,
+      rot: parseFloat(e.currentTarget.dataset.rot || "0"),
+      spin: tab === 1,
+    });
+  }, [tab]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const t1 = setTimeout(() => setOpen(true), 20);
+    const t2 = setTimeout(() => setShowContent(true), 400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [expanded]);
+
+  const closeCard = useCallback(() => {
+    setShowContent(false);
+    setOpen(false);
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setExpanded(null), 560);
+  }, []);
+
+  const switchTab = (id) => {
+    setTab(id);
+    setSackOpen(false);
+    clearTimeout(closeTimer.current);
+    setShowContent(false); setOpen(false); setExpanded(null);
+  };
+
+  const sheetStyle = (() => {
+    if (!expanded) return {};
+    if (open) return { left: 23, top: 85, width: 347, height: 682, borderRadius: 26, transform: `perspective(1100px) rotate(0deg) rotateY(${expanded.spin ? 360 : 0}deg)` };
+    return {
+      left: expanded.cx - CARD_W / 2, top: expanded.cy - CARD_H / 2,
+      width: CARD_W, height: CARD_H, borderRadius: 19,
+      transform: `perspective(1100px) rotate(${expanded.rot}deg) rotateY(0deg)`,
+    };
+  })();
+
+  const card = expanded && expanded.card;
+  const Body = card && VIEW[card.id];
+  const hpPct = Math.round((C.hp.cur / C.hp.max) * 100);
+
+  return (
+    <div className="phone" ref={phoneRef}>
+      <div className="statusbar"><span>9:41</span><div className="dots"><i/><i/><i/></div></div>
+
+      <div className="topbar">
+        <div className="cluster">
+          <HealthOrb />
+          <div className="glyph angel" onClick={() => openPanel("saves")} title="Saving Throws">{GLYPH.angel}</div>
+        </div>
+        <div className="navset">
+          {TABS.map((t) => (
+            <div key={t.id} className={"tab" + (tab === t.id ? " active" : "")} onClick={() => switchTab(t.id)} title={t.label}>{t.el}</div>
+          ))}
+        </div>
+        <div className="cluster">
+          <div className="glyph demon" onClick={() => openPanel("conditions")} title="Conditions">{GLYPH.demon}</div>
+          <SpellWheel slots={slots} toggle={toggleSlot} />
+        </div>
+      </div>
+
+      {tab === 1 ? (
+        <React.Fragment>
+          <div className="charline">
+            <span className="cn">{C.name}</span>
+            <span className="cc">{C.race} · {C.klass}</span>
+            <div className="charstats">
+              <span className="cbadge"><span className="bk">AC</span><span className="bv">{C.ac}</span></span>
+              <span className="cbadge"><span className="bk">Level</span><span className="bv">{C.level}</span></span>
+            </div>
+          </div>
+
+          <div className="body">
+            <div className="stat-grid">
+              {C.stats.map((s) => (
+                <div className="stat" key={s.key}>
+                  <span className="sc">{s.score}</span>
+                  <span className="mod">{s.mod}</span>
+                  <span className="k">{s.key}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </React.Fragment>
+      ) : tab === 2 ? (
+        sackOpen ? (
+          <div className="inv">
+            <div className="ring">
+              <div
+                className="inv-item center"
+                data-rot="0"
+                onClick={(e) => openCard(INV_CENTER, e)}
+                style={{ left: 106, top: 106, animationDelay: "0ms",
+                  visibility: expanded && expanded.card.id === INV_CENTER.id ? "hidden" : "visible" }}
+              >
+                <div className="disc" style={{ background: INV_CENTER.color }}>{ICON[INV_CENTER.id]}</div>
+                <div className="ilabel">{INV_CENTER.title}</div>
+              </div>
+              {INV_RING.map((it, i) => {
+                const p = ringPos(it.angle, 110, 64);
+                return (
+                  <div
+                    key={it.id}
+                    className={"inv-item" + (it.id === "add" ? " add" : "")}
+                    data-rot="0"
+                    onClick={(e) => openCard(it, e)}
+                    style={{ left: p.left, top: p.top, animationDelay: (90 + i * 60) + "ms",
+                      visibility: expanded && expanded.card.id === it.id ? "hidden" : "visible" }}
+                  >
+                    <div className="disc" style={{ background: it.color }}>{ICON[it.id]}</div>
+                    <div className="ilabel">{it.title}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <button className="tie" onClick={() => setSackOpen(false)}>Tie up sack</button>
+          </div>
+        ) : (
+          <div className="inv">
+            <div className="sack-wrap" onClick={() => setSackOpen(true)}>
+              <div className="sack">{SACK}</div>
+              <div className="sack-label">Tap to open your sack</div>
+            </div>
+          </div>
+        )
+      ) : tab === 3 ? (
+        <JournalTab history={history} pushRoll={pushRoll} clearHistory={clearHistory} notes={notes} setNotes={setNotes} />
+      ) : (
+        <div className="tabpage">
+          <div className="ph-icon">{TABS[tab - 1].el}</div>
+          <div className="ph-title">{TABS[tab - 1].label}</div>
+          <div className="ph-sub">Coming soon</div>
+        </div>
+      )}
+
+      {tab === 1 && (
+        <div className="hint" style={{ opacity: expanded ? 0 : 1 }}>Tap a card to open</div>
+      )}
+
+      {tab === 1 && (
+        <div className="fan">
+          {CARDS.map((c, i) => (
+            <div
+              key={c.id}
+              className="card"
+              data-rot={FAN[i].rot}
+              onClick={(e) => openCard(c, e)}
+              style={{
+                left: FAN[i].left, bottom: FAN[i].bottom, zIndex: FAN[i].z,
+                transform: `rotate(${FAN[i].rot}deg)`,
+                visibility: expanded && expanded.card.id === c.id ? "hidden" : "visible",
+              }}
+            >
+              <div className="cap" style={{ background: c.color }}>{ICON[c.id]}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={"scrim" + ((open || pOpen) ? " open" : "")} onClick={() => { if (panel) closePanel(); if (expanded) closeCard(); }} />
+
+      {panel && (
+        <div className={"panel" + (pOpen ? " open" : "")}>
+          <div className="p-head" style={{ background: PANELS[panel].color }}>
+            <div className="p-wm">{GLYPH[PANELS[panel].glyph]}</div>
+            <button className="p-close" onClick={closePanel} aria-label="Close">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <div className="p-title">{PANELS[panel].title}</div>
+          </div>
+          <div className="p-body">
+            {panel === "saves"
+              ? <SavesView rolls={rolls} roll={rollSave} />
+              : <ConditionsView conds={conds} toggle={toggleCond} />}
+          </div>
+        </div>
+      )}
+
+      {expanded && (
+        <div className="sheet" style={sheetStyle}>
+          <div className="s-head" style={{ background: card.color, height: open ? 132 : "48%" }}>
+            <div className="wm">{ICON[card.id]}</div>
+            <button className="s-close" onClick={closeCard} aria-label="Close" style={{ opacity: showContent ? 1 : 0 }}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <div className="s-title" style={{ opacity: showContent ? 1 : 0 }}>
+              <div className="t">{card.title.replace("\n", " ")}</div>
+            </div>
+          </div>
+          {showContent && Body && (
+            <div className="s-body"><Body /></div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
