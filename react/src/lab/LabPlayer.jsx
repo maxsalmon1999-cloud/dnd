@@ -8,7 +8,19 @@ import React from 'react'
 import { CHARACTER } from './characterData'
 import { useGameStore } from '../store/gameStore'
 import { rollLabDice } from './labDice'
+import { CONDITIONS as COND_INFO, SPELL_DESCRIPTIONS, ABILITY_DESCRIPTIONS } from '../data/gameData'
 import './lab.css'
+
+// condition name -> description (from the ported reference data)
+const CONDDESC = Object.fromEntries((COND_INFO || []).map((c) => [c.name, c.desc]))
+// parse a dice string like "1d6+3", "3d6", "2d8-1" -> {count, sides, modifier}
+function parseDice(str) {
+  const m = String(str || '').match(/(\d+)\s*d\s*(\d+)\s*([+-]\s*\d+)?/i)
+  if (!m) return null
+  return { count: parseInt(m[1], 10) || 1, sides: parseInt(m[2], 10), modifier: m[3] ? parseInt(m[3].replace(/\s/g, ''), 10) : 0 }
+}
+// description lookup (reference data), falling back to the prototype's shorthand
+const descOf = (table, name, fb) => (table && table[name]) || fb || 'No description available.'
 
 const { useState, useRef, useCallback, useEffect } = React;
 const C = CHARACTER;
@@ -87,7 +99,7 @@ const ringPos = (angle, R, size) => {
 };
 
 /* ---------- expanded content per category ---------- */
-function SkillsView() {
+function SkillsView({ ctx }) {
   return (
     <div className="sec">
       <div className="sec-h"><span>Ability Checks</span><span style={{textTransform:"none",letterSpacing:".02em",fontWeight:600}}>● proficient</span></div>
@@ -97,65 +109,95 @@ function SkillsView() {
           <span className="sn">{s.n}</span>
           <span className="sa">{s.a}</span>
           <span className="sm">{s.m}</span>
+          <button className="row-roll" onClick={() => ctx.roll({ count: 1, sides: 20, modifier: parseInt(s.m, 10) || 0, label: "1d20" + (s.m || ""), type: s.n })}>ROLL</button>
         </div>
       ))}
     </div>
   );
 }
-function CombatView() {
+// A weapon row: tap (or its button) to roll its damage dice.
+function WeaponRow({ w, ctx }) {
+  const dice = parseDice(w.dmg);
+  const doRoll = () => dice && ctx.roll({ ...dice, label: w.dmg, type: w.n + " damage" });
+  return (
+    <div className="item tappable" key={w.n} onClick={doRoll}>
+      <div className="main"><div className="in">{w.n}</div><div className="im">{w.meta} · {w.type}</div></div>
+      <div className="stats"><span className="tag solid">{w.hit}</span><button className="tag roll" onClick={(e) => { e.stopPropagation(); doRoll(); }}>{w.dmg}</button></div>
+    </div>
+  );
+}
+function CombatView({ ctx }) {
   return (
     <>
       <div className="sec">
         <div className="sec-h"><span>Weapons</span></div>
-        {C.weapons.map((w) => (
-          <div className="item" key={w.n}>
-            <div className="main"><div className="in">{w.n}</div><div className="im">{w.meta} · {w.type}</div></div>
-            <div className="stats"><span className="tag solid">{w.hit}</span><span className="tag">{w.dmg}</span></div>
-          </div>
-        ))}
+        {C.weapons.map((w) => <WeaponRow key={w.n} w={w} ctx={ctx} />)}
       </div>
       <div className="sec">
         <div className="sec-h"><span>Cantrips</span><span style={{letterSpacing:".02em",textTransform:"none",fontWeight:600}}>at will</span></div>
-        {C.cantrips.map((c) => (
-          <div className="item" key={c.n}>
-            <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
-            <div className="stats"><span className="tag ghost">{c.tag}</span></div>
-          </div>
-        ))}
+        {C.cantrips.map((c) => {
+          const dice = parseDice(c.tag);
+          const doRoll = () => dice && ctx.roll({ ...dice, label: dice.count + "d" + dice.sides, type: c.n });
+          return (
+            <div className="item tappable" key={c.n} onClick={doRoll}>
+              <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+              <div className="stats"><button className="tag roll ghost" onClick={(e) => { e.stopPropagation(); doRoll(); }}>{c.tag}</button></div>
+            </div>
+          );
+        })}
       </div>
     </>
   );
 }
-function MagicView() {
+function MagicView({ ctx }) {
   return (
     <>
       <div className="sec">
         <div className="sec-h"><span>Abilities</span><span style={{letterSpacing:".02em"}}>DC {C.spellDC} · ATK {C.spellAtk}</span></div>
-        {C.abilities.map((a) => (
-          <div className="item" key={a.n}>
-            <div className="main"><div className="in">{a.n}</div><div className="im">{a.meta}</div></div>
-            <div className="stats"><span className="tag ghost">{a.tag}</span></div>
-          </div>
-        ))}
+        {C.abilities.map((a) => {
+          const maxM = String(a.tag || "").match(/(\d+)\s*\/\s*(\d+)/);
+          const max = maxM ? parseInt(maxM[2], 10) : null;
+          const used = ctx.abilUses[a.n] || 0;
+          const left = max != null ? max - used : null;
+          const passive = /passive/i.test(a.tag || "");
+          return (
+            <div className="item" key={a.n}>
+              <div className="main">
+                <div className="in tappable" onClick={() => ctx.info(a.n, descOf(ABILITY_DESCRIPTIONS, a.n, a.meta))}>{a.n} <span className="qmark">?</span></div>
+                {left != null && <div className="im">{left}/{max} uses left</div>}
+              </div>
+              {!passive && (
+                <button className="row-roll" disabled={left != null && left <= 0} onClick={() => ctx.useAbility(a)}>
+                  {parseDice(a.meta) || parseDice(a.tag) ? "ROLL" : "USE"}
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
       {Object.keys(C.spells).map((lv) => (
         <div className="sec" key={lv}>
           <div className="sec-h"><span>Level {lv} Spells</span></div>
           {C.spells[lv].map((sp) => (
             <div className="item" key={sp.n}>
-              <div className="main"><div className="in">{sp.n}</div><div className="im">{sp.tag}</div></div>
+              <div className="main"><div className="in tappable" onClick={() => ctx.info(sp.n, descOf(SPELL_DESCRIPTIONS, sp.n, sp.tag))}>{sp.n} <span className="qmark">?</span></div></div>
+              <button className="row-roll" onClick={() => ctx.openCast(sp, parseInt(lv, 10))}>CAST</button>
             </div>
           ))}
         </div>
       ))}
       <div className="sec">
         <div className="sec-h"><span>Consumables</span></div>
-        {C.consumables.map((c) => (
-          <div className="item" key={c.n}>
-            <div className="qty">×{c.qty}</div>
-            <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
-          </div>
-        ))}
+        {C.consumables.map((c) => {
+          const left = (c.qty || 0) - (ctx.consumed[c.n] || 0);
+          return (
+            <div className="item" key={c.n}>
+              <div className="qty">×{left}</div>
+              <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+              <button className="row-roll" disabled={left <= 0} onClick={() => ctx.consumeItem(c)}>CONSUME</button>
+            </div>
+          );
+        })}
       </div>
     </>
   );
@@ -173,16 +215,11 @@ function ArmourView() {
     </div>
   );
 }
-function WeaponsView() {
+function WeaponsView({ ctx }) {
   return (
     <div className="sec">
       <div className="sec-h"><span>Weapons</span></div>
-      {C.weapons.map((w) => (
-        <div className="item" key={w.n}>
-          <div className="main"><div className="in">{w.n}</div><div className="im">{w.meta} · {w.type}</div></div>
-          <div className="stats"><span className="tag solid">{w.hit}</span><span className="tag">{w.dmg}</span></div>
-        </div>
-      ))}
+      {C.weapons.map((w) => <WeaponRow key={w.n} w={w} ctx={ctx} />)}
     </div>
   );
 }
@@ -216,16 +253,20 @@ function MiscView() {
     </div>
   );
 }
-function InvConsumablesView() {
+function InvConsumablesView({ ctx }) {
   return (
     <div className="sec">
       <div className="sec-h"><span>Potions &amp; Herbs</span></div>
-      {C.consumables.map((c) => (
-        <div className="item" key={c.n}>
-          <div className="qty">×{c.qty}</div>
-          <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
-        </div>
-      ))}
+      {C.consumables.map((c) => {
+        const left = (c.qty || 0) - (ctx.consumed[c.n] || 0);
+        return (
+          <div className="item" key={c.n}>
+            <div className="qty">×{left}</div>
+            <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+            <button className="row-roll" disabled={left <= 0} onClick={() => ctx.consumeItem(c)}>CONSUME</button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -273,12 +314,12 @@ function SavesView({ rolls, roll }) {
     </React.Fragment>
   );
 }
-function ConditionsView({ conds, toggle }) {
+function ConditionsView({ conds, toggle, info }) {
   return (
     <React.Fragment>
       {CONDITIONS.map((c) => (
         <div className="crow" key={c}>
-          <span className={"cname" + (conds[c] ? " on" : "")}>{c}</span>
+          <span className={"cname tappable" + (conds[c] ? " on" : "")} onClick={() => info(c, CONDDESC[c] || "No description available.")}>{c} <span className="qmark">?</span></span>
           <span className={"sw" + (conds[c] ? " on" : "")} onClick={() => toggle(c)} />
         </div>
       ))}
@@ -474,10 +515,22 @@ function App() {
   }, []);
   const clearHistory = useCallback(() => setHistory([]), []);
   const [notes, setNotes] = useState(() => {
-    try { return localStorage.getItem("akwan_journal_notes") || ""; } catch (e) { return ""; }
+    try {
+      const liveC = useGameStore.getState().characters[LAB_CHAR_KEY];
+      if (liveC && typeof liveC.notes === "string") return liveC.notes;
+      return localStorage.getItem("akwan_journal_notes") || "";
+    } catch (e) { return ""; }
   });
+  const notesTimer = useRef(null);
   useEffect(() => {
+    // auto-hard-save: localStorage immediately + debounced to the live store so
+    // notes persist between sessions and devices
     try { localStorage.setItem("akwan_journal_notes", notes); } catch (e) {}
+    clearTimeout(notesTimer.current);
+    notesTimer.current = setTimeout(() => {
+      try { useGameStore.getState().saveNotes(LAB_CHAR_KEY, notes); } catch (e) {}
+    }, 700);
+    return () => clearTimeout(notesTimer.current);
   }, [notes]);
   const openPanel = (id) => { clearTimeout(pTimer.current); setPanel(id); };
   const closePanel = useCallback(() => {
@@ -490,11 +543,16 @@ function App() {
     const t = setTimeout(() => setPOpen(true), 20);
     return () => clearTimeout(t);
   }, [panel]);
-  const rollSave = (key, mod) => {
-    const d = 1 + Math.floor(Math.random() * 20);
-    setRolls((r) => ({ ...r, [key]: { d, total: d + mod } }));
-    pushRoll({ sides: 20, label: "d20", value: d, total: d + mod, src: "save", note: key + " save" });
-    setTimeout(() => setRolls((r) => { const n = { ...r }; delete n[key]; return n; }), 1900);
+  const rollSave = async (key, mod) => {
+    let d;
+    try { const vals = await rollLabDice("1d20"); d = Array.isArray(vals) && vals.length ? vals[0] : 1 + Math.floor(Math.random() * 20); }
+    catch { d = 1 + Math.floor(Math.random() * 20); }
+    const total = d + mod;
+    const modStr = (mod >= 0 ? "+" : "") + mod;
+    setRolls((r) => ({ ...r, [key]: { d, total } }));
+    pushRoll({ sides: 20, label: "d20" + modStr, value: d, total, src: "save", note: key + " save" });
+    try { useGameStore.getState().pushDiceLog({ character: C.name, charKey: LAB_CHAR_KEY, label: "1d20" + modStr, result: total, type: key + " Save", modifier: mod }); } catch { /* ignore */ }
+    setTimeout(() => setRolls((r) => { const n = { ...r }; delete n[key]; return n; }), 2400);
   };
   // Ability check: tap a stat tile → roll the 3D dice (d20 + that stat's mod),
   // flash the total on the tile, log it locally + to the shared dice log.
@@ -528,6 +586,77 @@ function App() {
     next[li][pi] = !next[li][pi];
     return next;
   });
+
+  // ---- shared interactivity (descriptions, generic rolls, spells, abilities) ----
+  const [info, setInfo] = useState(null);       // {title, body} description pop-out
+  const [castPick, setCastPick] = useState(null); // {spell, options:[{level, n, free}]}
+  const [rollToast, setRollToast] = useState(null); // {label, total, sub, crit}
+  const [abilUses, setAbilUses] = useState({});   // ability name -> uses spent
+  const [consumed, setConsumed] = useState({});   // consumable name -> count consumed
+  const showInfo = useCallback((title, body) => setInfo({ title, body }), []);
+
+  // Generic 3D roll: rolls the dice, flashes a toast, logs locally + to shared log.
+  const rollThing = useCallback(async ({ label, count = 1, sides = 20, modifier = 0, type, note }) => {
+    let value;
+    try {
+      const vals = await rollLabDice(`${count}d${sides}`);
+      value = Array.isArray(vals) && vals.length ? vals.reduce((a, b) => a + b, 0) : null;
+    } catch { value = null; }
+    if (value == null) { let s = 0; for (let i = 0; i < count; i++) s += 1 + Math.floor(Math.random() * sides); value = s; }
+    const total = value + modifier;
+    const crit = count === 1 && sides === 20 ? (value === 20 ? "max" : value === 1 ? "min" : null) : null;
+    setRollToast({ label: label || `${count}d${sides}`, total, sub: type || note || "", crit });
+    setTimeout(() => setRollToast((t) => (t && t.total === total && t.label === (label || `${count}d${sides}`) ? null : t)), 2600);
+    pushRoll({ sides, label: label || `${count}d${sides}`, value, total, src: "roll", note: type || note });
+    try {
+      useGameStore.getState().pushDiceLog({ character: C.name, charKey: LAB_CHAR_KEY, label: label || `${count}d${sides}`, result: total, type: type || note || "Roll", modifier });
+    } catch { /* ignore */ }
+  }, [pushRoll]);
+
+  // spell-slot bookkeeping (slots state is boolean[level][pip], true = spent)
+  const slotsFreeAtIndex = (li) => slots[li]?.filter((x) => !x).length || 0;
+  // cast a spell: open a level picker (>= base level), greying out empty slot types
+  const openCast = (spell, baseLevel) => {
+    const options = C.spellSlots
+      .map((s, li) => ({ level: s.level, li, free: slotsFreeAtIndex(li) }))
+      .filter((o) => o.level >= baseLevel);
+    if (options.length === 0) { setRollToast({ label: spell.n, total: "—", sub: "no slots", crit: null }); setTimeout(() => setRollToast(null), 1800); return; }
+    setCastPick({ spell, baseLevel, options });
+  };
+  const confirmCast = (opt) => {
+    if (opt.free <= 0) return;
+    setSlots((prev) => {
+      const next = prev.map((a) => a.slice());
+      const pi = next[opt.li].findIndex((x) => !x);
+      if (pi >= 0) next[opt.li][pi] = true;
+      return next;
+    });
+    setCastPick(null);
+    const dice = parseDice(castPick.spell.tag) || parseDice(castPick.spell.dmg);
+    if (dice) rollThing({ ...dice, label: `${dice.count}d${dice.sides}`, type: `${castPick.spell.n} (lvl ${opt.level})` });
+    else { setRollToast({ label: castPick.spell.n, total: "✦", sub: `cast at level ${opt.level}`, crit: null }); setTimeout(() => setRollToast(null), 2200); }
+  };
+
+  // ability use: parse "x/y" from tag for finite uses; roll any dice in meta/tag
+  const useAbility = (a) => {
+    const maxM = String(a.tag || "").match(/(\d+)\s*\/\s*(\d+)/);
+    const dice = parseDice(a.meta) || parseDice(a.tag);
+    if (maxM) {
+      const max = parseInt(maxM[2], 10);
+      const used = abilUses[a.n] || 0;
+      if (used >= max) return;
+      setAbilUses((u) => ({ ...u, [a.n]: used + 1 }));
+    }
+    if (dice) rollThing({ ...dice, label: `${dice.count}d${dice.sides}`, type: a.n });
+    else { setRollToast({ label: a.n, total: "✦", sub: "used", crit: null }); setTimeout(() => setRollToast(null), 1800); }
+  };
+
+  const consumeItem = (c) => setConsumed((p) => ({ ...p, [c.n]: (p[c.n] || 0) + 1 }));
+
+  const ctx = {
+    roll: rollThing, info: showInfo, slots, slotsFreeAtIndex, openCast,
+    abilUses, useAbility, consumed, consumeItem,
+  };
 
   const openCard = useCallback((card, e) => {
     clearTimeout(closeTimer.current);
@@ -578,6 +707,11 @@ function App() {
   const card = expanded && expanded.card;
   const Body = card && VIEW[card.id];
   const hpPct = Math.round((C.hp.cur / C.hp.max) * 100);
+  // armour AC bonus (sum of "+N AC" from worn armour) shown bracketed next to natural AC
+  const armourBonus = (C.armour || []).reduce((s, a) => {
+    const m = String(a.ac).match(/([+-]?\d+)/);
+    return s + (m ? parseInt(m[1], 10) : 0);
+  }, 0);
 
   return (
     <div className="phone" ref={phoneRef}>
@@ -607,7 +741,7 @@ function App() {
             <span className="cn">{C.name}</span>
             <span className="cc">{C.race} · {C.klass}</span>
             <div className="charstats">
-              <span className="cbadge"><span className="bk">AC</span><span className="bv">{C.ac}</span></span>
+              <span className="cbadge"><span className="bk">AC</span><span className="bv">{C.ac}{armourBonus ? `(${armourBonus >= 0 ? "+" : ""}${armourBonus})` : ""}</span></span>
               <span className="cbadge"><span className="bk">Level</span><span className="bv">{C.level}</span></span>
             </div>
           </div>
@@ -726,7 +860,7 @@ function App() {
           <div className="p-body">
             {panel === "saves"
               ? <SavesView rolls={rolls} roll={rollSave} />
-              : <ConditionsView conds={conds} toggle={toggleCond} />}
+              : <ConditionsView conds={conds} toggle={toggleCond} info={showInfo} />}
           </div>
         </div>
       )}
@@ -743,8 +877,45 @@ function App() {
             </div>
           </div>
           {showContent && Body && (
-            <div className="s-body"><Body /></div>
+            <div className="s-body"><Body ctx={ctx} /></div>
           )}
+        </div>
+      )}
+
+      {/* description pop-out */}
+      {info && (
+        <div className="lab-pop-backdrop" onClick={() => setInfo(null)}>
+          <div className="lab-pop" onClick={(e) => e.stopPropagation()}>
+            <div className="lab-pop-title">{info.title}</div>
+            <div className="lab-pop-body">{info.body}</div>
+            <button className="lab-pop-x" onClick={() => setInfo(null)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* spell-slot level picker */}
+      {castPick && (
+        <div className="lab-pop-backdrop" onClick={() => setCastPick(null)}>
+          <div className="lab-pop" onClick={(e) => e.stopPropagation()}>
+            <div className="lab-pop-title">Cast {castPick.spell.n}</div>
+            <div className="lab-pop-body">Choose a spell slot level:</div>
+            <div className="cast-opts">
+              {castPick.options.map((o) => (
+                <button key={o.li} className="cast-opt" disabled={o.free <= 0} onClick={() => confirmCast(o)}>
+                  Level {o.level} <span className="cast-free">{o.free} left</span>
+                </button>
+              ))}
+            </div>
+            <button className="lab-pop-x" onClick={() => setCastPick(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* transient roll result toast */}
+      {rollToast && (
+        <div className={"lab-toast" + (rollToast.crit === "max" ? " crit-max" : rollToast.crit === "min" ? " crit-min" : "")}>
+          <div className="lt-total">{rollToast.total}</div>
+          <div className="lt-sub">{rollToast.label}{rollToast.sub ? " · " + rollToast.sub : ""}</div>
         </div>
       )}
     </div>
