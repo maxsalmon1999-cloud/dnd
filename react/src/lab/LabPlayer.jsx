@@ -330,11 +330,18 @@ function ConditionsView({ conds, toggle, info }) {
 /* ---------- health orb (liquid-filled) ---------- */
 function HealthOrb() {
   const frac = Math.max(0, Math.min(1, C.hp.cur / C.hp.max));
+  const chg = (d) => { try { useGameStore.getState().changeHp(LAB_CHAR_KEY, d); } catch (e) { /* ignore */ } };
   return (
-    <div className="orb" title={`${C.hp.cur} / ${C.hp.max} HP`}>
-      <div className="liquid" style={{ "--fill": (frac * 100) + "%" }} />
-      <div className="gloss" />
-      <span className="orb-num">{C.hp.cur}</span>
+    <div className="orb-wrap">
+      <div className="orb" title={`${C.hp.cur} / ${C.hp.max} HP`}>
+        <div className="liquid" style={{ "--fill": (frac * 100) + "%" }} />
+        <div className="gloss" />
+        <span className="orb-num">{C.hp.cur}</span>
+      </div>
+      <div className="hp-pm">
+        <button onClick={() => chg(-1)} aria-label="Lose 1 HP">−</button>
+        <button onClick={() => chg(1)} aria-label="Gain 1 HP">+</button>
+      </div>
     </div>
   );
 }

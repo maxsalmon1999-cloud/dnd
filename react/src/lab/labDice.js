@@ -29,19 +29,23 @@ function ensureBox() {
   return initPromise
 }
 
-// Roll a notation like "1d20"; resolves with the settled die values. Dice stay
-// briefly then clear. The overlay lives inside the phone, so it's clipped to it.
+// Roll a notation like "1d20"; resolves with the settled die values.
+// Dice stay on screen for 5s after the LAST roll. If you roll again within that
+// window, the new dice are ADDED alongside the existing ones (previous dice are
+// not cleared early) and the 5s timer resets.
+let visible = false
 export async function rollLabDice(notation) {
   const b = await ensureBox()
   const el = layerEl()
   clearTimeout(hideTimer)
-  b.clear()
   if (el) el.style.opacity = '1'
   window.dispatchEvent(new Event('resize'))
-  const results = await b.roll(notation)
+  const results = visible && typeof b.add === 'function' ? await b.add(notation) : await b.roll(notation)
+  visible = true
   hideTimer = setTimeout(() => {
     b.clear()
+    visible = false
     if (el) el.style.opacity = '0'
-  }, 1600)
+  }, 5000)
   return (Array.isArray(results) ? results : []).map((r) => r.value)
 }

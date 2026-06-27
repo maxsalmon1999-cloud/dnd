@@ -505,3 +505,9 @@
 .lab-root .lab-toast.crit-max .lt-total { color: var(--gold); }
 .lab-root .lab-toast.crit-min { border-color: var(--blood); }
 .lab-root .lab-toast.crit-min .lt-total { color: var(--blood); }
+
+/* ---- health orb +/- controls ---- */
+.lab-root .orb-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 0 0 auto; }
+.lab-root .hp-pm { display: flex; gap: 4px; }
+.lab-root .hp-pm button { width: 19px; height: 15px; padding: 0; line-height: 1; border: 1px solid var(--gold-2); background: var(--panel); color: var(--gold); font-family: var(--sans); font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.lab-root .hp-pm button:active { transform: scale(.9); }
