@@ -6,7 +6,7 @@ import Home from './routes/Home'
 import DmApp from './dm/DmApp'
 import PlayerApp from './player/PlayerApp'
 import Callback from './routes/Callback'
-import LabPlayer from './lab/LabPlayer'
+import RefreshedPlayer from './refreshed/RefreshedPlayer'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -16,7 +16,8 @@ createRoot(document.getElementById('root')).render(
         <Route path="/dm" element={<DmApp />} />
         <Route path="/play" element={<PlayerApp />} />
         <Route path="/callback" element={<Callback />} />
-        <Route path="/lab" element={<LabPlayer />} />
+        <Route path="/refreshed" element={<RefreshedPlayer />} />
+        <Route path="/lab" element={<RefreshedPlayer />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

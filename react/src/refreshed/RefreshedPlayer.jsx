@@ -7,9 +7,9 @@
 import React from 'react'
 import { CHARACTER } from './characterData'
 import { useGameStore } from '../store/gameStore'
-import { rollLabDice } from './labDice'
+import { rollLabDice } from './refreshedDice'
 import { CONDITIONS as COND_INFO, SPELL_DESCRIPTIONS, ABILITY_DESCRIPTIONS } from '../data/gameData'
-import './lab.css'
+import './refreshed.css'
 
 // condition name -> description (from the ported reference data)
 const CONDDESC = Object.fromEntries((COND_INFO || []).map((c) => [c.name, c.desc]))
@@ -1034,7 +1034,7 @@ function App() {
 // ---- live-data wiring (added; everything above is the verbatim prototype) ----
 const LAB_CHAR_KEY = 'akwan-akusian'
 
-function LabPlayer() {
+function RefreshedPlayer() {
   const subscribe = useGameStore((s) => s.subscribe)
   const live = useGameStore((s) => s.characters[LAB_CHAR_KEY])
   useEffect(() => { subscribe() }, [subscribe])
@@ -1043,7 +1043,7 @@ function LabPlayer() {
   if (live) {
     C.hp = { ...C.hp, cur: live.hp ?? C.hp.cur, max: live.maxHp ?? C.hp.max }
   }
-  return <div className="lab-root"><App /></div>
+  return <div className="refreshed-root"><App /></div>
 }
 
-export default LabPlayer
+export default RefreshedPlayer
