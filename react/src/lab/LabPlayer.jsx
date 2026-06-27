@@ -7,6 +7,7 @@
 import React from 'react'
 import { CHARACTER } from './characterData'
 import { useGameStore } from '../store/gameStore'
+import { rollDiceBox } from '../lib/dicebox'
 import './lab.css'
 
 const { useState, useRef, useCallback, useEffect } = React;
@@ -365,22 +366,27 @@ function JournalTab({ history, pushRoll, clearHistory, notes, setNotes }) {
   const spinRef = useRef(null);
   useEffect(() => () => clearInterval(spinRef.current), []);
 
-  const roll = (die) => {
-    clearInterval(spinRef.current);
-    const final = 1 + Math.floor(Math.random() * die.sides);
-    let ticks = 0;
-    spinRef.current = setInterval(() => {
-      ticks++;
-      if (ticks > 8) {
-        clearInterval(spinRef.current);
-        const crit = die.sides === 20 ? (final === 20 ? "max" : final === 1 ? "min" : null) : null;
-        setLast({ label: die.label, sides: die.sides, value: final, crit, rolling: false });
-        setPop((p) => p + 1);
-        pushRoll({ sides: die.sides, label: die.label, value: final, src: "manual" });
-      } else {
-        setLast({ label: die.label, sides: die.sides, value: 1 + Math.floor(Math.random() * die.sides), rolling: true });
-      }
-    }, 55);
+  const roll = async (die) => {
+    // Animate the real 3D physics dice (same roller as the HTML/legacy version);
+    // fall back to a plain RNG roll if the dice box can't load.
+    setLast({ label: die.label, sides: die.sides, rolling: true });
+    let value;
+    try {
+      const vals = await rollDiceBox(`1d${die.sides}`);
+      value = Array.isArray(vals) && vals.length ? vals[0] : 1 + Math.floor(Math.random() * die.sides);
+    } catch {
+      value = 1 + Math.floor(Math.random() * die.sides);
+    }
+    const crit = die.sides === 20 ? (value === 20 ? "max" : value === 1 ? "min" : null) : null;
+    setLast({ label: die.label, sides: die.sides, value, crit, rolling: false });
+    setPop((p) => p + 1);
+    pushRoll({ sides: die.sides, label: die.label, value, src: "manual" });
+    // LIVE: log to the shared dice log so the DM screen sees the roll
+    try {
+      useGameStore.getState().pushDiceLog({
+        character: C.name, charKey: LAB_CHAR_KEY, label: die.label, result: value, type: "Manual Roll",
+      });
+    } catch { /* ignore */ }
   };
 
   const critCls = last && !last.rolling && last.crit ? " crit-" + last.crit : "";
