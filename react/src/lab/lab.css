@@ -466,3 +466,7 @@
 .lab-root .notes-area:focus { border-color:var(--gold-2); }
 /* ---- legibility override (must be last to win over ornate theme) ---- */
 .lab-root { --sans: "VT323", ui-monospace, monospace; --mono: "VT323", ui-monospace, monospace; }
+
+/* ---- in-phone 3D dice roll surface (clipped to the phone) ---- */
+.lab-root .phone .lab-dice { position: absolute; inset: 0; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.lab-root .phone .lab-dice canvas { width: 100% !important; height: 100% !important; display: block; }

@@ -7,7 +7,7 @@
 import React from 'react'
 import { CHARACTER } from './characterData'
 import { useGameStore } from '../store/gameStore'
-import { rollDiceBox } from '../lib/dicebox'
+import { rollLabDice } from './labDice'
 import './lab.css'
 
 const { useState, useRef, useCallback, useEffect } = React;
@@ -372,7 +372,7 @@ function JournalTab({ history, pushRoll, clearHistory, notes, setNotes }) {
     setLast({ label: die.label, sides: die.sides, rolling: true });
     let value;
     try {
-      const vals = await rollDiceBox(`1d${die.sides}`);
+      const vals = await rollLabDice(`1d${die.sides}`);
       value = Array.isArray(vals) && vals.length ? vals[0] : 1 + Math.floor(Math.random() * die.sides);
     } catch {
       value = 1 + Math.floor(Math.random() * die.sides);
@@ -559,6 +559,8 @@ function App() {
 
   return (
     <div className="phone" ref={phoneRef}>
+      {/* 3D dice roll surface — clipped to the phone screen */}
+      <div className="lab-dice" id="lab-dice-box" />
       <div className="statusbar"><span>9:41</span><div className="dots"><i/><i/><i/></div></div>
 
       <div className="topbar">
