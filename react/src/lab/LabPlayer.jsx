@@ -22,6 +22,38 @@ function parseDice(str) {
 // description lookup (reference data), falling back to the prototype's shorthand
 const descOf = (table, name, fb) => (table && table[name]) || fb || 'No description available.'
 
+// slide-to-confirm delete (drag the knob to the far end to delete)
+function SlideToDelete({ name, onConfirm, onCancel }) {
+  const trackRef = useRef(null)
+  const [x, setX] = useState(0)
+  const [done, setDone] = useState(false)
+  const KNOB = 46
+  const move = (clientX) => {
+    if (done || !trackRef.current) return
+    const r = trackRef.current.getBoundingClientRect()
+    const max = r.width - KNOB
+    const nx = Math.max(0, Math.min(max, clientX - r.left - KNOB / 2))
+    setX(nx)
+    if (nx >= max - 2) { setDone(true); setX(max); onConfirm() }
+  }
+  return (
+    <div className="lab-pop-backdrop" onClick={onCancel}>
+      <div className="lab-pop" onClick={(e) => e.stopPropagation()}>
+        <div className="lab-pop-title">Delete {name}?</div>
+        <div className="lab-pop-body">This can&rsquo;t be undone.</div>
+        <div className="slide-track" ref={trackRef} onPointerMove={(e) => { if (e.buttons === 1) move(e.clientX) }}>
+          <span className="slide-hint">slide to delete →</span>
+          <div className="slide-knob" style={{ left: x }}
+            onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
+            onPointerMove={(e) => move(e.clientX)}
+            onPointerUp={() => { if (!done) setX(0) }}>🗑</div>
+        </div>
+        <button className="lab-pop-x" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  )
+}
+
 const { useState, useRef, useCallback, useEffect } = React;
 const C = CHARACTER;
 const CARD_W = 152, CARD_H = 190;
@@ -202,26 +234,50 @@ function MagicView({ ctx }) {
     </>
   );
 }
-function ArmourView() {
+// ---- live inventory (real Firebase data) ----
+function useLiveInv() {
+  return useGameStore((s) => s.characters[LAB_CHAR_KEY]?.inventory) || {};
+}
+const invAdd = (item) => { try { useGameStore.getState().addInventoryItem(LAB_CHAR_KEY, item); } catch (e) { /* ignore */ } };
+const invRemove = (itemKey) => { try { useGameStore.getState().removeInventoryItem(LAB_CHAR_KEY, itemKey); } catch (e) { /* ignore */ } };
+const invConsume = (itemKey, item) => {
+  const amt = item.amount ?? 1;
+  if (amt <= 1) useGameStore.getState().removeInventoryItem(LAB_CHAR_KEY, itemKey);
+  else useGameStore.getState().setAt(`characters/${LAB_CHAR_KEY}/inventory/${itemKey}/amount`, amt - 1);
+};
+
+// one live inventory row: optional damage roll, amount, consume, slide-to-delete
+function InvRow({ itemKey, item, ctx, kind }) {
+  const dice = parseDice(item.damageDice);
+  const sub = item.damageDice ? `${item.damageDice}${item.damageType ? " " + item.damageType : ""}` : item.ac ? `AC ${item.ac}` : item.notes || "";
   return (
-    <div className="sec">
-      <div className="sec-h"><span>Worn &amp; Carried</span></div>
-      {C.armour.map((a) => (
-        <div className="item" key={a.n}>
-          <div className="main"><div className="in">{a.n}</div><div className="im">{a.slot} · {a.note}</div></div>
-          <div className="stats"><span className="tag">{a.ac}</span></div>
-        </div>
-      ))}
+    <div className="item">
+      {item.amount > 1 && <div className="qty">×{item.amount}</div>}
+      <div className="main"><div className="in">{item.name}</div>{sub && <div className="im">{sub}</div>}</div>
+      <div className="stats" style={{ gap: 4 }}>
+        {dice && <button className="tag roll" onClick={() => ctx.roll({ ...dice, label: item.damageDice, type: item.name + " damage" })}>{item.damageDice}</button>}
+        {kind === "consumables" && <button className="row-roll" onClick={() => invConsume(itemKey, item)}>USE</button>}
+        <button className="inv-del" title="Delete" onClick={() => ctx.requestDelete(itemKey, item.name)}>🗑</button>
+      </div>
     </div>
   );
 }
-function WeaponsView({ ctx }) {
+function InvList({ ctx, title, cats, kind }) {
+  const inv = useLiveInv();
+  const rows = Object.entries(inv).filter(([, it]) => cats.includes((it && it.category) || "other"));
   return (
     <div className="sec">
-      <div className="sec-h"><span>Weapons</span></div>
-      {C.weapons.map((w) => <WeaponRow key={w.n} w={w} ctx={ctx} />)}
+      <div className="sec-h"><span>{title}</span></div>
+      {rows.length === 0 && <div className="im" style={{ padding: "8px 2px" }}>Nothing here yet.</div>}
+      {rows.map(([k, it]) => <InvRow key={k} itemKey={k} item={it} ctx={ctx} kind={kind} />)}
     </div>
   );
+}
+function ArmourView({ ctx }) {
+  return <InvList ctx={ctx} title="Worn & Carried" cats={["armour"]} kind="armour" />;
+}
+function WeaponsView({ ctx }) {
+  return <InvList ctx={ctx} title="Weapons" cats={["weapons"]} kind="weapons" />;
 }
 function CashView() {
   const c = C.coins;
@@ -240,47 +296,81 @@ function CashView() {
     </div>
   );
 }
-function MiscView() {
-  return (
-    <div className="sec">
-      <div className="sec-h"><span>Tools &amp; Sundries</span></div>
-      {C.misc.map((m) => (
-        <div className="item" key={m.n}>
-          <div className="qty">×{m.qty}</div>
-          <div className="main"><div className="in">{m.n}</div><div className="im">{m.meta}</div></div>
-        </div>
-      ))}
-    </div>
-  );
+function MiscView({ ctx }) {
+  return <InvList ctx={ctx} title="Tools & Sundries" cats={["tools", "loot", "other", "misc"]} kind="misc" />;
 }
 function InvConsumablesView({ ctx }) {
-  return (
-    <div className="sec">
-      <div className="sec-h"><span>Potions &amp; Herbs</span></div>
-      {C.consumables.map((c) => {
-        const left = (c.qty || 0) - (ctx.consumed[c.n] || 0);
-        return (
-          <div className="item" key={c.n}>
-            <div className="qty">×{left}</div>
-            <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
-            <button className="row-roll" disabled={left <= 0} onClick={() => ctx.consumeItem(c)}>CONSUME</button>
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <InvList ctx={ctx} title="Potions & Herbs" cats={["consumables"]} kind="consumables" />;
 }
+// Add-item form: name + qty + category; weapons/armour collect extra stats.
+// Writes straight to the live Firebase inventory (the legacy app's flow).
+const ADD_CATS = ["weapons", "armour", "tools", "loot", "consumables", "other"];
+const DMG_TYPES = ["slashing", "piercing", "bludgeoning", "fire", "cold", "lightning", "acid", "poison", "necrotic", "radiant", "psychic", "thunder", "force"];
 function AddView() {
+  const [name, setName] = useState("");
+  const [qty, setQty] = useState(1);
+  const [cat, setCat] = useState("consumables");
+  const [step, setStep] = useState("form"); // form | stats
+  const [count, setCount] = useState(1);
+  const [die, setDie] = useState("d6");
+  const [dmgType, setDmgType] = useState("slashing");
+  const [ac, setAc] = useState(10);
+  const [notes, setNotes] = useState("");
+  const reset = () => { setName(""); setQty(1); setNotes(""); setStep("form"); };
+
+  const submit = () => {
+    const n = name.trim();
+    if (!n) return;
+    if (cat === "weapons" || cat === "armour") { setStep("stats"); return; }
+    invAdd({ name: n, amount: Math.max(1, qty), category: cat });
+    reset();
+  };
+  const confirmStats = () => {
+    const item = { name: name.trim(), amount: Math.max(1, qty), category: cat };
+    if (cat === "weapons") { item.damageDice = `${count}${die}`; item.damageType = dmgType; }
+    else item.ac = parseInt(ac, 10) || 10;
+    if (notes.trim()) item.notes = notes.trim();
+    invAdd(item);
+    reset();
+  };
+
+  if (step === "stats") {
+    return (
+      <div className="addview">
+        <div className="add-t">{cat === "weapons" ? "Weapon stats" : "Armour stats"}</div>
+        {cat === "weapons" ? (
+          <>
+            <div className="add-row"><span className="add-lbl">Damage</span>
+              <input className="add-num" type="number" min="1" max="20" value={count} onChange={(e) => setCount(e.target.value)} />
+              <select className="add-sel" value={die} onChange={(e) => setDie(e.target.value)}>{["d4", "d6", "d8", "d10", "d12", "d20"].map((d) => <option key={d}>{d}</option>)}</select>
+            </div>
+            <div className="add-row"><span className="add-lbl">Type</span>
+              <select className="add-sel" value={dmgType} onChange={(e) => setDmgType(e.target.value)}>{DMG_TYPES.map((t) => <option key={t}>{t}</option>)}</select>
+            </div>
+          </>
+        ) : (
+          <div className="add-row"><span className="add-lbl">AC</span>
+            <input className="add-num" type="number" min="1" max="30" value={ac} onChange={(e) => setAc(e.target.value)} />
+          </div>
+        )}
+        <textarea className="add-notes" placeholder="Other info…" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <div className="add-actions">
+          <button className="add-opt" onClick={confirmStats}>Add to sack</button>
+          <button className="add-opt ghost" onClick={() => setStep("form")}>Back</button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="addview">
       <div className="add-ico">{ICON.add}</div>
       <div className="add-t">Add an item</div>
-      <div className="add-s">Search the compendium or enter a custom item to drop into the sack.</div>
-      <div className="add-opts">
-        <div className="add-opt">Search compendium</div>
-        <div className="add-opt">Custom item</div>
-        <div className="add-opt">Scan loot</div>
+      <div className="add-row"><input className="add-name" placeholder="Item name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} /></div>
+      <div className="add-row">
+        <input className="add-num" type="number" min="1" value={qty} onChange={(e) => setQty(parseInt(e.target.value) || 1)} />
+        <select className="add-sel" value={cat} onChange={(e) => setCat(e.target.value)}>{ADD_CATS.map((c) => <option key={c} value={c}>{c}</option>)}</select>
       </div>
+      <div className="add-actions"><button className="add-opt" onClick={submit}>{cat === "weapons" || cat === "armour" ? "Next: stats" : "Add to sack"}</button></div>
     </div>
   );
 }
@@ -598,6 +688,7 @@ function App() {
   const [info, setInfo] = useState(null);       // {title, body} description pop-out
   const [castPick, setCastPick] = useState(null); // {spell, options:[{level, n, free}]}
   const [rollToast, setRollToast] = useState(null); // {label, total, sub, crit}
+  const [delTarget, setDelTarget] = useState(null); // {itemKey, name} slide-to-delete
   const [abilUses, setAbilUses] = useState({});   // ability name -> uses spent
   const [consumed, setConsumed] = useState({});   // consumable name -> count consumed
   const showInfo = useCallback((title, body) => setInfo({ title, body }), []);
@@ -663,6 +754,7 @@ function App() {
   const ctx = {
     roll: rollThing, info: showInfo, slots, slotsFreeAtIndex, openCast,
     abilUses, useAbility, consumed, consumeItem,
+    requestDelete: (itemKey, name) => setDelTarget({ itemKey, name }),
   };
 
   const openCard = useCallback((card, e) => {
@@ -924,6 +1016,13 @@ function App() {
           <div className="lt-total">{rollToast.total}</div>
           <div className="lt-sub">{rollToast.label}{rollToast.sub ? " · " + rollToast.sub : ""}</div>
         </div>
+      )}
+
+      {/* slide-to-confirm delete */}
+      {delTarget && (
+        <SlideToDelete name={delTarget.name}
+          onConfirm={() => { invRemove(delTarget.itemKey); setTimeout(() => setDelTarget(null), 250); }}
+          onCancel={() => setDelTarget(null)} />
       )}
     </div>
   );
