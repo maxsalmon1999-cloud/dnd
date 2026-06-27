@@ -1,98 +1,729 @@
-// ISOLATED redesign sandbox — the new "Player Card Expansion" look, wired to our
-// real data ONE feature at a time. Lives entirely under /lab and .lab-root so it
-// can't affect the main app. First feature wired: HP (live + changeHp → Firebase).
-// Everything else here is static scaffold until we wire it, feature by feature.
-import { useEffect } from 'react'
+/* eslint-disable */
+// ISOLATED redesign sandbox — the ORIGINAL "Player Card Expansion" prototype,
+// ported verbatim (same layout, icons, spell wheel, cards). Scoped under
+// .lab-root + the /lab route so it can't touch the main app.
+// We swap the prototype's placeholder data for live data ONE feature at a time.
+// Wired so far: HP (the orb reads Akwan's live hp/maxHp from the store).
+import React from 'react'
+import { CHARACTER } from './characterData'
 import { useGameStore } from '../store/gameStore'
 import './lab.css'
 
-const CHAR_KEY = 'akwan-akusian' // experimenting with Akwan's sheet
+const { useState, useRef, useCallback, useEffect } = React;
+const C = CHARACTER;
+const CARD_W = 152, CARD_H = 190;
 
-function HealthOrb({ cur, max }) {
-  const frac = Math.max(0, Math.min(1, max ? cur / max : 0))
+/* ---------- icons (thin Lucide-style placeholders) ---------- */
+const S = ({ children }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
+const TABS = [
+  { id:1, label:"Character", el:<S><circle cx="12" cy="8" r="3.6"/><path d="M5 20c0-3.6 3.1-6.4 7-6.4s7 2.8 7 6.4"/></S> },
+  { id:2, label:"Inventory", el:<S><path d="M6.5 8h11l-1 11.4a1.6 1.6 0 0 1-1.6 1.5H9.1a1.6 1.6 0 0 1-1.6-1.5L6.5 8z"/><path d="M9 8V6.4a3 3 0 0 1 6 0V8"/></S> },
+  { id:3, label:"Journal", el:<S><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3V4z"/><path d="M5 17a3 3 0 013-3h11"/><path d="M9 8h6M9 11h4"/></S> },
+];
+
+const ICON = {
+  skills: <S><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.4"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></S>,
+  combat: <S><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" y1="14" x2="9" y2="18"/><line x1="7" y1="17" x2="4" y2="20"/><line x1="3" y1="19" x2="5" y2="21"/></S>,
+  magic:  <S><path d="M12 2.5l2.3 6.2 6.2 2.3-6.2 2.3L12 19.5l-2.3-6.2L3.5 11l6.2-2.3L12 2.5z"/></S>,
+  // inventory
+  weapons: <S><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/><polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5"/><line x1="5" y1="14" x2="9" y2="18"/><line x1="7" y1="17" x2="4" y2="20"/><line x1="3" y1="19" x2="5" y2="21"/></S>,
+  armour: <S><path d="M5 12a7 7 0 0 1 14 0v3a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M5 13.6h14"/><path d="M12 6.2v7.4"/></S>,
+  cash:   <S><ellipse cx="12" cy="6.5" rx="7" ry="3"/><path d="M5 6.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/><path d="M5 11.5v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/></S>,
+  misc:   <S><circle cx="8" cy="8" r="3.4"/><path d="M10.4 10.4L20 20M16.5 16.5l2-2M14 14l1.6-1.6"/></S>,
+  consumables: <S><path d="M9.5 3h5M11 3v4.2L7.6 15a3.2 3.2 0 0 0 2.9 4.7h3a3.2 3.2 0 0 0 2.9-4.7L13 7.2V3"/><path d="M8.2 13.5h7.6"/></S>,
+  add:    <S><path d="M12 5v14M5 12h14"/></S>,
+};
+
+const SACK = (
+  <svg viewBox="0 0 120 132" fill="none" stroke="#b89140" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
+    <path d="M44 26c-4-3-6-8-3-12 3 4 9 5 14 5h10c5 0 11-1 14-5 3 4 1 9-3 12" fill="#33271c"/>
+    <path d="M30 40c8-7 19-9 30-9s22 2 30 9c10 17 9 42-3 58-7 9-17 14-27 14s-20-5-27-14C21 82 20 57 30 40Z" fill="#2a1f17"/>
+    <path d="M34 38c8 5 17 7 26 7s18-2 26-7" stroke="#dcb968" />
+    <path d="M48 66c4 4 8 6 12 6s8-2 12-6" stroke="#6e5a40" strokeWidth="2.4"/>
+    <path d="M52 92c3 2 5 3 8 3s5-1 8-3" stroke="#5a4630" strokeWidth="2.2"/>
+  </svg>
+);
+
+// little angel (saving throws) + demon (conditions) — placeholder glyphs
+const GLYPH = {
+  angel: <S><ellipse cx="12" cy="3.6" rx="3" ry="1"/><circle cx="12" cy="7.6" r="2"/><path d="M12 10c-1.7 0-3 1.4-3 3.2V19h6v-5.8c0-1.8-1.3-3.2-3-3.2z"/><path d="M9 12.6c-2.8.2-4.6 2.2-4.6 4.7 2.2.2 4-.9 4.9-2.7M15 12.6c2.8.2 4.6 2.2 4.6 4.7-2.2.2-4-.9-4.9-2.7"/></S>,
+  demon: <S><path d="M8 6.6C6.6 4.7 4.8 4.3 4.8 4.3c.2 1.7 1 3 2.2 3.8"/><path d="M16 6.6c1.4-1.9 3.2-2.3 3.2-2.3-.2 1.7-1 3-2.2 3.8"/><path d="M5.6 12.6a6.4 6.4 0 0 1 12.8 0c0 3.5-2.9 6.4-6.4 6.4s-6.4-2.9-6.4-6.4z"/><circle cx="9.6" cy="12" r=".95" fill="currentColor"/><circle cx="14.4" cy="12" r=".95" fill="currentColor"/><path d="M9.7 15c.7.7 1.5 1 2.3 1s1.6-.3 2.3-1"/></S>,
+};
+
+const STAT_NAMES = { STR:"Strength", DEX:"Dexterity", CON:"Constitution", INT:"Intelligence", WIS:"Wisdom", CHA:"Charisma" };
+const CONDITIONS = ["Blinded","Charmed","Deafened","Exhaustion","Frightened","Grappled","Incapacitated","Invisible","Paralyzed","Petrified","Poisoned","Prone","Restrained","Stunned","Unconscious"];
+const PANELS = {
+  saves:      { title:"Saving Throws", color:"#6f5320", glyph:"angel" },
+  conditions: { title:"Conditions",    color:"var(--cond)", glyph:"demon" },
+};
+
+const CARDS = [
+  { id:"skills", color:"var(--skills)", title:"Skills",
+    sub:`${C.skills.filter(s=>s.p).length} proficient · ${C.skills.length} total` },
+  { id:"combat", color:"var(--combat)", title:"Weapons &\nCantrips",
+    sub:`${C.weapons.length} weapons · ${C.cantrips.length} cantrips` },
+  { id:"magic", color:"var(--magic)", title:"Spells &\nItems",
+    sub:`prepared · abilities · gear` },
+];
+const FAN = [
+  { left:0,   bottom:2,  rot:-12, z:1 },
+  { left:84,  bottom:16, rot:0,   z:3 },
+  { left:168, bottom:2,  rot:12,  z:2 },
+];
+
+/* ---------- inventory layout (sword center, 5 around) ---------- */
+const INV_CENTER = { id:"weapons", color:"var(--combat)", title:"Weapons" };
+const INV_RING = [
+  { id:"armour",      color:"var(--armour)",      title:"Armour",         angle:-90 },
+  { id:"consumables", color:"var(--consumables)", title:"Consumables",    angle:-18 },
+  { id:"cash",        color:"#7a5a24",      title:"Coins & Cash",   angle:54  },
+  { id:"misc",        color:"var(--misc)",        title:"Misc & Tools",   angle:126 },
+  { id:"add",         color:"#1c1510",            title:"Add Item",       angle:198 },
+];
+const ringPos = (angle, R, size) => {
+  const a = angle * Math.PI / 180;
+  return { left: 150 + R * Math.cos(a) - size / 2, top: 150 + R * Math.sin(a) - size / 2 };
+};
+
+/* ---------- expanded content per category ---------- */
+function SkillsView() {
   return (
-    <div className="orb" title={`${cur} / ${max} HP`}>
-      <div className="liquid" style={{ '--fill': frac * 100 + '%' }} />
-      <div className="gloss" />
-      <span className="orb-num">{cur}</span>
+    <div className="sec">
+      <div className="sec-h"><span>Ability Checks</span><span style={{textTransform:"none",letterSpacing:".02em",fontWeight:600}}>● proficient</span></div>
+      {C.skills.map((s) => (
+        <div className="skill" key={s.n}>
+          <div className={"dot" + (s.p ? " on" : "")} />
+          <span className="sn">{s.n}</span>
+          <span className="sa">{s.a}</span>
+          <span className="sm">{s.m}</span>
+        </div>
+      ))}
     </div>
-  )
+  );
 }
-
-export default function LabPlayer() {
-  const subscribe = useGameStore((s) => s.subscribe)
-  const loading = useGameStore((s) => s.loading)
-  const sheet = useGameStore((s) => s.sheets[CHAR_KEY])
-  const live = useGameStore((s) => s.characters[CHAR_KEY]) || {}
-  const changeHp = useGameStore((s) => s.changeHp)
-
-  useEffect(() => { subscribe() }, [subscribe])
-
-  if (loading || !sheet) {
-    return <div className="lab-root"><div className="phone" /></div>
-  }
-
-  const maxHp = live.maxHp ?? sheet.maxHp ?? 0
-  const hp = live.hp ?? maxHp
-  const stats = sheet.stats || {}
-
+function CombatView() {
   return (
-    <div className="lab-root">
-      <div className="phone">
-        <div className="statusbar"><span>9:41</span><div className="dots"><i /><i /><i /></div></div>
-
-        <div className="topbar">
-          {/* WIRED: live HP */}
-          <div className="cluster">
-            <HealthOrb cur={hp} max={maxHp} />
-            <div className="glyph angel" title="Saving Throws (soon)">✦</div>
+    <>
+      <div className="sec">
+        <div className="sec-h"><span>Weapons</span></div>
+        {C.weapons.map((w) => (
+          <div className="item" key={w.n}>
+            <div className="main"><div className="in">{w.n}</div><div className="im">{w.meta} · {w.type}</div></div>
+            <div className="stats"><span className="tag solid">{w.hit}</span><span className="tag">{w.dmg}</span></div>
           </div>
-          {/* scaffold: nav tabs */}
-          <div className="navset">
-            <div className="tab active" title="Stats">⚔</div>
-            <div className="tab" title="Character">◈</div>
-            <div className="tab" title="Inventory">🜍</div>
-            <div className="tab" title="Journal">✎</div>
+        ))}
+      </div>
+      <div className="sec">
+        <div className="sec-h"><span>Cantrips</span><span style={{letterSpacing:".02em",textTransform:"none",fontWeight:600}}>at will</span></div>
+        {C.cantrips.map((c) => (
+          <div className="item" key={c.n}>
+            <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+            <div className="stats"><span className="tag ghost">{c.tag}</span></div>
           </div>
-          {/* scaffold: conditions + spell wheel */}
-          <div className="cluster">
-            <div className="glyph demon" title="Conditions (soon)">☠</div>
-            <div style={{ width: 56, height: 56 }} />
+        ))}
+      </div>
+    </>
+  );
+}
+function MagicView() {
+  return (
+    <>
+      <div className="sec">
+        <div className="sec-h"><span>Abilities</span><span style={{letterSpacing:".02em"}}>DC {C.spellDC} · ATK {C.spellAtk}</span></div>
+        {C.abilities.map((a) => (
+          <div className="item" key={a.n}>
+            <div className="main"><div className="in">{a.n}</div><div className="im">{a.meta}</div></div>
+            <div className="stats"><span className="tag ghost">{a.tag}</span></div>
           </div>
+        ))}
+      </div>
+      {Object.keys(C.spells).map((lv) => (
+        <div className="sec" key={lv}>
+          <div className="sec-h"><span>Level {lv} Spells</span></div>
+          {C.spells[lv].map((sp) => (
+            <div className="item" key={sp.n}>
+              <div className="main"><div className="in">{sp.n}</div><div className="im">{sp.tag}</div></div>
+            </div>
+          ))}
         </div>
-
-        {/* charline — real sheet data */}
-        <div className="charline">
-          <span className="cn">{sheet.name}</span>
-          <span className="cc">{sheet.cls}</span>
-          <div className="charstats">
-            <span className="cbadge"><span className="bk">AC</span><span className="bv">{sheet.ac}</span></span>
-            <span className="cbadge"><span className="bk">Level</span><span className="bv">{sheet.level}</span></span>
-            <span className="cbadge"><span className="bk">HP</span><span className="bv">{hp}/{maxHp}</span></span>
+      ))}
+      <div className="sec">
+        <div className="sec-h"><span>Consumables</span></div>
+        {C.consumables.map((c) => (
+          <div className="item" key={c.n}>
+            <div className="qty">×{c.qty}</div>
+            <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
           </div>
+        ))}
+      </div>
+    </>
+  );
+}
+function ArmourView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Worn &amp; Carried</span></div>
+      {C.armour.map((a) => (
+        <div className="item" key={a.n}>
+          <div className="main"><div className="in">{a.n}</div><div className="im">{a.slot} · {a.note}</div></div>
+          <div className="stats"><span className="tag">{a.ac}</span></div>
         </div>
-
-        {/* WIRED: HP damage / heal → Firebase transaction */}
-        <div className="hpctl">
-          <button className="hpbtn" onClick={() => changeHp(CHAR_KEY, -1)}>−</button>
-          <span className="lbl">DAMAGE / HEAL</span>
-          <button className="hpbtn" onClick={() => changeHp(CHAR_KEY, +1)}>+</button>
+      ))}
+    </div>
+  );
+}
+function WeaponsView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Weapons</span></div>
+      {C.weapons.map((w) => (
+        <div className="item" key={w.n}>
+          <div className="main"><div className="in">{w.n}</div><div className="im">{w.meta} · {w.type}</div></div>
+          <div className="stats"><span className="tag solid">{w.hit}</span><span className="tag">{w.dmg}</span></div>
         </div>
-
-        {/* scaffold: ability scores (display only — real mods, not yet interactive) */}
-        <div className="body">
-          <div className="stat-grid">
-            {['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'].map((k) => (
-              <div className="stat" key={k}>
-                <span className="mod">{(stats[k] ?? 0) >= 0 ? `+${stats[k] ?? 0}` : stats[k]}</span>
-                <span className="k">{k}</span>
-              </div>
-            ))}
-          </div>
+      ))}
+    </div>
+  );
+}
+function CashView() {
+  const c = C.coins;
+  const total = (c.pp * 10 + c.gp + c.sp / 10 + c.cp / 100).toFixed(2);
+  const rows = [["Platinum", "pp", c.pp], ["Gold", "gp", c.gp], ["Silver", "sp", c.sp], ["Copper", "cp", c.cp]];
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Purse</span><span style={{ letterSpacing:".02em", textTransform:"none", fontWeight:600 }}>{total} gp total</span></div>
+      {rows.map(([name, k, v]) => (
+        <div className="item" key={k}>
+          <div className="qty">{k}</div>
+          <div className="main"><div className="in">{name}</div></div>
+          <div className="stats"><span className="tag">{v}</span></div>
         </div>
-
-        <div className="lab-note">SANDBOX · HP is live-wired · everything else is scaffold</div>
+      ))}
+    </div>
+  );
+}
+function MiscView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Tools &amp; Sundries</span></div>
+      {C.misc.map((m) => (
+        <div className="item" key={m.n}>
+          <div className="qty">×{m.qty}</div>
+          <div className="main"><div className="in">{m.n}</div><div className="im">{m.meta}</div></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function InvConsumablesView() {
+  return (
+    <div className="sec">
+      <div className="sec-h"><span>Potions &amp; Herbs</span></div>
+      {C.consumables.map((c) => (
+        <div className="item" key={c.n}>
+          <div className="qty">×{c.qty}</div>
+          <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function AddView() {
+  return (
+    <div className="addview">
+      <div className="add-ico">{ICON.add}</div>
+      <div className="add-t">Add an item</div>
+      <div className="add-s">Search the compendium or enter a custom item to drop into the sack.</div>
+      <div className="add-opts">
+        <div className="add-opt">Search compendium</div>
+        <div className="add-opt">Custom item</div>
+        <div className="add-opt">Scan loot</div>
       </div>
     </div>
-  )
+  );
 }
+
+const VIEW = { skills: SkillsView, combat: CombatView, magic: MagicView,
+  armour: ArmourView, weapons: WeaponsView, cash: CashView, misc: MiscView, consumables: InvConsumablesView, add: AddView };
+
+/* ---------- saving throws + conditions panels ---------- */
+function SavesView({ rolls, roll }) {
+  const pb = parseInt(C.prof, 10);
+  return (
+    <React.Fragment>
+      {C.stats.map((s) => {
+        const base = parseInt(s.mod, 10);
+        const prof = C.saveProf.includes(s.key);
+        const total = base + (prof ? pb : 0);
+        const f = (total >= 0 ? "+" : "") + total;
+        const r = rolls[s.key];
+        return (
+          <div className="srow" key={s.key}>
+            <span className={"sdia" + (prof ? " on" : "")} />
+            <span className="skey">{s.key}</span>
+            <span className="smod">{f}</span>
+            <span className="sname">{STAT_NAMES[s.key]}</span>
+            <button className={"sroll" + (r ? " hit" : "")} onClick={() => roll(s.key, total)}>
+              {r ? r.total : "ROLL"}
+            </button>
+          </div>
+        );
+      })}
+    </React.Fragment>
+  );
+}
+function ConditionsView({ conds, toggle }) {
+  return (
+    <React.Fragment>
+      {CONDITIONS.map((c) => (
+        <div className="crow" key={c}>
+          <span className={"cname" + (conds[c] ? " on" : "")}>{c}</span>
+          <span className={"sw" + (conds[c] ? " on" : "")} onClick={() => toggle(c)} />
+        </div>
+      ))}
+    </React.Fragment>
+  );
+}
+
+/* ---------- health orb (liquid-filled) ---------- */
+function HealthOrb() {
+  const frac = Math.max(0, Math.min(1, C.hp.cur / C.hp.max));
+  return (
+    <div className="orb" title={`${C.hp.cur} / ${C.hp.max} HP`}>
+      <div className="liquid" style={{ "--fill": (frac * 100) + "%" }} />
+      <div className="gloss" />
+      <span className="orb-num">{C.hp.cur}</span>
+    </div>
+  );
+}
+
+/* ---------- spell wheel (each chunk = one slot) ---------- */
+function SpellWheel({ slots, toggle }) {
+  const flat = [];
+  C.spellSlots.forEach((s, li) => slots[li].forEach((spent, pi) => flat.push({ li, pi, level: s.level, spent })));
+  const N = flat.length;
+  const cx = 29, cy = 29, rOut = 27, rIn = 14.5, gap = 6;
+  const seg = (360 - N * gap) / N;
+  // darker = higher spell-slot level (gold ramp, supports levels 1-9)
+  const shadeRamp = ["#efd089", "#e3bd6a", "#d0a44b", "#ba8d37", "#a37828", "#8a631d", "#704f15", "#583e10", "#422f0b"];
+  const shadeFor = (lv) => shadeRamp[Math.max(0, Math.min(8, lv - 1))];
+  const remaining = flat.filter((f) => !f.spent).length;
+  const rad = (d) => (d - 90) * Math.PI / 180;
+  const pt = (r, d) => [cx + r * Math.cos(rad(d)), cy + r * Math.sin(rad(d))];
+  const arc = (a0, a1) => {
+    const [x0, y0] = pt(rOut, a0), [x1, y1] = pt(rOut, a1);
+    const [x2, y2] = pt(rIn, a1), [x3, y3] = pt(rIn, a0);
+    const big = a1 - a0 > 180 ? 1 : 0;
+    return `M${x0} ${y0} A${rOut} ${rOut} 0 ${big} 1 ${x1} ${y1} L${x2} ${y2} A${rIn} ${rIn} 0 ${big} 0 ${x3} ${y3} Z`;
+  };
+  return (
+    <svg className="wheel" viewBox="0 0 58 58" width="56" height="56" title={`${remaining} spell slots left`}>
+      {flat.map((f, i) => {
+        const a0 = i * (seg + gap) + gap / 2, a1 = a0 + seg;
+        return (
+          <path key={i} d={arc(a0, a1)}
+            fill={f.spent ? "#241a12" : shadeFor(f.level)}
+            stroke={f.spent ? "var(--line-strong)" : "none"} strokeWidth="1.4"
+            style={{ cursor: "pointer" }} onClick={() => toggle(f.li, f.pi)} />
+        );
+      })}
+      <circle cx={cx} cy={cy} r="11.5" fill="#120d0a" stroke="var(--gold-2)" strokeWidth="1.4" />
+      <text x={cx} y={cy + 0.5} textAnchor="middle" dominantBaseline="central"
+        fill="var(--gold)" fontFamily="var(--mono)" fontSize="13" fontWeight="700">{remaining}</text>
+    </svg>
+  );
+}
+
+/* ---------- journal (tab 3): dice roller, roll log, notes ---------- */
+const DICE = [
+  { label:"d4",  sides:4,   poly:"12,3 21,20 3,20" },
+  { label:"d6",  sides:6,   poly:"4.5,4.5 19.5,4.5 19.5,19.5 4.5,19.5" },
+  { label:"d8",  sides:8,   poly:"12,2 21,12 12,22 3,12" },
+  { label:"d10", sides:10,  poly:"12,2 19,10 12,22 5,10" },
+  { label:"d12", sides:12,  poly:"12,2.5 20.5,9 17,20.5 7,20.5 3.5,9" },
+  { label:"d20", sides:20,  poly:"6,4.5 18,4.5 22,12 18,19.5 6,19.5 2,12" },
+  { label:"d%",  sides:100, poly:"12,2 20,7 20,17 12,22 4,17 4,7" },
+];
+const DieShape = ({ poly, size }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+    <polygon points={poly} />
+  </svg>
+);
+function relTime(t) {
+  const s = Math.floor((Date.now() - t) / 1000);
+  if (s < 8) return "just now";
+  if (s < 60) return s + "s";
+  if (s < 3600) return Math.floor(s / 60) + "m";
+  if (s < 86400) return Math.floor(s / 3600) + "h";
+  return Math.floor(s / 86400) + "d";
+}
+
+function JournalTab({ history, pushRoll, clearHistory, notes, setNotes }) {
+  const [pane, setPane] = useState("log");
+  const [last, setLast] = useState(null);
+  const [pop, setPop] = useState(0);
+  const spinRef = useRef(null);
+  useEffect(() => () => clearInterval(spinRef.current), []);
+
+  const roll = (die) => {
+    clearInterval(spinRef.current);
+    const final = 1 + Math.floor(Math.random() * die.sides);
+    let ticks = 0;
+    spinRef.current = setInterval(() => {
+      ticks++;
+      if (ticks > 8) {
+        clearInterval(spinRef.current);
+        const crit = die.sides === 20 ? (final === 20 ? "max" : final === 1 ? "min" : null) : null;
+        setLast({ label: die.label, sides: die.sides, value: final, crit, rolling: false });
+        setPop((p) => p + 1);
+        pushRoll({ sides: die.sides, label: die.label, value: final, src: "manual" });
+      } else {
+        setLast({ label: die.label, sides: die.sides, value: 1 + Math.floor(Math.random() * die.sides), rolling: true });
+      }
+    }, 55);
+  };
+
+  const critCls = last && !last.rolling && last.crit ? " crit-" + last.crit : "";
+  return (
+    <div className="journal">
+      <div className="jroller">
+        <div className="jh">Manual Roll</div>
+        <div className="die-row">
+          {DICE.map((d) => (
+            <button className="die" key={d.label} onClick={() => roll(d)}>
+              <DieShape poly={d.poly} size={26} />
+              <span className="dl">{d.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className={"readout" + critCls} key={pop}>
+          {last && !last.rolling && last.crit === "max" && <span className="crit-tag" style={{ color: "var(--gold)" }}>★ CRITICAL ★</span>}
+          {last && !last.rolling && last.crit === "min" && <span className="crit-tag" style={{ color: "var(--blood)" }}>FUMBLE</span>}
+          <span className={"rv" + (last && !last.rolling ? " pop" : "")}>{last ? last.value : "—"}</span>
+          <span className="rl">{last ? (last.rolling ? "rolling " + last.label + "…" : "rolled " + last.label) : "tap a die to roll"}</span>
+        </div>
+      </div>
+
+      <div className="jtoggle">
+        <button className={pane === "log" ? "on" : ""} onClick={() => setPane("log")}>Roll Log</button>
+        <button className={pane === "notes" ? "on" : ""} onClick={() => setPane("notes")}>Notes</button>
+      </div>
+
+      <div className="jpane">
+        {pane === "log" ? (
+          history.length === 0 ? (
+            <div className="rlog"><div className="empty">No rolls yet.<br/>Cast a die above, or roll a saving throw.</div></div>
+          ) : (
+            <div className="rlog">
+              <button className="rlog-clear" onClick={clearHistory}>✕ clear log</button>
+              {history.map((h) => {
+                const critCls2 = h.sides === 20 ? (h.value === 20 ? " max" : h.value === 1 ? " min" : "") : "";
+                return (
+                  <div className="rlog-row" key={h.id}>
+                    <span className="rlog-die">{h.label}</span>
+                    <span className={"rlog-val" + critCls2}>{h.value}{h.total != null && h.total !== h.value ? <span className="rlog-tot"> → {h.total}</span> : null}</span>
+                    <span className="rlog-src">{h.note || "manual roll"}</span>
+                    <span className="rlog-time">{relTime(h.t)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          <textarea className="notes-area" value={notes} onChange={(e) => setNotes(e.target.value)}
+            placeholder="Quest notes, NPCs met, clues, loot owed…" spellCheck={false} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- main app ---------- */
+function App() {
+  const phoneRef = useRef(null);
+  const closeTimer = useRef(null);
+  const [tab, setTab] = useState(1);
+  const [sackOpen, setSackOpen] = useState(false);
+  const [expanded, setExpanded] = useState(null); // {card, cx, cy, rot}
+  const [open, setOpen] = useState(false);
+  const [showContent, setShowContent] = useState(false);
+
+  // saves / conditions panels
+  const [panel, setPanel] = useState(null);
+  const [pOpen, setPOpen] = useState(false);
+  const pTimer = useRef(null);
+  const [rolls, setRolls] = useState({});
+  const [conds, setConds] = useState({});
+
+  // journal: roll history + notes (persisted)
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("akwan_roll_history")) || []; } catch (e) { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("akwan_roll_history", JSON.stringify(history.slice(0, 80))); } catch (e) {}
+  }, [history]);
+  const pushRoll = useCallback((entry) => {
+    setHistory((h) => [{ id: Date.now() + "-" + Math.random().toString(36).slice(2, 6), t: Date.now(), ...entry }, ...h].slice(0, 80));
+  }, []);
+  const clearHistory = useCallback(() => setHistory([]), []);
+  const [notes, setNotes] = useState(() => {
+    try { return localStorage.getItem("akwan_journal_notes") || ""; } catch (e) { return ""; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("akwan_journal_notes", notes); } catch (e) {}
+  }, [notes]);
+  const openPanel = (id) => { clearTimeout(pTimer.current); setPanel(id); };
+  const closePanel = useCallback(() => {
+    setPOpen(false);
+    clearTimeout(pTimer.current);
+    pTimer.current = setTimeout(() => setPanel(null), 320);
+  }, []);
+  useEffect(() => {
+    if (!panel) return;
+    const t = setTimeout(() => setPOpen(true), 20);
+    return () => clearTimeout(t);
+  }, [panel]);
+  const rollSave = (key, mod) => {
+    const d = 1 + Math.floor(Math.random() * 20);
+    setRolls((r) => ({ ...r, [key]: { d, total: d + mod } }));
+    pushRoll({ sides: 20, label: "d20", value: d, total: d + mod, src: "save", note: key + " save" });
+    setTimeout(() => setRolls((r) => { const n = { ...r }; delete n[key]; return n; }), 1900);
+  };
+  const toggleCond = (c) => setConds((p) => ({ ...p, [c]: !p[c] }));
+
+  // spell slots: boolean array per level (true = expended)
+  const [slots, setSlots] = useState(() =>
+    C.spellSlots.map((s) => Array.from({ length: s.total }, (_, i) => i < s.used))
+  );
+  const toggleSlot = (li, pi) => setSlots((prev) => {
+    const next = prev.map((a) => a.slice());
+    next[li][pi] = !next[li][pi];
+    return next;
+  });
+
+  const openCard = useCallback((card, e) => {
+    clearTimeout(closeTimer.current);
+    const ph = phoneRef.current.getBoundingClientRect();
+    const r = e.currentTarget.getBoundingClientRect();
+    setShowContent(false);
+    setOpen(false);
+    setExpanded({
+      card,
+      cx: r.left + r.width / 2 - ph.left,
+      cy: r.top + r.height / 2 - ph.top,
+      rot: parseFloat(e.currentTarget.dataset.rot || "0"),
+      spin: tab === 1,
+    });
+  }, [tab]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const t1 = setTimeout(() => setOpen(true), 20);
+    const t2 = setTimeout(() => setShowContent(true), 400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [expanded]);
+
+  const closeCard = useCallback(() => {
+    setShowContent(false);
+    setOpen(false);
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setExpanded(null), 560);
+  }, []);
+
+  const switchTab = (id) => {
+    setTab(id);
+    setSackOpen(false);
+    clearTimeout(closeTimer.current);
+    setShowContent(false); setOpen(false); setExpanded(null);
+  };
+
+  const sheetStyle = (() => {
+    if (!expanded) return {};
+    if (open) return { left: 23, top: 85, width: 347, height: 682, borderRadius: 26, transform: `perspective(1100px) rotate(0deg) rotateY(${expanded.spin ? 360 : 0}deg)` };
+    return {
+      left: expanded.cx - CARD_W / 2, top: expanded.cy - CARD_H / 2,
+      width: CARD_W, height: CARD_H, borderRadius: 19,
+      transform: `perspective(1100px) rotate(${expanded.rot}deg) rotateY(0deg)`,
+    };
+  })();
+
+  const card = expanded && expanded.card;
+  const Body = card && VIEW[card.id];
+  const hpPct = Math.round((C.hp.cur / C.hp.max) * 100);
+
+  return (
+    <div className="phone" ref={phoneRef}>
+      <div className="statusbar"><span>9:41</span><div className="dots"><i/><i/><i/></div></div>
+
+      <div className="topbar">
+        <div className="cluster">
+          <HealthOrb />
+          <div className="glyph angel" onClick={() => openPanel("saves")} title="Saving Throws">{GLYPH.angel}</div>
+        </div>
+        <div className="navset">
+          {TABS.map((t) => (
+            <div key={t.id} className={"tab" + (tab === t.id ? " active" : "")} onClick={() => switchTab(t.id)} title={t.label}>{t.el}</div>
+          ))}
+        </div>
+        <div className="cluster">
+          <div className="glyph demon" onClick={() => openPanel("conditions")} title="Conditions">{GLYPH.demon}</div>
+          <SpellWheel slots={slots} toggle={toggleSlot} />
+        </div>
+      </div>
+
+      {tab === 1 ? (
+        <React.Fragment>
+          <div className="charline">
+            <span className="cn">{C.name}</span>
+            <span className="cc">{C.race} · {C.klass}</span>
+            <div className="charstats">
+              <span className="cbadge"><span className="bk">AC</span><span className="bv">{C.ac}</span></span>
+              <span className="cbadge"><span className="bk">Level</span><span className="bv">{C.level}</span></span>
+            </div>
+          </div>
+
+          <div className="body">
+            <div className="stat-grid">
+              {C.stats.map((s) => (
+                <div className="stat" key={s.key}>
+                  <span className="sc">{s.score}</span>
+                  <span className="mod">{s.mod}</span>
+                  <span className="k">{s.key}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </React.Fragment>
+      ) : tab === 2 ? (
+        sackOpen ? (
+          <div className="inv">
+            <div className="ring">
+              <div
+                className="inv-item center"
+                data-rot="0"
+                onClick={(e) => openCard(INV_CENTER, e)}
+                style={{ left: 106, top: 106, animationDelay: "0ms",
+                  visibility: expanded && expanded.card.id === INV_CENTER.id ? "hidden" : "visible" }}
+              >
+                <div className="disc" style={{ background: INV_CENTER.color }}>{ICON[INV_CENTER.id]}</div>
+                <div className="ilabel">{INV_CENTER.title}</div>
+              </div>
+              {INV_RING.map((it, i) => {
+                const p = ringPos(it.angle, 110, 64);
+                return (
+                  <div
+                    key={it.id}
+                    className={"inv-item" + (it.id === "add" ? " add" : "")}
+                    data-rot="0"
+                    onClick={(e) => openCard(it, e)}
+                    style={{ left: p.left, top: p.top, animationDelay: (90 + i * 60) + "ms",
+                      visibility: expanded && expanded.card.id === it.id ? "hidden" : "visible" }}
+                  >
+                    <div className="disc" style={{ background: it.color }}>{ICON[it.id]}</div>
+                    <div className="ilabel">{it.title}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <button className="tie" onClick={() => setSackOpen(false)}>Tie up sack</button>
+          </div>
+        ) : (
+          <div className="inv">
+            <div className="sack-wrap" onClick={() => setSackOpen(true)}>
+              <div className="sack">{SACK}</div>
+              <div className="sack-label">Tap to open your sack</div>
+            </div>
+          </div>
+        )
+      ) : tab === 3 ? (
+        <JournalTab history={history} pushRoll={pushRoll} clearHistory={clearHistory} notes={notes} setNotes={setNotes} />
+      ) : (
+        <div className="tabpage">
+          <div className="ph-icon">{TABS[tab - 1].el}</div>
+          <div className="ph-title">{TABS[tab - 1].label}</div>
+          <div className="ph-sub">Coming soon</div>
+        </div>
+      )}
+
+      {tab === 1 && (
+        <div className="hint" style={{ opacity: expanded ? 0 : 1 }}>Tap a card to open</div>
+      )}
+
+      {tab === 1 && (
+        <div className="fan">
+          {CARDS.map((c, i) => (
+            <div
+              key={c.id}
+              className="card"
+              data-rot={FAN[i].rot}
+              onClick={(e) => openCard(c, e)}
+              style={{
+                left: FAN[i].left, bottom: FAN[i].bottom, zIndex: FAN[i].z,
+                transform: `rotate(${FAN[i].rot}deg)`,
+                visibility: expanded && expanded.card.id === c.id ? "hidden" : "visible",
+              }}
+            >
+              <div className="cap" style={{ background: c.color }}>{ICON[c.id]}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={"scrim" + ((open || pOpen) ? " open" : "")} onClick={() => { if (panel) closePanel(); if (expanded) closeCard(); }} />
+
+      {panel && (
+        <div className={"panel" + (pOpen ? " open" : "")}>
+          <div className="p-head" style={{ background: PANELS[panel].color }}>
+            <div className="p-wm">{GLYPH[PANELS[panel].glyph]}</div>
+            <button className="p-close" onClick={closePanel} aria-label="Close">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <div className="p-title">{PANELS[panel].title}</div>
+          </div>
+          <div className="p-body">
+            {panel === "saves"
+              ? <SavesView rolls={rolls} roll={rollSave} />
+              : <ConditionsView conds={conds} toggle={toggleCond} />}
+          </div>
+        </div>
+      )}
+
+      {expanded && (
+        <div className="sheet" style={sheetStyle}>
+          <div className="s-head" style={{ background: card.color, height: open ? 132 : "48%" }}>
+            <div className="wm">{ICON[card.id]}</div>
+            <button className="s-close" onClick={closeCard} aria-label="Close" style={{ opacity: showContent ? 1 : 0 }}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <div className="s-title" style={{ opacity: showContent ? 1 : 0 }}>
+              <div className="t">{card.title.replace("\n", " ")}</div>
+            </div>
+          </div>
+          {showContent && Body && (
+            <div className="s-body"><Body /></div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
+// ---- live-data wiring (added; everything above is the verbatim prototype) ----
+const LAB_CHAR_KEY = 'akwan-akusian'
+
+function LabPlayer() {
+  const subscribe = useGameStore((s) => s.subscribe)
+  const live = useGameStore((s) => s.characters[LAB_CHAR_KEY])
+  useEffect(() => { subscribe() }, [subscribe])
+  // FEATURE 1 — HP: feed Akwan's live hp/maxHp into the prototype's data so the
+  // HealthOrb renders real values (and updates when the DM changes them).
+  if (live) {
+    C.hp = { ...C.hp, cur: live.hp ?? C.hp.cur, max: live.maxHp ?? C.hp.max }
+  }
+  return <div className="lab-root"><App /></div>
+}
+
+export default LabPlayer
