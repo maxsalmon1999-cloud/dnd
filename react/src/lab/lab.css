@@ -1,0 +1,113 @@
+/* Isolated redesign sandbox styles. EVERYTHING is scoped under .lab-root so it
+   cannot leak into the main app. Ported from "Player Card Expansion" prototype
+   (ornate pixel-fantasy reskin). */
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Silkscreen:wght@400;700&display=swap');
+
+.lab-root {
+  --paper: #161010; --panel: #1f1611; --tile: #281d16;
+  --ink: #ece0c6; --ink-soft: #cabb98; --muted: #8c7a5e;
+  --line: #473628; --line-strong: #6e5a40;
+  --gold: #dcb968; --gold-2: #b89140; --blood: #bb3b32; --hp: #bb3b32;
+  --cond: #8a3340;
+  --sans: "Pixelify Sans", system-ui, sans-serif;
+  --cap: "Silkscreen", "Pixelify Sans", sans-serif;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  min-height: 100vh; background: #0c0908;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); color: var(--ink); padding: 20px 0;
+}
+.lab-root * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* phone frame */
+.lab-root .phone {
+  position: relative; width: 393px; height: 852px; background: var(--paper);
+  border-radius: 30px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 2px #2a1f17, inset 0 0 70px rgba(0,0,0,.5);
+}
+
+/* status bar */
+.lab-root .statusbar {
+  height: 48px; flex: 0 0 auto; display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 30px 5px; font-family: var(--cap); font-size: 11px; color: var(--ink);
+}
+.lab-root .statusbar .dots { display: flex; gap: 5px; align-items: center; }
+.lab-root .statusbar .dots i { width: 6px; height: 6px; background: var(--muted); display: inline-block; }
+.lab-root .statusbar .dots i:last-child { width: 16px; }
+
+/* top bar */
+.lab-root .topbar {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 22px 16px; border-bottom: 2px solid var(--line-strong); box-shadow: 0 2px 0 #000;
+}
+.lab-root .cluster { display: flex; align-items: center; gap: 8px; }
+.lab-root .navset { display: flex; align-items: center; gap: 4px; }
+.lab-root .tab {
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; font-size: 18px;
+}
+.lab-root .tab.active { color: var(--gold); border-bottom-color: var(--gold-2); }
+.lab-root .glyph { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+.lab-root .glyph.angel { color: var(--gold); }
+.lab-root .glyph.demon { color: var(--blood); }
+
+/* health orb */
+.lab-root .orb {
+  position: relative; width: 56px; height: 56px; flex: 0 0 auto; border-radius: 50%;
+  overflow: hidden; background: #0b0908; border: 3px solid var(--gold-2); cursor: pointer;
+  box-shadow: 0 0 0 1px #000, inset 0 2px 6px rgba(0,0,0,.7);
+}
+.lab-root .orb .liquid {
+  position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 0%);
+  background: linear-gradient(180deg, #e2564b 0%, #b22f23 100%); transition: height .45s var(--ease);
+}
+.lab-root .orb .liquid::before {
+  content: ""; position: absolute; left: -10%; right: -10%; top: -7px; height: 14px;
+  border-radius: 50%; background: #e2564b; animation: lab-bob 2.6s ease-in-out infinite;
+}
+.lab-root .orb .liquid::after {
+  content: ""; position: absolute; left: -10%; right: -10%; top: -5px; height: 10px;
+  border-radius: 50%; background: rgba(255,255,255,.28); animation: lab-bob 2.6s ease-in-out infinite reverse;
+}
+@keyframes lab-bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-2.5px) } }
+.lab-root .orb .gloss {
+  position: absolute; left: 9px; top: 7px; width: 18px; height: 13px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(255,255,255,.85), rgba(255,255,255,0) 70%); z-index: 2;
+}
+.lab-root .orb .orb-num {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--sans); font-weight: 700; font-size: 16px; color: var(--ink); text-shadow: 0 1px 2px #000; z-index: 3;
+}
+
+/* character line */
+.lab-root .charline { text-align: center; padding: 16px 0 0; flex: 0 0 auto; }
+.lab-root .charline .cn { font-family: var(--sans); font-weight: 700; font-size: 25px; color: var(--ink); text-shadow: 0 2px 0 #000; }
+.lab-root .charline .cc { display: block; font-family: var(--sans); color: var(--muted); font-size: 12px; margin-top: 4px; }
+.lab-root .charstats { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.lab-root .cbadge { display: flex; align-items: baseline; gap: 5px; border: 2px solid var(--gold-2); background: var(--panel); padding: 5px 10px; }
+.lab-root .cbadge .bk { font-family: var(--cap); font-size: 8px; color: var(--gold); text-transform: uppercase; }
+.lab-root .cbadge .bv { font-family: var(--sans); font-weight: 700; color: var(--ink); }
+
+/* hp damage/heal control (our wired feature) */
+.lab-root .hpctl { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; }
+.lab-root .hpctl .lbl { font-family: var(--cap); font-size: 9px; color: var(--muted); letter-spacing: .08em; }
+.lab-root .hpbtn {
+  width: 32px; height: 32px; border: 2px solid var(--gold-2); background: var(--panel);
+  color: var(--gold); font-family: var(--sans); font-weight: 700; font-size: 18px; cursor: pointer;
+}
+.lab-root .hpbtn:active { transform: scale(.94); }
+
+/* stat grid (display only for now) */
+.lab-root .body { padding: 18px 20px; }
+.lab-root .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.lab-root .stat {
+  position: relative; height: 90px; background: var(--tile); border: 2px solid var(--gold-2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.lab-root .stat .mod { font-family: var(--sans); font-weight: 700; font-size: 26px; color: var(--ink); }
+.lab-root .stat .k { font-family: var(--cap); font-size: 9px; color: var(--gold); margin-top: 6px; }
+
+/* tag showing what's wired vs scaffold */
+.lab-root .lab-note {
+  position: absolute; bottom: 14px; left: 0; right: 0; text-align: center;
+  font-family: var(--cap); font-size: 8px; color: var(--muted); letter-spacing: .06em;
+}
