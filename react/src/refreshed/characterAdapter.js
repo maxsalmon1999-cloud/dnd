@@ -31,7 +31,9 @@ export function adaptCharacter(sheet, live) {
   const statsObj = sheet.stats || {}
   const charLevel = sheet.level || 1
   const profNum = sheet.proficiency != null ? sheet.proficiency : profFromLevel(charLevel)
-  const { race, klass } = splitClass(sheet.cls)
+  const split = splitClass(sheet.cls)
+  const race = sheet.race || split.race // prefer the stored field; fall back to parsing cls
+  const klass = split.klass
   const statMod = (k) => statsObj[k] || 0
 
   // ability scores (we only have modifiers; derive a plausible score for display)
@@ -61,7 +63,12 @@ export function adaptCharacter(sheet, live) {
   const cantrips = []
   const spells = {}
   ;(sheet.spells || []).forEach((sp) => {
-    if (/cantrip/i.test(sp.level)) { cantrips.push({ n: sp.name, meta: 'Cantrip', tag: '' }); return }
+    if (/cantrip/i.test(sp.level)) {
+      // damaging cantrips carry damage/damageType in the sheet → roll tag like "1d10 fire"
+      const tag = sp.damage ? `${sp.damage}${sp.damageType ? ' ' + sp.damageType : ''}` : ''
+      cantrips.push({ n: sp.name, meta: 'Cantrip', tag })
+      return
+    }
     const ln = parseLevelNum(sp.level)
     if (ln == null) return
     ;(spells[ln] = spells[ln] || []).push({ n: sp.name, tag: '' })

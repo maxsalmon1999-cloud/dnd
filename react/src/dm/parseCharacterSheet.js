@@ -67,6 +67,9 @@ export function parseCharacterSheet(text) {
   const lines = text.split('\n')
   const name = lines[0].trim()
   const cls = lines[1] ? lines[1].trim() : ''
+  // The sheet's 2nd line leads with race then class ("human bard"); store race
+  // as its own field (first token) so it's a first-class value, not just parsed.
+  const race = cls.split(/\s+/)[0] || ''
 
   const extract = (pattern) => {
     for (const line of lines) {
@@ -204,5 +207,5 @@ export function parseCharacterSheet(text) {
     inventory[itemKey] = entry
   })
 
-  return { name, cls, level, xp, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells, inventory }
+  return { name, cls, race, level, xp, rawMarkdown: text, maxHp, ac, proficiency, spellSaveDC, spellAttack, stats, spellSlots, abilities, spells, inventory }
 }
