@@ -529,3 +529,7 @@
 .refreshed-root .slide-hint { font-family: var(--cap); font-size: 9px; color: var(--blood); letter-spacing: .08em; pointer-events: none; }
 .refreshed-root .slide-knob { position: absolute; left: 0; top: 2px; bottom: 2px; width: 46px; background: var(--blood); color: #fff; display: flex; align-items: center; justify-content: center; cursor: grab; font-size: 18px; touch-action: none; user-select: none; }
 .refreshed-root .slide-knob:active { cursor: grabbing; }
+
+/* ---- weapon attack/damage roll buttons (combat card) — skill-roll style ---- */
+.refreshed-root .wpn-roll { border: 1.5px solid var(--gold-2); background: var(--panel); color: var(--gold); font-family: var(--cap); font-size: 11px; letter-spacing: .04em; padding: 8px 11px; cursor: pointer; flex: 0 0 auto; }
+.refreshed-root .wpn-roll:active { transform: scale(.95); }

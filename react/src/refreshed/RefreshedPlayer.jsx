@@ -149,12 +149,15 @@ function SkillsView({ ctx }) {
 }
 // A weapon row: tap (or its button) to roll its damage dice.
 function WeaponRow({ w, ctx }) {
-  const dice = parseDice(w.dmg);
-  const doRoll = () => dice && ctx.roll({ ...dice, label: w.dmg, type: w.n + " damage" });
+  const dmg = parseDice(w.dmg);
+  const hitMod = parseInt(w.hit, 10) || 0;
   return (
-    <div className="item tappable" key={w.n} onClick={doRoll}>
+    <div className="item" key={w.n}>
       <div className="main"><div className="in">{w.n}</div><div className="im">{w.meta} · {w.type}</div></div>
-      <div className="stats"><span className="tag solid">{w.hit}</span><button className="tag roll" onClick={(e) => { e.stopPropagation(); doRoll(); }}>{w.dmg}</button></div>
+      <div className="stats" style={{ gap: 6 }}>
+        <button className="wpn-roll" title="Attack roll" onClick={() => ctx.roll({ count: 1, sides: 20, modifier: hitMod, label: "1d20" + (w.hit || ""), type: w.n + " attack" })}>{w.hit}</button>
+        {dmg && <button className="wpn-roll" title="Damage roll" onClick={() => ctx.roll({ ...dmg, label: w.dmg, type: w.n + " damage" })}>{w.dmg}</button>}
+      </div>
     </div>
   );
 }
