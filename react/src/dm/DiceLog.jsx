@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/gameStore'
+import { Section } from '../shared/ui'
 
 export default function DiceLog() {
   const log = useGameStore((s) => s.diceLog)
@@ -17,8 +18,7 @@ export default function DiceLog() {
   }
 
   return (
-    <div className="card">
-      <strong style={{ color: '#c4a44e' }}>Player Dice Log</strong>
+    <Section title={`Player Dice Log (${entries.length})`} defaultOpen>
       {entries.length === 0 && <div className="muted" style={{ marginTop: 6 }}>No player rolls yet</div>}
       {entries.map((e) => (
         <div className="row spread" key={e.id} style={{ padding: '3px 0', fontSize: 12 }}>
@@ -26,6 +26,6 @@ export default function DiceLog() {
           <strong className={cls(e)}>{e.result}</strong>
         </div>
       ))}
-    </div>
+    </Section>
   )
 }
