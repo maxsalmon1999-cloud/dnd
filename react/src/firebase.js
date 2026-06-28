@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Firebase initialisation.
 // One place that connects to the Realtime Database. Everything else imports
-// `db` from here. (Phase 1 will build the live game-state store on top of this.)
+// `db` from here; the live game-state store (store/gameStore.js) builds on it.
 // ---------------------------------------------------------------------------
 import { initializeApp } from 'firebase/app'
 import { getDatabase } from 'firebase/database'

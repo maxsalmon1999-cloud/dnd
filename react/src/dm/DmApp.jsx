@@ -1,6 +1,4 @@
-// DM screen. Core session loop built on the shared store. Remaining DM features
-// (game-setup modal, dice automation, undo/redo, session end, music/timer) are
-// later Phase 3 chunks — see MIGRATION-PLAN.md.
+// DM screen. The core session loop, built on the shared game-state store.
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useGameStore } from '../store/gameStore'
