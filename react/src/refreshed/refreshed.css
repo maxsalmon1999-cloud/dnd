@@ -367,7 +367,7 @@
 .refreshed-root .addview .add-s { color:var(--muted); }
 .refreshed-root .addview .add-ico { border:2px dashed var(--line-strong); color:var(--gold-2); border-radius:0; }
 .refreshed-root .add-opt { border:0; border-image:url('/assets/ui/btn_b.png') 7 16 fill / 7px 16px stretch; border-radius:0;
-    color:#2a2016; font-family:var(--sans); font-weight:600; }
+    color:var(--gold); text-shadow:0 1px 1px rgba(0,0,0,.55); font-family:var(--sans); font-weight:700; }
 .refreshed-root .add-opt:active { border-image:url('/assets/ui/btn_press_b.png') 6 16 fill / 6px 16px stretch; background:transparent; }
 .refreshed-root .hint { color:var(--muted); font-family:var(--cap); font-size:10px; letter-spacing:.05em; }
 .refreshed-root .card { background:transparent; border:3px solid var(--gold-2); border-radius:0;
