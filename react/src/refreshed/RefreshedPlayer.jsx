@@ -5,6 +5,7 @@
 // We swap the prototype's placeholder data for live data ONE feature at a time.
 // Wired so far: HP (the orb reads Akwan's live hp/maxHp from the store).
 import React from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CHARACTER } from './characterData'
 import { adaptCharacter } from './characterAdapter'
 import { useGameStore } from '../store/gameStore'
@@ -1041,31 +1042,54 @@ function App() {
 
 
 // ---- live-data wiring (everything above is the verbatim prototype) ----
+const tc = (s) => String(s || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+
+function RefreshedShell({ children }) {
+  return <div className="refreshed-root"><div className="phone refreshed-msg">{children}</div></div>
+}
+
+// Pick which character to play when no (valid) ?char= is supplied.
+function CharacterPicker({ sheets, onPick }) {
+  return (
+    <div className="refreshed-root">
+      <div className="phone char-picker">
+        <div className="cp-title">Choose your hero</div>
+        <div className="cp-list">
+          {Object.entries(sheets).map(([k, s]) => (
+            <button key={k} className="cp-item" onClick={() => onPick(k)}>
+              <span className="cp-name">{tc(s.name)}</span>
+              <span className="cp-cls">{tc(s.cls)} · Lvl {s.level || 1}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Build the active character's `C` from live Firebase (sheet + runtime state)
-// and point the module bindings at it before <App> renders.
+// and point the module bindings at it before <App> renders. The character is
+// chosen by ?char=<key>; a picker is shown when it's absent or unknown.
 function RefreshedPlayer() {
   const subscribe = useGameStore((s) => s.subscribe)
   useEffect(() => { subscribe() }, [subscribe])
+  const sheets = useGameStore((s) => s.sheets)
+  const characters = useGameStore((s) => s.characters)
+  const [params, setParams] = useSearchParams()
+  const charKey = params.get('char')
 
-  // which character (step 2 will read this from the route/param)
-  const charKey = 'akwan-akusian'
-  const sheet = useGameStore((s) => s.sheets[charKey])
-  const live = useGameStore((s) => s.characters[charKey])
+  // wait for the sheets to load before deciding anything
+  const keys = Object.keys(sheets || {})
+  if (keys.length === 0) return <RefreshedShell>Loading…</RefreshedShell>
 
-  // Wait for the static sheet before mounting App, so App's once-per-mount state
-  // (spell slots, notes, roll log) initialises from the real character.
-  if (!sheet) {
-    return (
-      <div className="refreshed-root">
-        <div className="phone" style={{ display: 'grid', placeItems: 'center', color: 'var(--gold)', fontFamily: 'var(--cap)' }}>
-          Loading…
-        </div>
-      </div>
-    )
+  // no character chosen, or an unknown key → let the player pick
+  if (!charKey || !sheets[charKey]) {
+    return <CharacterPicker sheets={sheets} onPick={(k) => setParams({ char: k })} />
   }
 
   LAB_CHAR_KEY = charKey
-  C = adaptCharacter(sheet, live)
+  C = adaptCharacter(sheets[charKey], characters[charKey])
+  // key by charKey so App's once-per-mount state re-initialises on a switch
   return <div className="refreshed-root"><App key={charKey} /></div>
 }
 
