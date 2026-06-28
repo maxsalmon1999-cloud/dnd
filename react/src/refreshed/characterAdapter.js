@@ -25,6 +25,40 @@ function parseLevelNum(lv) {
   return m ? parseInt(m[0], 10) : null
 }
 
+const ABIL_RE = '(STR|DEX|CON|INT|WIS|CHA)'
+const isRangedWeapon = (name) => /(bow|crossbow|sling|dart|javelin|arrow)/i.test(name || '')
+
+// Scan a sheet's passive abilities for always-on bonuses to attacks/damage/checks
+// (e.g. Agonizing Blast → +CHA to Eldritch Blast damage; Archery → +2 ranged
+// attack; Jack of All Trades → +1 non-proficient checks). Situational ones
+// (Sneak Attack "once per turn", Dread Ambusher "first turn") are deliberately
+// NOT folded in — they'd be wrong on every roll. Add new patterns here to extend.
+function detectBonuses(sheet, statMod) {
+  const out = { spellDamage: {}, rangedAttack: 0, meleeAttack: 0, nonProfCheck: 0, notes: [] }
+  ;(sheet.abilities || []).forEach((a) => {
+    const d = a.desc || ''
+    let m
+    // "Add CHA modifier to Eldritch Blast damage" → +<that ability's mod> to the named spell
+    if ((m = d.match(new RegExp(`add\\s+${ABIL_RE}\\s+modifier\\b[^.]*?\\bto\\s+(.+?)\\s+damage`, 'i')))) {
+      const spell = m[2].trim().toLowerCase()
+      const amt = statMod(m[1].toUpperCase())
+      out.spellDamage[spell] = (out.spellDamage[spell] || 0) + amt
+      out.notes.push(`${a.name}: ${fmtMod(amt)} ${m[2].trim()} damage`)
+    }
+    // "+2 to attack rolls with ranged|melee weapons"
+    if ((m = d.match(/\+(\d+)\s+to\s+attack\s+rolls?\s+with\s+(ranged|melee)\s+weapons/i))) {
+      const amt = parseInt(m[1], 10)
+      out[m[2].toLowerCase() === 'ranged' ? 'rangedAttack' : 'meleeAttack'] += amt
+      out.notes.push(`${a.name}: +${amt} ${m[2].toLowerCase()} attack`)
+    }
+    // "+1 to all non-proficient ability checks" (Jack of All Trades)
+    if ((m = d.match(/\+(\d+)\s+to\s+(?:all\s+)?non-?proficient\s+(?:ability\s+)?checks/i))) {
+      out.nonProfCheck += parseInt(m[1], 10)
+    }
+  })
+  return out
+}
+
 export function adaptCharacter(sheet, live) {
   sheet = sheet || {}
   live = live || {}
@@ -35,6 +69,7 @@ export function adaptCharacter(sheet, live) {
   const race = sheet.race || split.race // prefer the stored field; fall back to parsing cls
   const klass = split.klass
   const statMod = (k) => statsObj[k] || 0
+  const bonuses = detectBonuses(sheet, statMod) // always-on attack/damage/check bonuses
 
   // ability scores (we only have modifiers; derive a plausible score for display)
   const stats = STAT_ORDER.map((key) => {
@@ -46,7 +81,9 @@ export function adaptCharacter(sheet, live) {
   const skillProf = live.skillProficiencies || []
   const skills = SKILLS.map((sk) => {
     const isProf = skillProf.includes(sk.name)
-    return { n: sk.name, a: sk.stat, m: fmtMod(statMod(sk.stat) + (isProf ? profNum : 0)), p: isProf }
+    // non-proficient checks pick up Jack-of-All-Trades-style bonuses
+    const extra = isProf ? profNum : bonuses.nonProfCheck
+    return { n: sk.name, a: sk.stat, m: fmtMod(statMod(sk.stat) + extra), p: isProf }
   }).sort((a, b) => a.n.localeCompare(b.n))
 
   // spell slots: {level, total, used} — used derived from the live pip map
@@ -64,8 +101,12 @@ export function adaptCharacter(sheet, live) {
   const spells = {}
   ;(sheet.spells || []).forEach((sp) => {
     if (/cantrip/i.test(sp.level)) {
-      // damaging cantrips carry damage/damageType in the sheet → roll tag like "1d10 fire"
-      const tag = sp.damage ? `${sp.damage}${sp.damageType ? ' ' + sp.damageType : ''}` : ''
+      // damaging cantrips carry damage/damageType in the sheet → roll tag like "1d10 fire";
+      // fold in any always-on bonus (e.g. Agonizing Blast → +CHA) so it rolls 1d10+5
+      let dice = sp.damage || ''
+      const bonus = bonuses.spellDamage[(sp.name || '').toLowerCase()] || 0
+      if (dice && bonus) dice += fmtMod(bonus)
+      const tag = dice ? `${dice}${sp.damageType ? ' ' + sp.damageType : ''}` : ''
       cantrips.push({ n: sp.name, meta: 'Cantrip', tag })
       return
     }
@@ -89,10 +130,11 @@ export function adaptCharacter(sheet, live) {
     const abilKey = it.damageAbility && statsObj[it.damageAbility] != null ? it.damageAbility : null
     const aMod = abilKey ? statMod(abilKey) : bestPhysical
     const dice = it.damageDice || ''
+    const atkBonus = isRangedWeapon(it.name) ? bonuses.rangedAttack : bonuses.meleeAttack
     return {
       n: it.name + (it.amount > 1 ? ` ×${it.amount}` : ''),
       meta: 'Weapon',
-      hit: fmtMod(aMod + profNum),
+      hit: fmtMod(aMod + profNum + atkBonus),
       dmg: dice ? dice + (aMod ? fmtMod(aMod) : '') : '',
       type: it.damageType || '',
     }
