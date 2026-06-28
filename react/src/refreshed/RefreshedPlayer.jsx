@@ -6,6 +6,7 @@
 // Wired so far: HP (the orb reads Akwan's live hp/maxHp from the store).
 import React from 'react'
 import { CHARACTER } from './characterData'
+import { adaptCharacter } from './characterAdapter'
 import { useGameStore } from '../store/gameStore'
 import { rollLabDice } from './refreshedDice'
 import { CONDITIONS as COND_INFO, SPELL_DESCRIPTIONS, ABILITY_DESCRIPTIONS } from '../data/gameData'
@@ -55,7 +56,11 @@ function SlideToDelete({ name, onConfirm, onCancel }) {
 }
 
 const { useState, useRef, useCallback, useEffect } = React;
-const C = CHARACTER;
+// Per-character data + key. Reassigned by <RefreshedPlayer> (the only renderer)
+// before <App> renders, so every child reads the active character. <App> is
+// keyed by charKey, so its once-per-mount state re-initialises on a switch.
+let C = CHARACTER;
+let LAB_CHAR_KEY = 'akwan-akusian';
 const CARD_W = 152, CARD_H = 190;
 
 /* ---------- icons (thin Lucide-style placeholders) ---------- */
@@ -102,7 +107,7 @@ const PANELS = {
   conditions: { title:"Conditions",    color:"var(--cond)", glyph:"demon" },
 };
 
-const CARDS = [
+const cardsFor = (C) => [
   { id:"skills", color:"var(--skills)", title:"Skills",
     sub:`${C.skills.filter(s=>s.p).length} proficient · ${C.skills.length} total` },
   { id:"combat", color:"var(--combat)", title:"Weapons &\nCantrips",
@@ -176,7 +181,7 @@ function CombatView({ ctx }) {
           return (
             <div className="item tappable" key={c.n} onClick={doRoll}>
               <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
-              <div className="stats"><button className="tag roll ghost" onClick={(e) => { e.stopPropagation(); doRoll(); }}>{c.tag}</button></div>
+              <div className="stats">{c.tag && <button className="tag roll ghost" onClick={(e) => { e.stopPropagation(); doRoll(); }}>{c.tag}</button>}</div>
             </div>
           );
         })}
@@ -587,6 +592,7 @@ function JournalTab({ history, pushRoll, clearHistory, notes, setNotes }) {
 
 /* ---------- main app ---------- */
 function App() {
+  const CARDS = cardsFor(C);
   const phoneRef = useRef(null);
   const closeTimer = useRef(null);
   const [tab, setTab] = useState(1);
@@ -605,10 +611,10 @@ function App() {
 
   // journal: roll history + notes (persisted)
   const [history, setHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("akwan_roll_history")) || []; } catch (e) { return []; }
+    try { return JSON.parse(localStorage.getItem(`${LAB_CHAR_KEY}_roll_history`)) || []; } catch (e) { return []; }
   });
   useEffect(() => {
-    try { localStorage.setItem("akwan_roll_history", JSON.stringify(history.slice(0, 80))); } catch (e) {}
+    try { localStorage.setItem(`${LAB_CHAR_KEY}_roll_history`, JSON.stringify(history.slice(0, 80))); } catch (e) {}
   }, [history]);
   const pushRoll = useCallback((entry) => {
     setHistory((h) => [{ id: Date.now() + "-" + Math.random().toString(36).slice(2, 6), t: Date.now(), ...entry }, ...h].slice(0, 80));
@@ -618,14 +624,14 @@ function App() {
     try {
       const liveC = useGameStore.getState().characters[LAB_CHAR_KEY];
       if (liveC && typeof liveC.notes === "string") return liveC.notes;
-      return localStorage.getItem("akwan_journal_notes") || "";
+      return localStorage.getItem(`${LAB_CHAR_KEY}_journal_notes`) || "";
     } catch (e) { return ""; }
   });
   const notesTimer = useRef(null);
   useEffect(() => {
     // auto-hard-save: localStorage immediately + debounced to the live store so
     // notes persist between sessions and devices
-    try { localStorage.setItem("akwan_journal_notes", notes); } catch (e) {}
+    try { localStorage.setItem(`${LAB_CHAR_KEY}_journal_notes`, notes); } catch (e) {}
     clearTimeout(notesTimer.current);
     notesTimer.current = setTimeout(() => {
       try { useGameStore.getState().saveNotes(LAB_CHAR_KEY, notes); } catch (e) {}
@@ -811,7 +817,7 @@ function App() {
   const hpPct = Math.round((C.hp.cur / C.hp.max) * 100);
   // armour AC bonus (sum of "+N AC" from worn armour) shown bracketed next to natural AC
   const armourBonus = (C.armour || []).reduce((s, a) => {
-    const m = String(a.ac).match(/([+-]?\d+)/);
+    const m = String(a.ac).match(/^\s*([+-]\d+)/); // only explicit "+N"/"-N" bonuses
     return s + (m ? parseInt(m[1], 10) : 0);
   }, 0);
 
@@ -841,7 +847,7 @@ function App() {
         <React.Fragment>
           <div className="charline">
             <span className="cn">{C.name}</span>
-            <span className="cc">{C.race} · {C.klass}</span>
+            <span className="cc">{C.race ? `${C.race} · ${C.klass}` : C.klass}</span>
             <div className="charstats">
               <span className="cbadge"><span className="bk">AC</span><span className="bv">{C.ac}{armourBonus ? `(${armourBonus >= 0 ? "+" : ""}${armourBonus})` : ""}</span></span>
               <span className="cbadge"><span className="bk">Level</span><span className="bv">{C.level}</span></span>
@@ -1034,19 +1040,33 @@ function App() {
 
 
 
-// ---- live-data wiring (added; everything above is the verbatim prototype) ----
-const LAB_CHAR_KEY = 'akwan-akusian'
-
+// ---- live-data wiring (everything above is the verbatim prototype) ----
+// Build the active character's `C` from live Firebase (sheet + runtime state)
+// and point the module bindings at it before <App> renders.
 function RefreshedPlayer() {
   const subscribe = useGameStore((s) => s.subscribe)
-  const live = useGameStore((s) => s.characters[LAB_CHAR_KEY])
   useEffect(() => { subscribe() }, [subscribe])
-  // FEATURE 1 — HP: feed Akwan's live hp/maxHp into the prototype's data so the
-  // HealthOrb renders real values (and updates when the DM changes them).
-  if (live) {
-    C.hp = { ...C.hp, cur: live.hp ?? C.hp.cur, max: live.maxHp ?? C.hp.max }
+
+  // which character (step 2 will read this from the route/param)
+  const charKey = 'akwan-akusian'
+  const sheet = useGameStore((s) => s.sheets[charKey])
+  const live = useGameStore((s) => s.characters[charKey])
+
+  // Wait for the static sheet before mounting App, so App's once-per-mount state
+  // (spell slots, notes, roll log) initialises from the real character.
+  if (!sheet) {
+    return (
+      <div className="refreshed-root">
+        <div className="phone" style={{ display: 'grid', placeItems: 'center', color: 'var(--gold)', fontFamily: 'var(--cap)' }}>
+          Loading…
+        </div>
+      </div>
+    )
   }
-  return <div className="refreshed-root"><App /></div>
+
+  LAB_CHAR_KEY = charKey
+  C = adaptCharacter(sheet, live)
+  return <div className="refreshed-root"><App key={charKey} /></div>
 }
 
 export default RefreshedPlayer
