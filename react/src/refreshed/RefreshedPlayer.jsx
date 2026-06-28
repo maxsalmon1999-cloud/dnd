@@ -46,7 +46,7 @@ function SlideToDelete({ name, onConfirm, onCancel }) {
           <div className="slide-knob" style={{ left: x }}
             onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
             onPointerMove={(e) => move(e.clientX)}
-            onPointerUp={() => { if (!done) setX(0) }}>🗑</div>
+            onPointerUp={() => { if (!done) setX(0) }}><S><path d="M6 6l12 12M18 6L6 18"/></S></div>
         </div>
         <button className="lab-pop-x" onClick={onCancel}>Cancel</button>
       </div>
@@ -260,7 +260,7 @@ function InvRow({ itemKey, item, ctx, kind }) {
       <div className="stats" style={{ gap: 4 }}>
         {dice && <button className="tag roll" onClick={() => ctx.roll({ ...dice, label: item.damageDice, type: item.name + " damage" })}>{item.damageDice}</button>}
         {kind === "consumables" && <button className="row-roll" onClick={() => invConsume(itemKey, item)}>USE</button>}
-        <button className="inv-del" title="Delete" onClick={() => ctx.requestDelete(itemKey, item.name)}>🗑</button>
+        <button className="inv-del" title="Delete" onClick={() => ctx.requestDelete(itemKey, item.name)}><S><path d="M6 6l12 12M18 6L6 18"/></S></button>
       </div>
     </div>
   );

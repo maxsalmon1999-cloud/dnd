@@ -521,7 +521,9 @@
 .refreshed-root .add-notes { width: 100%; margin-top: 10px; min-height: 54px; background: var(--tile); border: 2px solid var(--line-strong); color: var(--ink); font-family: var(--sans); font-size: 14px; padding: 8px; }
 .refreshed-root .add-actions { display: flex; gap: 8px; margin-top: 14px; }
 .refreshed-root .add-opt.ghost { background: transparent; }
-.refreshed-root .inv-del { border: 0; background: transparent; cursor: pointer; font-size: 15px; opacity: .8; padding: 2px 4px; }
+.refreshed-root .inv-del { border: 0; background: transparent; cursor: pointer; color: var(--gold); opacity: .85; padding: 2px 4px; line-height: 0; }
+.refreshed-root .inv-del svg { width: 16px; height: 16px; }
+.refreshed-root .inv-del:hover { opacity: 1; }
 .refreshed-root .inv-del:active { transform: scale(.9); }
 
 /* ---- slide-to-delete ---- */
@@ -529,6 +531,7 @@
 .refreshed-root .slide-hint { font-family: var(--cap); font-size: 9px; color: var(--blood); letter-spacing: .08em; pointer-events: none; }
 .refreshed-root .slide-knob { position: absolute; left: 0; top: 2px; bottom: 2px; width: 46px; background: var(--blood); color: #fff; display: flex; align-items: center; justify-content: center; cursor: grab; font-size: 18px; touch-action: none; user-select: none; }
 .refreshed-root .slide-knob:active { cursor: grabbing; }
+.refreshed-root .slide-knob svg { width: 20px; height: 20px; }
 
 /* ---- weapon attack/damage roll buttons (combat card) — skill-roll style ---- */
 .refreshed-root .wpn-roll { border: 1.5px solid var(--gold-2); background: var(--panel); color: var(--gold); font-family: var(--cap); font-size: 11px; letter-spacing: .04em; padding: 8px 11px; cursor: pointer; flex: 0 0 auto; }
