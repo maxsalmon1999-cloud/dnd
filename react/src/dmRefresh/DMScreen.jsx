@@ -243,6 +243,7 @@ export default class DMScreen extends React.Component {
         { id:4, name:'Rain & Distant Bells', playing:false },
       ],
       open: { party:true, requests:true, messages:true, timer:true, diceLog:false, notes:false, meta:false, music:false },
+      info: null, // {title, body} — spell/ability description pop-out
     };
   }
 
@@ -363,6 +364,8 @@ export default class DMScreen extends React.Component {
   resetBudget() { this.setState(s => ({ budget:{ ...s.budget, used:0 } })); }
 
   toggle(panel) { this.setState(s => ({ open:{ ...s.open, [panel]: !s.open[panel] } })); }
+  showInfo(title, body) { this.setState({ info: { title, body } }); }
+  closeInfo() { this.setState({ info: null }); }
   toggleMusic(id) { this.setState(s => ({ music: s.music.map(t => t.id === id ? { ...t, playing:!t.playing } : { ...t, playing:false }) })); }
 
   hpColor(pct) {
@@ -382,6 +385,11 @@ export default class DMScreen extends React.Component {
        Everything else on this screen is still the prototype's mock data. */
     const party = this.props.liveCharacters || s.characters;
     const adjustHp = this.props.onAdjustHp || ((id, d) => this.adjustHp(id, d));
+    // feats/actions may be live objects ({label,name,desc}) or the prototype's
+    // plain-string mock — normalise so the clickable chips work for both.
+    const chipInfo = (x) => (typeof x === 'string'
+      ? { label: x, name: x, desc: 'No description available.' }
+      : x);
 
     /* whisper helpers */
     const lastDir = {};
@@ -499,15 +507,21 @@ export default class DMScreen extends React.Component {
                                   </div>
                                   {c.feats.length > 0 && (
                                     <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-                                      {c.feats.map(ft => (
-                                        <span key={ft} style={{ fontFamily:'var(--font-ui)', fontSize:'12px', color:'var(--brass-200)', padding:'4px 9px', background:'var(--surface-base)', border:'2px solid var(--brass-600)', borderRadius:'var(--radius-sm)' }}>{ft}</span>
-                                      ))}
+                                      {c.feats.map((raw, i) => {
+                                        const ft = chipInfo(raw);
+                                        return (
+                                        <span key={ft.label + '·' + i} onClick={(e) => { e.stopPropagation(); this.showInfo(ft.name, ft.desc); }} title="What does this do?" style={{ cursor:'pointer', fontFamily:'var(--font-ui)', fontSize:'12px', color:'var(--brass-200)', padding:'4px 9px', background:'var(--surface-base)', border:'2px solid var(--brass-600)', borderRadius:'var(--radius-sm)' }}>{ft.label}</span>
+                                        );
+                                      })}
                                     </div>
                                   )}
                                   <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-                                    {c.actions.map(act => (
-                                      <span key={act} style={{ fontFamily:'var(--font-ui)', fontSize:'12px', color:'var(--text-body)', padding:'4px 9px', ...S.slot }}>{act}</span>
-                                    ))}
+                                    {c.actions.map((raw, i) => {
+                                      const act = chipInfo(raw);
+                                      return (
+                                      <span key={act.label + '·' + i} onClick={(e) => { e.stopPropagation(); this.showInfo(act.name, act.desc); }} title="What does this do?" style={{ cursor:'pointer', fontFamily:'var(--font-ui)', fontSize:'12px', color:'var(--text-body)', padding:'4px 9px', ...S.slot }}>{act.label}</span>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
@@ -751,6 +765,19 @@ export default class DMScreen extends React.Component {
             </div>
           </div>
         </div>
+
+        {s.info && (
+          <div onClick={() => this.closeInfo()} style={{ position:'absolute', inset:0, zIndex:80, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(6,3,10,0.72)', padding:'24px' }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ maxWidth:'420px', width:'100%', background:'var(--surface-panel)', border:'2px solid var(--brass-600)', borderRadius:'var(--radius-md)', boxShadow:'var(--glow-brass)', padding:'18px 20px', display:'flex', flexDirection:'column', gap:'12px' }}>
+              <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'12px' }}>
+                <span style={{ fontFamily:'var(--font-name)', fontWeight:700, fontSize:'19px', color:'var(--brass-200)', letterSpacing:'var(--ls-name)' }}>{s.info.title}</span>
+                <span onClick={() => this.closeInfo()} style={{ cursor:'pointer', color:'var(--text-gold)', fontSize:'18px', lineHeight:1, padding:'0 2px' }}>✕</span>
+              </div>
+              <div style={{ fontFamily:'var(--font-ui)', fontSize:'14px', lineHeight:1.5, color:'var(--text-body)' }}>{s.info.body}</div>
+              <div style={{ alignSelf:'flex-end' }}><Button variant="secondary" size="sm" onClick={() => this.closeInfo()}>Close</Button></div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

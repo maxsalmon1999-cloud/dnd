@@ -3,6 +3,9 @@
 // then reshapes into what the DM "Book of the Raven" Party cards expect:
 //   { id, name, cls, race, lvl, hp, max, ac, dc, abil:[{k,v}], feats[], actions[] }
 import { adaptCharacter } from '../refreshed/characterAdapter'
+import { SPELL_DESCRIPTIONS, ABILITY_DESCRIPTIONS } from '../data/gameData'
+
+const NO_DESC = 'No description available.'
 
 export function adaptDmParty(sheets, characters) {
   const keys = Object.keys(sheets || {})
@@ -17,15 +20,19 @@ export function adaptDmParty(sheets, characters) {
       .sort((a, b) => b.n - a.n)
       .map(({ k, v }) => ({ k, v }))
 
-    // feats = the character's features; limited-use ones show live remaining/max
-    const feats = (sheets[key].abilities || []).map((a) =>
-      a.max ? `${a.name} (${Math.max(0, a.max - (liveAbil[a.key] || 0))}/${a.max})` : a.name
-    )
+    // feats = the character's features; limited-use ones show live remaining/max.
+    // Each carries a description (from the sheet, then the reference table).
+    const feats = (sheets[key].abilities || []).map((a) => ({
+      label: a.max ? `${a.name} (${Math.max(0, a.max - (liveAbil[a.key] || 0))}/${a.max})` : a.name,
+      name: a.name,
+      desc: a.desc || ABILITY_DESCRIPTIONS[a.name] || NO_DESC,
+    }))
 
-    // actions = known cantrips + leveled spells (flat name list)
+    // actions = known cantrips + leveled spells, each with a spell description
+    const spellAction = (name) => ({ label: name, name, desc: SPELL_DESCRIPTIONS[name] || NO_DESC })
     const actions = [
-      ...C.cantrips.map((c) => c.n),
-      ...Object.values(C.spells).flat().map((sp) => sp.n),
+      ...C.cantrips.map((c) => spellAction(c.n)),
+      ...Object.values(C.spells).flat().map((sp) => spellAction(sp.n)),
     ]
 
     return {
