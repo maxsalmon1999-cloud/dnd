@@ -53,6 +53,25 @@ export const useGameStore = create((set, get) => ({
     set({ _unsubs: unsubs })
   },
 
+  // Role-scoped subscription for a signed-in PLAYER: only their own character,
+  // sheet, whispers and pending requests — exactly what the per-character
+  // security rules allow. The player screen calls this (instead of subscribe())
+  // once auth has resolved their charKey, so a player never reads other players'
+  // data and never trips a permission-denied on the whole-node listeners.
+  subscribePlayer(charKey) {
+    if (get()._unsubs.length || !charKey) return
+    const one = (val) => (val ? { [charKey]: val } : {})
+    const unsubs = [
+      onValue(ref(db, `characterSheets/${charKey}`), (s) => set({ sheets: one(s.val()) })),
+      onValue(ref(db, `characters/${charKey}`), (s) => set({ characters: one(s.val()) })),
+      onValue(ref(db, 'campaign'), (s) => set({ campaign: s.val() || null })),
+      onValue(ref(db, `inventoryRequests/${charKey}`), (s) => set({ inventoryRequests: one(s.val()) })),
+      onValue(ref(db, `goldRequests/${charKey}`), (s) => set({ goldRequests: one(s.val()) })),
+      onValue(ref(db, `whispers/${charKey}`), (s) => set({ whispers: one(s.val()) })),
+    ]
+    set({ _unsubs: unsubs })
+  },
+
   // Tear down listeners (e.g. on full app unmount).
   unsubscribe() {
     get()._unsubs.forEach((u) => u())
