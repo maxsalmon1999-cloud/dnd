@@ -15,7 +15,7 @@ export default function Callback() {
   useEffect(() => {
     if (ERROR || !CODE) return
     exchangeCode(CODE)
-      .then(() => { window.location.href = '/dm' })
+      .then(() => { window.location.href = '/dm-refresh' })
       .catch((err) => setStatus('Error: ' + err.message))
   }, [])
 
