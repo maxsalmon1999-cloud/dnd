@@ -23,7 +23,7 @@ import {
 } from 'firebase/database'
 import { db } from '../firebase'
 
-export const useGameStore = create((store, get) => ({
+export const useGameStore = create((set, get) => ({
   // ---- live data (mirrors Firebase) ----
   sheets: {}, // characterSheets/{key} — static definitions
   characters: {}, // characters/{key} — live runtime state
@@ -33,33 +33,30 @@ export const useGameStore = create((store, get) => ({
   diceLog: {}, // diceLog/{id} — player rolls
   dmNotes: '', // dmNotes — the DM's live story-notes scratchpad
   whispers: {}, // whispers/{charKey}/{id} — private player<->DM messages
-  loading: true,
   _unsubs: [],
 
   // Wire up all Firebase listeners. Call once when the app mounts.
   subscribe() {
     if (get()._unsubs.length) return // already subscribed
     const unsubs = [
-      onValue(ref(db, 'characterSheets'), (s) => store({ sheets: s.val() || {} })),
-      onValue(ref(db, 'characters'), (s) =>
-        store({ characters: s.val() || {}, loading: false }),
-      ),
-      onValue(ref(db, 'campaign'), (s) => store({ campaign: s.val() || null })),
+      onValue(ref(db, 'characterSheets'), (s) => set({ sheets: s.val() || {} })),
+      onValue(ref(db, 'characters'), (s) => set({ characters: s.val() || {} })),
+      onValue(ref(db, 'campaign'), (s) => set({ campaign: s.val() || null })),
       onValue(ref(db, 'inventoryRequests'), (s) =>
-        store({ inventoryRequests: s.val() || {} }),
+        set({ inventoryRequests: s.val() || {} }),
       ),
-      onValue(ref(db, 'goldRequests'), (s) => store({ goldRequests: s.val() || {} })),
-      onValue(query(ref(db, 'diceLog'), limitToLast(50)), (s) => store({ diceLog: s.val() || {} })),
-      onValue(ref(db, 'dmNotes'), (s) => store({ dmNotes: s.val() || '' })),
-      onValue(ref(db, 'whispers'), (s) => store({ whispers: s.val() || {} })),
+      onValue(ref(db, 'goldRequests'), (s) => set({ goldRequests: s.val() || {} })),
+      onValue(query(ref(db, 'diceLog'), limitToLast(50)), (s) => set({ diceLog: s.val() || {} })),
+      onValue(ref(db, 'dmNotes'), (s) => set({ dmNotes: s.val() || '' })),
+      onValue(ref(db, 'whispers'), (s) => set({ whispers: s.val() || {} })),
     ]
-    store({ _unsubs: unsubs })
+    set({ _unsubs: unsubs })
   },
 
   // Tear down listeners (e.g. on full app unmount).
   unsubscribe() {
     get()._unsubs.forEach((u) => u())
-    store({ _unsubs: [] })
+    set({ _unsubs: [] })
   },
 
   // ---- write helpers (foundational set; more added per phase) ----
@@ -88,24 +85,17 @@ export const useGameStore = create((store, get) => ({
     return push(ref(db, `whispers/${charKey}`), { text: body, from, ts: serverTimestamp() })
   },
 
-  // Generic helpers used by later phases.
-  writeCharacterField(key, field, value) {
-    return fbSet(ref(db, `characters/${key}/${field}`), value)
-  },
-  updateCharacter(key, partial) {
-    return update(ref(db, `characters/${key}`), partial)
-  },
-  removeAt(path) {
-    return remove(ref(db, path))
-  },
+  // Generic path write.
   setAt(path, value) {
     return fbSet(ref(db, path), value)
   },
-  batchUpdate(updates) {
-    return update(ref(db), updates)
-  },
 
   // ---- player-screen write helpers ----
+  // NOTE: setCondition / setProficiencies / setAbilityUsed / setSlotSpent /
+  // persistRollHistory currently have no live callers — the refreshed player
+  // keeps that state locally for now, but the adapter and DM party cards
+  // already READ these Firebase nodes, so these writers are the intended
+  // wiring, not dead code. Keep them.
 
   // Active conditions: stored as characters/{key}/conditions/{Name_with_underscores} = true.
   setCondition(key, name, on) {
@@ -168,6 +158,9 @@ export const useGameStore = create((store, get) => ({
 
   // Inventory quantity request (player -> DM). Accumulates onto an existing
   // pending request for the same item; removes it if the net delta hits 0.
+  // NOTE: the request producers (this + requestGoldChange) have no live caller
+  // yet — the refreshed player writes inventory directly. The DM approval UI
+  // (RequestsPanel) is wired and waiting; keep these for the approval flow.
   adjustInventoryRequest(key, item, itemKey, deltaStep) {
     const reqs = get().inventoryRequests[key] || {}
     const existing = Object.entries(reqs).find(([, r]) => r.itemKey === itemKey)
@@ -223,6 +216,8 @@ export const useGameStore = create((store, get) => ({
 
   // Short/long rest: reset ability uses and spell slots across the party.
   // Short rest resets short-rest abilities + warlock (key 'w') slots; long rest resets all.
+  // NOTE: not yet wired to the refreshed DM screen's Short/Long Rest buttons
+  // (they currently only post a narration line) — keep for that wiring.
   doRest(type) {
     const { sheets } = get()
     const updates = {}
