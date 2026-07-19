@@ -26,6 +26,7 @@ import { ref, get } from 'firebase/database'
 import { auth, db } from './firebase'
 
 const EMAIL_KEY = 'auth_email_for_link'
+let started = false // guards init() so the auth listener attaches only once
 
 async function resolveRole(user) {
   const email = (user.email || '').toLowerCase()
@@ -50,7 +51,10 @@ export const useAuth = create((set) => ({
   error: null,
 
   // Call once on app mount. Watches auth state and completes email-link returns.
+  // Safe to call from multiple gates / StrictMode — only attaches once.
   init() {
+    if (started) return
+    started = true
     // If the user is returning via a sign-in email link, finish that first.
     if (isSignInWithEmailLink(auth, window.location.href)) {
       const email = window.localStorage.getItem(EMAIL_KEY) || window.prompt('Confirm your email to finish signing in')

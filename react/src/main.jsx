@@ -7,13 +7,14 @@ import DmRefresh from './dmRefresh/DmRefresh'
 import Callback from './routes/Callback'
 import RedirectTo from './routes/RedirectTo'
 import RefreshedPlayer from './refreshed/RefreshedPlayer'
+import AuthGate from './AuthGate'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/dm" element={<DmRefresh />} />
+        <Route path="/dm" element={<AuthGate require="dm"><DmRefresh /></AuthGate>} />
         <Route path="/play" element={<RefreshedPlayer />} />
         <Route path="/callback" element={<Callback />} />
         {/* legacy aliases from the refresh rollout */}
