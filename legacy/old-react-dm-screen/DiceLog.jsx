@@ -18,8 +18,8 @@ export default function DiceLog() {
   }
 
   return (
-    <Section title={`Player Dice Log (${entries.length})`} defaultOpen>
-      {entries.length === 0 && <div className="muted" style={{ marginTop: 6 }}>No player rolls yet</div>}
+    <Section title={`Dice Log (${entries.length})`} defaultOpen>
+      {entries.length === 0 && <div className="muted" style={{ marginTop: 6 }}>No rolls yet</div>}
       {entries.map((e) => (
         <div className="row spread" key={e.id} style={{ padding: '3px 0', fontSize: 12 }}>
           <span><strong>{(e.character || '').split(' ')[0]}</strong> <span className="muted">{e.type}</span></span>

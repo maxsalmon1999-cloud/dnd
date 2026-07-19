@@ -35,6 +35,14 @@ the following were retired here:
   original single-file HTML app (removed from the repo root; copies kept above).
 - `old-react-player-screen/` — the first React rebuild of the player screen (Phase 2),
   superseded by the refreshed player card (`react/src/refreshed/`).
+- `old-react-dm-screen/` — the first React rebuild of the DM screen (Phase 3),
+  superseded by the refreshed "Book of the Raven" DM screen (`react/src/dmRefresh/`).
+  Three engine modules stayed live in `react/src/dm/` (`spotify.js`, `prompts.js`,
+  `budget.js`) because the refreshed screen uses them. **Known gap:** the Setup flow
+  (character-sheet / campaign-doc import — `SetupModal.jsx`, `parseCharacterSheet.js`,
+  `pdf.js`, `campaignPrompt.js`) is not rebuilt in the refreshed screen yet; pull those
+  from this archive when wiring it up.
 
-The live app is now the React build (DM screen + refreshed player screen) on Cloudflare Pages.
-The Cloudflare **worker** (AI proxy) and the React app under `react/` are unaffected.
+The live app is now the React build (refreshed DM screen + refreshed player screen) on
+Cloudflare Pages. The Cloudflare **worker** (AI proxy) and the React app under `react/`
+are unaffected.
