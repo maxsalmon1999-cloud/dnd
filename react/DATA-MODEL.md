@@ -17,6 +17,7 @@
 | `inventoryRequests/{charKey}/{id}` | Player→DM pending inventory-change requests | Player (created), DM (removes) |
 | `goldRequests/{charKey}/{id}` | Player→DM pending gold-change requests | Player (created), DM (removes) |
 | `diceLog/{id}` | Append-only log of player dice rolls | Players (push) |
+| `whispers/{charKey}/{id}` | Private player↔DM messages (one thread per character, both directions) | Player + DM (push) |
 | `campaignRag` | **Not used by the app** — orphaned RAG index. Out of scope. | — |
 
 > `inventoryRequests`, `goldRequests`, and `diceLog` only exist when there's data — they're
@@ -73,7 +74,13 @@ Item IDs are either Firebase push IDs (e.g. `-Oq5qCOiz...`) or slugs (e.g. `arca
 inventoryRequests/{charKey}/{id}: { itemKey, itemName, currentAmount, delta, timestamp }
 goldRequests/{charKey}/{id}:       { charKey, charName, currentGold, delta, timestamp }
 diceLog/{id}:                      { character, charKey, label/dice, result/total, type, modifier, timestamp }
+whispers/{charKey}/{id}:           { text, from: 'player' | 'dm', ts }
 ```
+
+Whispers are a single live thread per character shared by both screens: the player's
+✉ "Message the DM" popup and the DM screen's ✉ Messages panel both push to and read
+`whispers/{charKey}`. Push keys sort chronologically (oldest→newest). `from` marks the
+sender so each side can align its own messages.
 
 ## `campaign`
 

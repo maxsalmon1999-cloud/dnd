@@ -10,6 +10,7 @@ import { CHARACTER } from './characterData'
 import { adaptCharacter } from './characterAdapter'
 import { useGameStore } from '../store/gameStore'
 import { rollLabDice } from './refreshedDice'
+import PlayerWhisper from './PlayerWhisper'
 import { CONDITIONS as COND_INFO, SPELL_DESCRIPTIONS, ABILITY_DESCRIPTIONS } from '../data/gameData'
 import './refreshed.css'
 
@@ -539,6 +540,7 @@ function JournalTab({ history, pushRoll, clearHistory, notes, setNotes }) {
   const critCls = last && !last.rolling && last.crit ? " crit-" + last.crit : "";
   return (
     <div className="journal">
+      <PlayerWhisper charKey={LAB_CHAR_KEY} />
       <div className="jroller">
         <div className="jh">Manual Roll</div>
         <div className="die-row">

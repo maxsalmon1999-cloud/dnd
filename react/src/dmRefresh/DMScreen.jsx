@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React from 'react';
-import { StoryNotes, SpotifyMusic } from './liveParts';
+import { StoryNotes, SpotifyMusic, Whispers } from './liveParts';
 
 /**
  * DMScreen — "Book of the Raven" Dungeon-Master interface.
@@ -176,7 +176,6 @@ export default class DMScreen extends React.Component {
   constructor(props) {
     super(props);
     this.transcriptRef = React.createRef();
-    this.whisperRef = React.createRef();
     this._timerInt = null;
     this.state = {
       characters: [
@@ -215,14 +214,6 @@ export default class DMScreen extends React.Component {
         { id:'r1', type:'inventory', char:'Flicker',     label:'Potion of Healing ×2', status:'pending' },
         { id:'r2', type:'gold',      char:'Fordee Whax', label:'150 gp',               status:'pending' },
       ],
-      whispers: [
-        { id:1, with:'flicker', dir:'in',  text:'Can I use Mage Hand to lift the key off the sleeping goblin?' },
-        { id:2, with:'flicker', dir:'out', text:'Make an Arcana check first — DC 13.' },
-        { id:3, with:'akwan',   dir:'out', text:'You catch a whiff of sulphur from the eastern arch. Only you notice.' },
-        { id:4, with:'fordee',  dir:'in',  text:'Holding my rage for the boss. I ready an attack instead.' },
-      ],
-      whisperTo: 'flicker',
-      whisperDraft: '',
       diceLog: [
         { char:'Akwan Akusian', f:'d20+5',       r:18 },
         { char:'Flicker',       f:'d20+9',       r:27 },
@@ -253,9 +244,6 @@ export default class DMScreen extends React.Component {
   componentDidUpdate(prevProps, prevState) {
     if (!prevState) return;
     if (this.state.messages.length !== prevState.messages.length || this.state.thinking !== prevState.thinking) this._scrollBottom();
-    if (this.whisperRef.current && (this.state.whispers.length !== prevState.whispers.length || this.state.whisperTo !== prevState.whisperTo)) {
-      const w = this.whisperRef.current; w.scrollTop = w.scrollHeight;
-    }
   }
   _scrollBottom() { const el = this.transcriptRef.current; if (el) el.scrollTop = el.scrollHeight; }
   d20() { return 1 + Math.floor(Math.random() * 20); }
@@ -356,16 +344,6 @@ export default class DMScreen extends React.Component {
     });
   }
 
-  selectWhisperTo(id) { this.setState({ whisperTo: id }); }
-  onWhisperDraft(e) { this.setState({ whisperDraft: e.target.value }); }
-  onWhisperKey(e) { if (e.key === 'Enter') { e.preventDefault(); this.sendWhisper(); } }
-  sendWhisper() {
-    const text = (this.state.whisperDraft || '').trim();
-    if (!text) return;
-    const to = this.state.whisperTo;
-    this.setState(s => ({ whispers: [...s.whispers, { id:Date.now(), with:to, dir:'out', text }], whisperDraft:'' }));
-  }
-
   onNotes(e) { this.setState({ notes: e.target.value }); }
   onBudget(e) { const v = parseFloat(e.target.value); this.setState(s => ({ budget:{ ...s.budget, total: isNaN(v) ? 0 : v } })); }
   resetBudget() { this.setState(s => ({ budget:{ ...s.budget, used:0 } })); }
@@ -386,7 +364,6 @@ export default class DMScreen extends React.Component {
     const s = this.state;
     const o = s.open;
     const chev = (open) => (open ? '▾' : '▸');
-    const firstName = (full) => full.split(' ')[0];
 
     /* LIVE: the character-sheet tracker (Party panel) is driven by real data.
        Everything else on this screen is still the prototype's mock data. */
@@ -398,14 +375,6 @@ export default class DMScreen extends React.Component {
     const chipInfo = (x) => (typeof x === 'string'
       ? { label: x, name: x, desc: 'No description available.' }
       : x);
-
-    /* whisper helpers */
-    const lastDir = {};
-    s.whispers.forEach(w => { lastDir[w.with] = w.dir; });
-    const waitingCount = s.characters.filter(c => lastDir[c.id] === 'in').length;
-    const toChar = s.characters.find(c => c.id === s.whisperTo);
-    const toName = toChar ? firstName(toChar.name) : '';
-    const thread = s.whispers.filter(w => w.with === s.whisperTo);
 
     /* narration message skins */
     const styleMap = {
@@ -690,45 +659,16 @@ export default class DMScreen extends React.Component {
                     )}
                   </section>
 
-                  {/* Messages */}
+                  {/* Messages — live private player<->DM whispers */}
                   <section style={S.panel}>
                     <div onClick={() => this.toggle('messages')} style={{ ...S.header, cursor:'pointer' }}>
                       <span style={S.headLabel}>✉ Messages</span>
                       <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                        <Badge tone={waitingCount > 0 ? 'ember' : 'neutral'}>{waitingCount > 0 ? `${waitingCount} WAITING` : 'PRIVATE'}</Badge>
+                        <Badge tone="neutral">PRIVATE</Badge>
                         <span style={S.chev}>{chev(o.messages)}</span>
                       </div>
                     </div>
-                    {o.messages && (
-                      <div style={{ padding:'12px', display:'flex', flexDirection:'column', gap:'10px' }}>
-                        <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-                          {s.characters.map(c => {
-                            const sel = s.whisperTo === c.id;
-                            const waiting = lastDir[c.id] === 'in';
-                            return <Button key={c.id} variant={sel ? 'primary' : (waiting ? 'secondary' : 'ghost')} size="sm" onClick={() => this.selectWhisperTo(c.id)}>{firstName(c.name)}</Button>;
-                          })}
-                        </div>
-                        <div ref={this.whisperRef} className="om-scroll" style={{ maxHeight:'210px', overflowY:'auto', display:'flex', flexDirection:'column', gap:'8px', padding:'2px' }}>
-                          {thread.length > 0
-                            ? thread.map(w => {
-                                const out = w.dir === 'out';
-                                return (
-                                  <div key={w.id} style={{ display:'flex', flexDirection:'column', gap:'3px', alignItems: out ? 'flex-end' : 'flex-start' }}>
-                                    <span style={{ fontFamily:'var(--font-label)', fontSize:'8px', letterSpacing:'var(--ls-label)', textTransform:'uppercase', color:'var(--text-faint)' }}>{out ? `You → ${toName}` : toName}</span>
-                                    <div style={out
-                                      ? { background:'var(--ink-600)', border:'2px solid var(--brass-600)', boxShadow:'var(--frame-slot)', borderRadius:'var(--radius-sm)', padding:'8px 11px', maxWidth:'88%', color:'var(--text-strong)', fontSize:'14px', lineHeight:1.45 }
-                                      : { background:'var(--surface-slot)', borderLeft:'3px solid var(--brass-300)', boxShadow:'var(--frame-slot)', borderRadius:'var(--radius-sm)', padding:'8px 11px', maxWidth:'88%', color:'var(--text-body)', fontSize:'14px', lineHeight:1.45 }}>{w.text}</div>
-                                  </div>
-                                );
-                              })
-                            : <span style={{ fontSize:'13px', color:'var(--text-faint)', lineHeight:1.5 }}>{`No whispers yet — send ${toName} a private message.`}</span>}
-                        </div>
-                        <div style={{ display:'flex', gap:'6px' }}>
-                          <input value={s.whisperDraft} onChange={(e) => this.onWhisperDraft(e)} onKeyDown={(e) => this.onWhisperKey(e)} placeholder={`Whisper to ${toName}…`} style={{ flex:1, minWidth:0, height:'32px', ...S.field, fontSize:'13px', padding:'0 10px' }} />
-                          <Button variant="primary" size="sm" onClick={() => this.sendWhisper()}>Send</Button>
-                        </div>
-                      </div>
-                    )}
+                    {o.messages && <Whispers />}
                   </section>
 
                   {/* Encounter Timer */}

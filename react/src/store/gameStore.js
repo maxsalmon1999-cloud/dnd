@@ -32,6 +32,7 @@ export const useGameStore = create((store, get) => ({
   goldRequests: {}, // goldRequests/{charKey}/{id}
   diceLog: {}, // diceLog/{id} — player rolls
   dmNotes: '', // dmNotes — the DM's live story-notes scratchpad
+  whispers: {}, // whispers/{charKey}/{id} — private player<->DM messages
   loading: true,
   _unsubs: [],
 
@@ -50,6 +51,7 @@ export const useGameStore = create((store, get) => ({
       onValue(ref(db, 'goldRequests'), (s) => store({ goldRequests: s.val() || {} })),
       onValue(query(ref(db, 'diceLog'), limitToLast(50)), (s) => store({ diceLog: s.val() || {} })),
       onValue(ref(db, 'dmNotes'), (s) => store({ dmNotes: s.val() || '' })),
+      onValue(ref(db, 'whispers'), (s) => store({ whispers: s.val() || {} })),
     ]
     store({ _unsubs: unsubs })
   },
@@ -75,6 +77,15 @@ export const useGameStore = create((store, get) => ({
   // Append a roll to the shared dice log (shows on the DM screen).
   pushDiceLog(entry) {
     return push(ref(db, 'diceLog'), { ...entry, timestamp: serverTimestamp() })
+  },
+
+  // Private player<->DM messaging. One thread per character at whispers/{charKey}.
+  // `from` is 'player' or 'dm'; both the player screen and DM screen push here and
+  // read the same node, so messages sync live in both directions.
+  sendWhisper(charKey, from, text) {
+    const body = (text || '').trim()
+    if (!charKey || !body) return
+    return push(ref(db, `whispers/${charKey}`), { text: body, from, ts: serverTimestamp() })
   },
 
   // Generic helpers used by later phases.

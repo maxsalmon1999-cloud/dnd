@@ -85,3 +85,97 @@ export function SpotifyMusic() {
     </div>
   )
 }
+
+// ---- Whispers: live private player<->DM messaging (whispers/{charKey}) ----
+const bubbleOut = {
+  background: 'var(--ink-600)', border: '2px solid var(--brass-600)', boxShadow: 'var(--frame-slot)',
+  borderRadius: 'var(--radius-sm)', padding: '8px 11px', maxWidth: '88%', color: 'var(--text-strong)', fontSize: '14px', lineHeight: 1.45,
+}
+const bubbleIn = {
+  background: 'var(--surface-slot)', borderLeft: '3px solid var(--brass-300)', boxShadow: 'var(--frame-slot)',
+  borderRadius: 'var(--radius-sm)', padding: '8px 11px', maxWidth: '88%', color: 'var(--text-body)', fontSize: '14px', lineHeight: 1.45,
+}
+const pill = (sel, waiting) => ({
+  fontFamily: 'var(--font-ui)', fontSize: '12px', padding: '5px 10px', cursor: 'pointer', borderRadius: 'var(--radius-sm)',
+  background: sel ? 'var(--brass-600)' : 'var(--surface-slot)',
+  color: sel ? 'var(--ink-900)' : 'var(--text-body)',
+  border: `2px solid ${sel ? 'var(--brass-600)' : waiting ? 'var(--brass-300)' : 'var(--ink-900)'}`,
+})
+
+// newest-last thread array from a whispers/{charKey} node (push keys sort by time)
+const threadOf = (node) => Object.entries(node || {})
+  .sort(([a], [b]) => (a < b ? -1 : 1))
+  .map(([id, w]) => ({ id, ...w }))
+
+export function Whispers() {
+  const whispers = useGameStore((s) => s.whispers)
+  const sheets = useGameStore((s) => s.sheets)
+  const characters = useGameStore((s) => s.characters)
+  const send = useGameStore((s) => s.sendWhisper)
+
+  // Player roster — prefer character sheets (they carry names); fall back to live state.
+  const roster = Object.keys(sheets || {}).length ? sheets : (characters || {})
+  const keys = Object.keys(roster)
+  const firstName = (k) => String(roster[k]?.name || k).split(' ')[0]
+
+  const [sel, setSel] = useState('')
+  const [draft, setDraft] = useState('')
+  const scrollRef = useRef(null)
+
+  // Effective selection: the clicked player, or the first once the roster loads.
+  const to = keys.includes(sel) ? sel : (keys[0] || '')
+
+  const thread = threadOf(whispers?.[to])
+  const toName = to ? firstName(to) : ''
+  const waiting = (k) => {
+    const t = threadOf(whispers?.[k])
+    return t.length > 0 && t[t.length - 1].from === 'player'
+  }
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [thread.length, to])
+
+  const sendIt = () => {
+    const t = draft.trim()
+    if (!t || !to) return
+    send(to, 'dm', t)
+    setDraft('')
+  }
+
+  return (
+    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {keys.length === 0
+          ? <span style={{ fontSize: '13px', color: 'var(--text-faint)' }}>No characters loaded.</span>
+          : keys.map((k) => (
+              <button key={k} onClick={() => setSel(k)} style={pill(to === k, waiting(k))}>
+                {firstName(k)}{waiting(k) ? ' •' : ''}
+              </button>
+            ))}
+      </div>
+
+      <div ref={scrollRef} className="om-scroll" style={{ maxHeight: '210px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', padding: '2px' }}>
+        {thread.length > 0
+          ? thread.map((w) => {
+              const out = w.from === 'dm'
+              return (
+                <div key={w.id} style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: out ? 'flex-end' : 'flex-start' }}>
+                  <span style={{ fontFamily: 'var(--font-label)', fontSize: '8px', letterSpacing: 'var(--ls-label)', textTransform: 'uppercase', color: 'var(--text-faint)' }}>{out ? `You → ${toName}` : toName}</span>
+                  <div style={out ? bubbleOut : bubbleIn}>{w.text}</div>
+                </div>
+              )
+            })
+          : <span style={{ fontSize: '13px', color: 'var(--text-faint)', lineHeight: 1.5 }}>{to ? `No whispers yet — send ${toName} a private message.` : 'Select a character to whisper.'}</span>}
+      </div>
+
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <input value={draft} onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendIt() } }}
+          placeholder={to ? `Whisper to ${toName}…` : 'Whisper…'} disabled={!to}
+          style={{ flex: 1, minWidth: 0, height: '32px', ...FIELD, fontSize: '13px', padding: '0 10px' }} />
+        <button onClick={sendIt} disabled={!to || !draft.trim()} style={ctrlBtn}>Send</button>
+      </div>
+    </div>
+  )
+}
