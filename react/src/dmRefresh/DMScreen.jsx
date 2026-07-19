@@ -529,15 +529,15 @@ export default class DMScreen extends React.Component {
                     )}
                   </section>
 
-                  {/* Player Dice Log */}
+                  {/* Dice Log */}
                   <section style={S.panel}>
                     <button onClick={() => this.toggle('diceLog')} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'transparent', border:'none', cursor:'pointer', color:'var(--text-gold)', ...S.headLabel }}>
-                      <span>🎲 Player Dice Log ({diceLog.length})</span>
+                      <span>🎲 Dice Log ({diceLog.length})</span>
                       <span style={S.chev}>{chev(o.diceLog)}</span>
                     </button>
                     {o.diceLog && (
                       <div className="om-scroll" style={{ maxHeight:'230px', overflowY:'auto', padding:'0 12px 12px', display:'flex', flexDirection:'column', gap:'6px' }}>
-                        {diceLog.length === 0 && <div style={{ fontSize:'14px', color:'var(--text-faint)', padding:'4px 2px' }}>No player rolls yet.</div>}
+                        {diceLog.length === 0 && <div style={{ fontSize:'14px', color:'var(--text-faint)', padding:'4px 2px' }}>No rolls yet.</div>}
                         {diceLog.map((d, i) => (
                           <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'7px 10px', background:'var(--surface-slot)', borderRadius:'var(--radius-sm)', boxShadow:'var(--frame-slot)' }}>
                             <span style={{ flex:1, fontSize:'13px', color:'var(--text-muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{d.char}</span>

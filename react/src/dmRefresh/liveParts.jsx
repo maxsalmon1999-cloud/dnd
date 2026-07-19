@@ -289,7 +289,12 @@ export function DiceRoller() {
     } catch {
       values = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * die.sides))
     }
-    setLast({ label, values, total: values.reduce((a, b) => a + b, 0), rolling: false })
+    const total = values.reduce((a, b) => a + b, 0)
+    setLast({ label, values, total, rolling: false })
+    // Log to the shared dice log so DM rolls show alongside player rolls.
+    try {
+      useGameStore.getState().pushDiceLog({ character: 'DM', charKey: 'dm', label, result: total, type: 'DM Roll' })
+    } catch { /* ignore */ }
   }
 
   return (
