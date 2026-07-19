@@ -109,6 +109,23 @@ Firebase, dice-roll helpers, and the reference-data tables.)
 **Next:** Phase 5 — the UI overhaul (the original goal): richer visuals, animations
 (Framer Motion / Motion), and the 3D dice renderer. This is open-ended design work.
 
+### Update (2026-06-29)
+
+Phase 5 happened as two design-prototype ports, and both shipped:
+
+- **Player**: the "refreshed player screen" (`react/src/refreshed/`) now serves `/play`
+  for every character (`?char=<key>`), fully wired to live Firebase, with 3D physics dice.
+- **DM**: the "Book of the Raven" screen (`react/src/dmRefresh/`) now serves `/dm` —
+  live party tracker, real AI narration through the worker, requests, whispers, dice
+  log/roller, story notes with per-session archiving, Spotify.
+- The Phase-2/3 React screens were retired to `legacy/old-react-player-screen/` and
+  `legacy/old-react-dm-screen/` (the Setup/sheet-import flow is noted there as the one
+  unported feature).
+
+Remaining work is Phase-6 style upkeep: wiring the rest buttons and player-state
+persistence (slots/conditions/ability uses) through the store, and the request-flow
+producer side on the player screen.
+
 ---
 
 ## 1. The big picture in plain English
