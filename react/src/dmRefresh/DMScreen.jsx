@@ -196,7 +196,7 @@ export default class DMScreen extends React.Component {
           feats:['Rage (3/4)','Reckless Attack'],
           actions:['Reckless Attack','Frenzy','Intimidate','Second Wind'] },
       ],
-      expanded: { flicker: true },
+      expanded: {}, // all party cards start minimised
       selected: 'flicker',
       mode: props.defaultMode || 'DESC',
       draft: '',
