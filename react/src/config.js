@@ -20,6 +20,3 @@ export const WORKER_URL = 'https://dnd-anthropic-proxy.max-salmon1999.workers.de
 
 // The Claude model the DM uses.
 export const API_MODEL = 'claude-opus-4-6'
-
-// How the AI Dungeon Master is presented to users.
-export const AI_ASSISTANT_NAME = 'The abominable intelligence'

@@ -15,12 +15,12 @@ export default function Callback() {
   useEffect(() => {
     if (ERROR || !CODE) return
     exchangeCode(CODE)
-      .then(() => { window.location.href = '/dm-refresh' })
+      .then(() => { window.location.href = '/dm' })
       .catch((err) => setStatus('Error: ' + err.message))
   }, [])
 
   return (
-    <div className="pl" style={{ padding: 40, textAlign: 'center' }}>
+    <div style={{ padding: 40, textAlign: 'center' }}>
       <p>{status}</p>
     </div>
   )

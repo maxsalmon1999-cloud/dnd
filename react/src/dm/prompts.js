@@ -2,14 +2,6 @@
 // campaign setting + plot + NPCs + locations + party roster, then a per-mode
 // instruction. Falls back to sensible defaults when no campaign is loaded.
 
-export const DM_MODES = [
-  { key: 'description', label: 'DESC', placeholder: 'Describe a scene, location, or moment…' },
-  { key: 'action', label: 'ACT', placeholder: 'Describe an action or encounter (stats only)…' },
-  { key: 'both', label: 'BOTH', placeholder: 'Describe an action with narrative context…' },
-  { key: 'meta', label: 'META', placeholder: 'Add a comment about the game or system… (no AI)' },
-  { key: 'rules', label: 'RULES', placeholder: 'Ask about a D&D rule, spell, ability, or mechanic…' },
-]
-
 const DEFAULT_TEMPLATES = {
   description:
     'Describe the scene vividly in 2-4 paragraphs. Focus on sensory detail, mood, character reactions, and concrete environmental cues. Do not resolve mechanics or invent facts beyond the supplied campaign context.',

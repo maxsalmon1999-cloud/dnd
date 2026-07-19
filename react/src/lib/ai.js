@@ -9,6 +9,8 @@
 import { WORKER_URL, API_MODEL } from '../config'
 
 // One-shot, non-streaming completion. Returns { text, usage }.
+// No live callers yet — kept for the one-shot features not yet ported to the
+// refreshed DM screen (campaign extraction on setup, AI session summary).
 export async function complete({ system, messages, maxTokens = 1024, model = API_MODEL }) {
   const res = await fetch(WORKER_URL, {
     method: 'POST',
