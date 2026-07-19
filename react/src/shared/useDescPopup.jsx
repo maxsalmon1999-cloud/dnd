@@ -9,7 +9,7 @@ export function useDescPopup() {
   const node = pop ? (
     <Popup anchor={{ x: pop.x, y: pop.y }} onClose={() => setPop(null)}>
       <strong style={{ color: '#c4a44e' }}>{pop.title}</strong>
-      <div style={{ marginTop: 4 }}>{pop.text || 'No description available.'}</div>
+      <div style={{ marginTop: 4, whiteSpace: 'pre-wrap', maxHeight: '50vh', overflowY: 'auto' }}>{pop.text || 'No description available.'}</div>
     </Popup>
   ) : null
   return { show, node }

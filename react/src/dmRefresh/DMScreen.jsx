@@ -719,7 +719,7 @@ export default class DMScreen extends React.Component {
                 <span style={{ fontFamily:'var(--font-name)', fontWeight:700, fontSize:'19px', color:'var(--brass-200)', letterSpacing:'var(--ls-name)' }}>{s.info.title}</span>
                 <span onClick={() => this.closeInfo()} style={{ cursor:'pointer', color:'var(--text-gold)', fontSize:'18px', lineHeight:1, padding:'0 2px' }}>✕</span>
               </div>
-              <div style={{ fontFamily:'var(--font-ui)', fontSize:'14px', lineHeight:1.5, color:'var(--text-body)' }}>{s.info.body}</div>
+              <div style={{ fontFamily:'var(--font-ui)', fontSize:'14px', lineHeight:1.5, color:'var(--text-body)', whiteSpace:'pre-wrap', maxHeight:'55vh', overflowY:'auto' }}>{s.info.body}</div>
               <div style={{ alignSelf:'flex-end' }}><Button variant="secondary" size="sm" onClick={() => this.closeInfo()}>Close</Button></div>
             </div>
           </div>

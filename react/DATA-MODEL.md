@@ -89,3 +89,23 @@ sender so each side can align its own messages.
 ```
 
 Used to build the AI system prompt and to populate NPC/enemy pickers.
+
+## SRD reference data (bundled, not in Firebase)
+
+`src/data/srd/*.json` is the full 5e SRD (2014 rules): all 319 spells (full text +
+damage scaling), every class feature, racial trait, per-level class progression
+(spell slots, proficiency, features, class counters), conditions, magic items,
+and mundane gear. Generated from [5e-bits/5e-database](https://github.com/5e-bits/5e-database)
+(CC-BY-4.0) by `node tools/build-srd.mjs` (raw source in `tools/srd-2014/`).
+
+Lookups go through `src/data/srd.js` (fuzzy name resolution — parentheticals,
+trailing dice, plurals). Priority order:
+
+- **Spells** — SRD full spell card first, then the hand-curated one-liners in
+  `gameData.js` (which cover non-SRD content the party uses: Hex, Toll the
+  Dead, changeling traits…), then the sheet's own text.
+- **Abilities** — curated/sheet text first (compact, table-tuned), SRD class
+  feature / racial trait full text as fallback.
+
+`characterAdapter.js` also falls back to the SRD class table for spell slots
+when a sheet has no slot definitions, so any class/level combination works.

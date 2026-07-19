@@ -490,7 +490,7 @@
 .refreshed-root .lab-pop-backdrop { position: absolute; inset: 0; z-index: 80; background: rgba(6,4,3,.66); display: flex; align-items: center; justify-content: center; padding: 26px; }
 .refreshed-root .lab-pop { background: var(--panel); border: 3px solid var(--gold-2); max-width: 300px; width: 100%; padding: 16px; box-shadow: 0 20px 50px rgba(0,0,0,.6); }
 .refreshed-root .lab-pop-title { font-family: var(--sans); font-weight: 700; font-size: 19px; color: var(--gold); margin-bottom: 8px; }
-.refreshed-root .lab-pop-body { font-family: var(--sans); font-size: 15px; color: var(--ink-soft); line-height: 1.5; }
+.refreshed-root .lab-pop-body { font-family: var(--sans); font-size: 15px; color: var(--ink-soft); line-height: 1.5; white-space: pre-wrap; max-height: 46vh; overflow-y: auto; }
 .refreshed-root .lab-pop-x { margin-top: 14px; width: 100%; border: 1.5px solid var(--gold-2); background: transparent; color: var(--gold); font-family: var(--cap); font-size: 10px; padding: 9px; cursor: pointer; }
 .refreshed-root .cast-opts { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .refreshed-root .cast-opt { display: flex; justify-content: space-between; align-items: center; border: 2px solid var(--gold-2); background: var(--tile); color: var(--ink); font-family: var(--sans); font-size: 16px; padding: 10px 12px; cursor: pointer; }

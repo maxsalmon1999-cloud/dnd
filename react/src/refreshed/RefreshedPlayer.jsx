@@ -11,7 +11,8 @@ import { adaptCharacter } from './characterAdapter'
 import { useGameStore } from '../store/gameStore'
 import { rollLabDice } from './refreshedDice'
 import PlayerWhisper from './PlayerWhisper'
-import { CONDITIONS as COND_INFO, SPELL_DESCRIPTIONS, ABILITY_DESCRIPTIONS } from '../data/gameData'
+import { CONDITIONS as COND_INFO } from '../data/gameData'
+import { describeSpell, describeAbility } from '../data/srd'
 import './refreshed.css'
 
 // condition name -> description (from the ported reference data)
@@ -23,7 +24,6 @@ function parseDice(str) {
   return { count: parseInt(m[1], 10) || 1, sides: parseInt(m[2], 10), modifier: m[3] ? parseInt(m[3].replace(/\s/g, ''), 10) : 0 }
 }
 // description lookup (reference data), falling back to the prototype's shorthand
-const descOf = (table, name, fb) => (table && table[name]) || fb || 'No description available.'
 
 // slide-to-confirm delete (drag the knob to the far end to delete)
 function SlideToDelete({ name, onConfirm, onCancel }) {
@@ -182,7 +182,7 @@ function CombatView({ ctx }) {
           const doRoll = () => dice && ctx.roll({ ...dice, label: dice.count + "d" + dice.sides, type: c.n });
           return (
             <div className="item tappable" key={c.n} onClick={doRoll}>
-              <div className="main"><div className="in">{c.n}</div><div className="im">{c.meta}</div></div>
+              <div className="main"><div className="in" onClick={(e) => { e.stopPropagation(); ctx.info(c.n, describeSpell(c.n, c.meta)); }}>{c.n} <span className="qmark">?</span></div><div className="im">{c.meta}</div></div>
               <div className="stats">{c.tag && <button className="tag roll ghost" onClick={(e) => { e.stopPropagation(); doRoll(); }}>{c.tag}</button>}</div>
             </div>
           );
@@ -205,7 +205,7 @@ function MagicView({ ctx }) {
           return (
             <div className="item" key={a.n}>
               <div className="main">
-                <div className="in tappable" onClick={() => ctx.info(a.n, descOf(ABILITY_DESCRIPTIONS, a.n, a.meta))}>{a.n} <span className="qmark">?</span></div>
+                <div className="in tappable" onClick={() => ctx.info(a.n, describeAbility(a.n, a.meta, C.klass))}>{a.n} <span className="qmark">?</span></div>
                 {left != null && <div className="im">{left}/{max} uses left</div>}
               </div>
               {!passive && (
@@ -222,7 +222,7 @@ function MagicView({ ctx }) {
           <div className="sec-h"><span>Level {lv} Spells</span></div>
           {C.spells[lv].map((sp) => (
             <div className="item" key={sp.n}>
-              <div className="main"><div className="in tappable" onClick={() => ctx.info(sp.n, descOf(SPELL_DESCRIPTIONS, sp.n, sp.tag))}>{sp.n} <span className="qmark">?</span></div></div>
+              <div className="main"><div className="in tappable" onClick={() => ctx.info(sp.n, describeSpell(sp.n, sp.tag))}>{sp.n} <span className="qmark">?</span></div></div>
               <button className="row-roll" onClick={() => ctx.openCast(sp, parseInt(lv, 10))}>CAST</button>
             </div>
           ))}

@@ -5,6 +5,7 @@
 // screen works for ANY character. The transform mirrors the (archived) old
 // React player screen, reusing the same SKILLS map + helpers.
 import { SKILLS } from '../data/gameData'
+import { spellSlotsFor } from '../data/srd'
 import { fmtMod, profFromLevel, slotLevel } from '../shared/helpers'
 
 const STAT_ORDER = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']
@@ -88,13 +89,24 @@ export function adaptCharacter(sheet, live) {
 
   // spell slots: {level, total, used} — used derived from the live pip map
   const liveSlots = live.slots || {}
-  const spellSlots = (sheet.spellSlots || []).map((s) => {
+  let spellSlots = (sheet.spellSlots || []).map((s) => {
     const lvl = slotLevel(s)
     const total = s.count || 0
     let used = 0
     for (let i = 0; i < total; i++) if (liveSlots[`${s.key}_${i}`] === true) used++
     return { level: lvl, total, used }
   })
+  // sheet has no slot definitions but the class is a caster → fall back to the
+  // SRD progression table for this class + level (pip keys follow "<lvl>_<i>")
+  if (!spellSlots.length) {
+    const srdSlots = spellSlotsFor(klass, charLevel) || []
+    spellSlots = srdSlots.flatMap((count, i) => {
+      if (!count) return []
+      let used = 0
+      for (let p = 0; p < count; p++) if (liveSlots[`${i + 1}_${p}`] === true) used++
+      return [{ level: i + 1, total: count, used }]
+    })
+  }
 
   // spells grouped by level + cantrips split out (no dice in the data → no roll tag)
   const cantrips = []
