@@ -1,5 +1,6 @@
 /* eslint-disable */
 import React from 'react';
+import { StoryNotes, SpotifyMusic } from './liveParts';
 
 /**
  * DMScreen — "Book of the Raven" Dungeon-Master interface.
@@ -313,7 +314,13 @@ export default class DMScreen extends React.Component {
   }
   endSession() {
     this.pauseTimer();
-    this.setState(s => ({ messages: [...s.messages, { id:Date.now(), who:'system', text:'— Session 7 ends. The Raven closes the book. —' }] }));
+    // LIVE: hard-save the current story notes under an immutable session record
+    let saved = false;
+    if (this.props.onEndSession) { try { this.props.onEndSession(); saved = true; } catch (e) { /* ignore */ } }
+    const text = saved
+      ? '— The session ends. The Raven closes the book — its notes sealed and saved. —'
+      : '— Session 7 ends. The Raven closes the book. —';
+    this.setState(s => ({ messages: [...s.messages, { id:Date.now(), who:'system', text }] }));
   }
 
   startTimer() {
@@ -384,6 +391,7 @@ export default class DMScreen extends React.Component {
     /* LIVE: the character-sheet tracker (Party panel) is driven by real data.
        Everything else on this screen is still the prototype's mock data. */
     const party = this.props.liveCharacters || s.characters;
+    const diceLog = this.props.liveDiceLog || s.diceLog;
     const adjustHp = this.props.onAdjustHp || ((id, d) => this.adjustHp(id, d));
     // feats/actions may be live objects ({label,name,desc}) or the prototype's
     // plain-string mock — normalise so the clickable chips work for both.
@@ -535,12 +543,13 @@ export default class DMScreen extends React.Component {
                   {/* Player Dice Log */}
                   <section style={S.panel}>
                     <button onClick={() => this.toggle('diceLog')} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'transparent', border:'none', cursor:'pointer', color:'var(--text-gold)', ...S.headLabel }}>
-                      <span>🎲 Player Dice Log ({s.diceLog.length})</span>
+                      <span>🎲 Player Dice Log ({diceLog.length})</span>
                       <span style={S.chev}>{chev(o.diceLog)}</span>
                     </button>
                     {o.diceLog && (
                       <div className="om-scroll" style={{ maxHeight:'230px', overflowY:'auto', padding:'0 12px 12px', display:'flex', flexDirection:'column', gap:'6px' }}>
-                        {s.diceLog.map((d, i) => (
+                        {diceLog.length === 0 && <div style={{ fontSize:'14px', color:'var(--text-faint)', padding:'4px 2px' }}>No player rolls yet.</div>}
+                        {diceLog.map((d, i) => (
                           <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'7px 10px', background:'var(--surface-slot)', borderRadius:'var(--radius-sm)', boxShadow:'var(--frame-slot)' }}>
                             <span style={{ flex:1, fontSize:'13px', color:'var(--text-muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{d.char}</span>
                             <span style={{ fontFamily:'var(--font-mono)', fontSize:'10px', color:'var(--text-faint)' }}>{d.f}</span>
@@ -556,11 +565,7 @@ export default class DMScreen extends React.Component {
                     <button onClick={() => this.toggle('notes')} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'transparent', border:'none', cursor:'pointer', color:'var(--text-gold)', ...S.headLabel }}>
                       <span>📜 Story Notes</span><span style={S.chev}>{chev(o.notes)}</span>
                     </button>
-                    {o.notes && (
-                      <div style={{ padding:'0 12px 12px' }}>
-                        <textarea value={s.notes} onChange={(e) => this.onNotes(e)} rows={5} style={{ width:'100%', resize:'vertical', ...S.field, color:'var(--text-body)', fontSize:'14px', lineHeight:1.5, padding:'10px 12px' }} />
-                      </div>
-                    )}
+                    {o.notes && <StoryNotes />}
                   </section>
 
                   {/* Meta Comments */}
@@ -587,17 +592,7 @@ export default class DMScreen extends React.Component {
                     <button onClick={() => this.toggle('music')} style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'transparent', border:'none', cursor:'pointer', color:'var(--text-gold)', ...S.headLabel }}>
                       <span>♫ Music</span><span style={S.chev}>{chev(o.music)}</span>
                     </button>
-                    {o.music && (
-                      <div style={{ padding:'0 12px 12px', display:'flex', flexDirection:'column', gap:'6px' }}>
-                        {s.music.map(tr => (
-                          <div key={tr.id} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'6px 10px', background:'var(--surface-slot)', borderRadius:'var(--radius-sm)', boxShadow:'var(--frame-slot)' }}>
-                            <Button variant="ghost" size="sm" onClick={() => this.toggleMusic(tr.id)}>{tr.playing ? '⏸' : '▶'}</Button>
-                            <span style={{ flex:1, fontSize:'14px', color:'var(--text-body)', minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{tr.name}</span>
-                            {tr.playing && <span style={{ fontFamily:'var(--font-label)', fontSize:'8px', letterSpacing:'var(--ls-label)', textTransform:'uppercase', color:'var(--brass-200)', whiteSpace:'nowrap' }}>Now Playing</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {o.music && <SpotifyMusic />}
                   </section>
 
                 </div>

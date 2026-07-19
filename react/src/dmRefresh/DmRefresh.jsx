@@ -7,12 +7,27 @@ import DMScreen from './DMScreen'
 import { adaptDmParty } from './dmParty'
 import { useGameStore } from '../store/gameStore'
 
+// Map the live diceLog map → the DM screen's { char, f, r } row shape,
+// newest first (Firebase push keys sort chronologically).
+function adaptDiceLog(diceLog) {
+  return Object.entries(diceLog || {})
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .slice(0, 30)
+    .map(([, e]) => ({
+      char: e.character || '—',
+      f: [e.label, e.type].filter(Boolean).join(' '),
+      r: e.result,
+    }))
+}
+
 export default function DmRefresh() {
   const subscribe = useGameStore((s) => s.subscribe)
   useEffect(() => { subscribe() }, [subscribe])
   const sheets = useGameStore((s) => s.sheets)
   const characters = useGameStore((s) => s.characters)
+  const diceLog = useGameStore((s) => s.diceLog)
   const changeHp = useGameStore((s) => s.changeHp)
+  const endSession = useGameStore((s) => s.endSession)
 
   const keys = Object.keys(sheets || {})
   // Until the sheets load, let the prototype show its own mock party.
@@ -21,7 +36,9 @@ export default function DmRefresh() {
   return (
     <DMScreen
       liveCharacters={liveCharacters}
+      liveDiceLog={adaptDiceLog(diceLog)}
       onAdjustHp={(id, delta) => changeHp(id, delta)}
+      onEndSession={() => endSession()}
     />
   )
 }

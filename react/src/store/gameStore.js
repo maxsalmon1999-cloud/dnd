@@ -31,6 +31,7 @@ export const useGameStore = create((store, get) => ({
   inventoryRequests: {}, // inventoryRequests/{charKey}/{id}
   goldRequests: {}, // goldRequests/{charKey}/{id}
   diceLog: {}, // diceLog/{id} — player rolls
+  dmNotes: '', // dmNotes — the DM's live story-notes scratchpad
   loading: true,
   _unsubs: [],
 
@@ -48,6 +49,7 @@ export const useGameStore = create((store, get) => ({
       ),
       onValue(ref(db, 'goldRequests'), (s) => store({ goldRequests: s.val() || {} })),
       onValue(query(ref(db, 'diceLog'), limitToLast(50)), (s) => store({ diceLog: s.val() || {} })),
+      onValue(ref(db, 'dmNotes'), (s) => store({ dmNotes: s.val() || '' })),
     ]
     store({ _unsubs: unsubs })
   },
@@ -119,6 +121,20 @@ export const useGameStore = create((store, get) => ({
   // Notes (player calls this debounced).
   saveNotes(key, text) {
     return fbSet(ref(db, `characters/${key}/notes`), text || null)
+  },
+
+  // DM story notes — live scratchpad, persisted (DM calls this debounced).
+  saveStoryNotes(text) {
+    return fbSet(ref(db, 'dmNotes'), text || null)
+  },
+
+  // End of session: hard-save the current story notes under an immutable
+  // session record, so each session's notes are preserved.
+  endSession() {
+    return push(ref(db, 'sessions'), {
+      endedAt: serverTimestamp(),
+      storyNotes: get().dmNotes || '',
+    })
   },
 
   // Roll history (capped, newest first).
