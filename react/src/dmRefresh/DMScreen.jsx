@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React from 'react';
-import { StoryNotes, SpotifyMusic, Whispers } from './liveParts';
+import { StoryNotes, SpotifyMusic, Whispers, RequestsPanel, DiceRoller } from './liveParts';
 
 /**
  * DMScreen — "Book of the Raven" Dungeon-Master interface.
@@ -202,31 +202,13 @@ export default class DMScreen extends React.Component {
       draft: '',
       thinking: false,
       replyIdx: 0,
-      messages: [
-        { id:1, who:'dm',    text:'The lift shudders to a halt. Below you, the Sunless Citadel’s broken courtyard yawns in the dark — a fortress that fell into the earth, swallowed whole.' },
-        { id:2, who:'raven', text:'Cold air rises from the pit, carrying wet stone and something older — char, and dried blood. Two crumbled towers lean together overhead, and a single rope bridge sags across the chasm. Somewhere below, a child is humming.' },
-        { id:3, who:'dm',    text:'Flicker scouts ahead along the bridge, keeping low and quiet.' },
-        { id:4, who:'rules', text:'Flicker, make a Dexterity (Stealth) check. The rotted planks impose disadvantage on anyone moving faster than half speed.' },
-      ],
+      messages: [], // real narration only — no placeholder transcript
+      streamText: '', // partial AI reply while streaming
       timer: { remaining: 0, running: false },
-      budget: { total: 10, used: 0 },
-      requests: [
-        { id:'r1', type:'inventory', char:'Flicker',     label:'Potion of Healing ×2', status:'pending' },
-        { id:'r2', type:'gold',      char:'Fordee Whax', label:'150 gp',               status:'pending' },
-      ],
-      diceLog: [
-        { char:'Akwan Akusian', f:'d20+5',       r:18 },
-        { char:'Flicker',       f:'d20+9',       r:27 },
-        { char:'Fordee Whax',   f:'d20+7 ATK',   r:12 },
-        { char:'Fiel Amimso',   f:'d20+6 WIS',   r:21 },
-        { char:'Flicker',       f:'2d6+4 SNEAK', r:14 },
-        { char:'Akwan Akusian', f:'d20+8 SAVE',  r:9  },
-        { char:'Fordee Whax',   f:'d20+1 STL',   r:4  },
-        { char:'Fiel Amimso',   f:'d20+4',       r:17 },
-        { char:'Flicker',       f:'d20+9',       r:24 },
-        { char:'Akwan Akusian', f:'d20+5',       r:20 },
-      ],
-      notes: 'Belak the Outcast tends the Gulthias Tree in the Citadel’s heart, harvesting its fruit. He’ll offer the party a deal before he fights. The humming child is Sharwyn — long dead, kept walking by the tree.',
+      budget: props.initialBudget || { total: 10, used: 0 },
+      requests: [], // live requests render via <RequestsPanel />
+      diceLog: [], // live rolls render via the liveDiceLog prop
+      notes: '', // live notes render via <StoryNotes />
       meta: [],
       music: [
         { id:1, name:'Tavern Hearth',        playing:false },
@@ -234,7 +216,8 @@ export default class DMScreen extends React.Component {
         { id:3, name:'The Gulthias Tree',    playing:false },
         { id:4, name:'Rain & Distant Bells', playing:false },
       ],
-      open: { party:true, requests:true, messages:true, timer:true, diceLog:false, notes:false, meta:false, music:false },
+      // right-hand column (requests/messages/timer/dice) starts minimised
+      open: { party:true, requests:false, messages:false, timer:false, dice:false, diceLog:false, notes:false, meta:false, music:false },
       info: null, // {title, body} — spell/ability description pop-out
     };
   }
@@ -243,7 +226,7 @@ export default class DMScreen extends React.Component {
   componentWillUnmount() { if (this._timerInt) clearInterval(this._timerInt); }
   componentDidUpdate(prevProps, prevState) {
     if (!prevState) return;
-    if (this.state.messages.length !== prevState.messages.length || this.state.thinking !== prevState.thinking) this._scrollBottom();
+    if (this.state.messages.length !== prevState.messages.length || this.state.thinking !== prevState.thinking || this.state.streamText !== prevState.streamText) this._scrollBottom();
   }
   _scrollBottom() { const el = this.transcriptRef.current; if (el) el.scrollTop = el.scrollHeight; }
   d20() { return 1 + Math.floor(Math.random() * 20); }
@@ -262,11 +245,29 @@ export default class DMScreen extends React.Component {
   onKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } }
   send() {
     const text = (this.state.draft || '').trim();
-    if (!text) return;
+    if (!text || this.state.thinking) return;
     const mode = this.state.mode;
     const id = Date.now();
     if (mode === 'META') {
       this.setState(s => ({ meta: [...s.meta, { id, who:'DM', text }], draft:'', open:{ ...s.open, meta:true } }));
+      return;
+    }
+    // LIVE: the real DM prompt tool — stream the reply from the AI worker.
+    if (this.props.onAiSend) {
+      if (this.state.budget.total > 0 && this.state.budget.used >= this.state.budget.total) return; // budget spent
+      this.setState(s => ({ messages: [...s.messages, { id, who:'dm', text }], draft:'', thinking:true, streamText:'' }));
+      this.props.onAiSend({ text, mode, onToken: (partial) => this.setState({ streamText: partial }) })
+        .then(({ reply, spentUsd }) => {
+          const who = mode === 'RULES' ? 'rules' : 'raven';
+          this.setState(s => ({
+            messages: [...s.messages, { id: id + 1, who, text: reply }],
+            thinking: false, streamText: '',
+            budget: spentUsd != null ? { ...s.budget, used: spentUsd } : s.budget,
+          }));
+        })
+        .catch((err) => {
+          this.setState(s => ({ messages: [...s.messages, { id: id + 1, who:'system', text: '[AI error: ' + err.message + ']' }], thinking:false, streamText:'' }));
+        });
       return;
     }
     const used = Math.min(this.state.budget.total, this.state.budget.used + 0.72);
@@ -286,7 +287,16 @@ export default class DMScreen extends React.Component {
     const who = mode === 'RULES' ? 'rules' : (mode === 'META' ? 'system' : 'raven');
     return { who, text: pool[idx] };
   }
-  undo() { this.setState(s => (s.messages.length ? { messages: s.messages.slice(0, -1) } : {})); }
+  undo() {
+    // With the real AI, undo removes the last exchange (DM line + reply) and
+    // pops it from the conversation history so the model forgets it too.
+    if (this.props.onAiUndo && this.state.messages.length >= 2) {
+      this.props.onAiUndo();
+      this.setState(s => ({ messages: s.messages.slice(0, -2) }));
+      return;
+    }
+    this.setState(s => (s.messages.length ? { messages: s.messages.slice(0, -1) } : {}));
+  }
 
   shortRest() {
     this.setState(s => ({
@@ -345,8 +355,16 @@ export default class DMScreen extends React.Component {
   }
 
   onNotes(e) { this.setState({ notes: e.target.value }); }
-  onBudget(e) { const v = parseFloat(e.target.value); this.setState(s => ({ budget:{ ...s.budget, total: isNaN(v) ? 0 : v } })); }
-  resetBudget() { this.setState(s => ({ budget:{ ...s.budget, used:0 } })); }
+  onBudget(e) {
+    const v = parseFloat(e.target.value);
+    const total = isNaN(v) ? 0 : v;
+    if (this.props.onBudgetLimit) this.props.onBudgetLimit(total);
+    this.setState(s => ({ budget:{ ...s.budget, total } }));
+  }
+  resetBudget() {
+    if (this.props.onBudgetReset) this.props.onBudgetReset();
+    this.setState(s => ({ budget:{ ...s.budget, used:0 } }));
+  }
 
   toggle(panel) { this.setState(s => ({ open:{ ...s.open, [panel]: !s.open[panel] } })); }
   showInfo(title, body) { this.setState({ info: { title, body } }); }
@@ -392,7 +410,9 @@ export default class DMScreen extends React.Component {
 
     const total = s.budget.total, used = s.budget.used, left = Math.max(0, total - used);
     const budgetPct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
-    const pendingCount = s.requests.filter(r => r.status === 'pending').length;
+    const pendingCount = this.props.requestCount != null
+      ? this.props.requestCount
+      : s.requests.filter(r => r.status === 'pending').length;
 
     return (
       <div className="arcana-dm-root" style={{ height:'100vh', width:'100%' }}>
@@ -588,11 +608,15 @@ export default class DMScreen extends React.Component {
                       {s.thinking && (
                         <div style={{ display:'flex', flexDirection:'column', gap:'6px', alignItems:'flex-start' }}>
                           <Badge tone="magic">THE RAVEN</Badge>
-                          <div style={{ display:'flex', gap:'5px', padding:'14px', background:'var(--surface-panel)', borderLeft:'3px solid var(--c-violet)', borderRadius:'var(--radius-sm)' }}>
-                            <span style={{ width:'7px', height:'7px', background:'var(--c-violet)', animation:'arcana-blink 1.2s infinite' }} />
-                            <span style={{ width:'7px', height:'7px', background:'var(--c-violet)', animation:'arcana-blink 1.2s infinite .2s' }} />
-                            <span style={{ width:'7px', height:'7px', background:'var(--c-violet)', animation:'arcana-blink 1.2s infinite .4s' }} />
-                          </div>
+                          {s.streamText ? (
+                            <div style={{ ...styleMap.raven, padding:'11px 14px', borderRadius:'var(--radius-sm)', color:'var(--text-body)', fontSize:'15px', lineHeight:1.55, maxWidth:'92%' }}>{s.streamText}</div>
+                          ) : (
+                            <div style={{ display:'flex', gap:'5px', padding:'14px', background:'var(--surface-panel)', borderLeft:'3px solid var(--c-violet)', borderRadius:'var(--radius-sm)' }}>
+                              <span style={{ width:'7px', height:'7px', background:'var(--c-violet)', animation:'arcana-blink 1.2s infinite' }} />
+                              <span style={{ width:'7px', height:'7px', background:'var(--c-violet)', animation:'arcana-blink 1.2s infinite .2s' }} />
+                              <span style={{ width:'7px', height:'7px', background:'var(--c-violet)', animation:'arcana-blink 1.2s infinite .4s' }} />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -634,29 +658,7 @@ export default class DMScreen extends React.Component {
                         <span style={S.chev}>{chev(o.requests)}</span>
                       </div>
                     </div>
-                    {o.requests && (
-                      <div style={{ padding:'12px', display:'flex', flexDirection:'column', gap:'10px' }}>
-                        {s.requests.map(r => {
-                          const pending = r.status === 'pending';
-                          return (
-                            <div key={r.id} style={{ ...S.slot, padding:'11px 12px', display:'flex', flexDirection:'column', gap:'8px' }}>
-                              <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                                <Badge tone={r.type === 'gold' ? 'ember' : 'mana'}>{r.type === 'gold' ? 'GOLD' : 'ITEM'}</Badge>
-                                <span style={{ fontFamily:'var(--font-name)', fontWeight:700, fontSize:'15px', color:'var(--text-strong)', flex:1, minWidth:0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.char}</span>
-                                {!pending && <Badge tone={r.status === 'approved' ? 'gold' : 'blood'}>{r.status === 'approved' ? 'APPROVED' : 'DENIED'}</Badge>}
-                              </div>
-                              <span style={{ fontSize:'15px', color:'var(--brass-200)', fontWeight:600, lineHeight:1.4 }}>{r.label}</span>
-                              {pending && (
-                                <div style={{ display:'flex', gap:'6px' }}>
-                                  <Button variant="primary" size="sm" onClick={() => this.resolveReq(r.id, 'approved')}>Approve</Button>
-                                  <Button variant="danger" size="sm" onClick={() => this.resolveReq(r.id, 'denied')}>Deny</Button>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    {o.requests && <RequestsPanel />}
                   </section>
 
                   {/* Messages — live private player<->DM whispers */}
@@ -692,6 +694,15 @@ export default class DMScreen extends React.Component {
                         </div>
                       </div>
                     )}
+                  </section>
+
+                  {/* Dice Roller — the player screen's 3D dice, for the DM */}
+                  <section style={S.panel}>
+                    <div onClick={() => this.toggle('dice')} style={{ ...S.header, cursor:'pointer' }}>
+                      <span style={S.headLabel}>⚄ Dice Roller</span>
+                      <span style={S.chev}>{chev(o.dice)}</span>
+                    </div>
+                    {o.dice && <DiceRoller />}
                   </section>
 
                 </div>
