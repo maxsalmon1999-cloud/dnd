@@ -9,6 +9,39 @@ const threadOf = (node) => Object.entries(node || {})
   .sort(([a], [b]) => (a < b ? -1 : 1))
   .map(([id, w]) => ({ id, ...w }))
 
+// Full-screen "shhhh…" alert when the DM whispers. Blocks until the player drags
+// the knob to the far end (same slide mechanic as slide-to-delete elsewhere).
+function ShushAlert({ onDismiss }) {
+  const trackRef = useRef(null)
+  const [x, setX] = useState(0)
+  const [done, setDone] = useState(false)
+  const KNOB = 46
+  const move = (clientX) => {
+    if (done || !trackRef.current) return
+    const r = trackRef.current.getBoundingClientRect()
+    const max = r.width - KNOB
+    const nx = Math.max(0, Math.min(max, clientX - r.left - KNOB / 2))
+    setX(nx)
+    if (nx >= max - 2) { setDone(true); setX(max); onDismiss() }
+  }
+  return (
+    <div className="shush-backdrop">
+      <div className="shush">
+        <div className="shush-emoji">🤫</div>
+        <div className="shush-title">Shhhh…</div>
+        <div className="shush-body">the DM sent you a message</div>
+        <div className="shush-track" ref={trackRef} onPointerMove={(e) => { if (e.buttons === 1) move(e.clientX) }}>
+          <span className="shush-hint">slide to dismiss →</span>
+          <div className="shush-knob" style={{ left: x }}
+            onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
+            onPointerMove={(e) => move(e.clientX)}
+            onPointerUp={() => { if (!done) setX(0) }}>›</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PlayerWhisper({ charKey }) {
   const node = useGameStore((s) => s.whispers?.[charKey])
   const send = useGameStore((s) => s.sendWhisper)
@@ -19,20 +52,30 @@ export default function PlayerWhisper({ charKey }) {
   const [seen, setSeen] = useState(() => {
     try { return localStorage.getItem(`${charKey}_whisper_seen`) || '' } catch { return '' }
   })
+  // Last DM message the "shhhh" alert has already been shown for (separate from
+  // `seen`: dismissing the alert doesn't count as having read the message).
+  const [notified, setNotified] = useState(() => {
+    try { return localStorage.getItem(`${charKey}_whisper_notified`) || '' } catch { return '' }
+  })
   const scrollRef = useRef(null)
 
   const last = thread[thread.length - 1]
   const lastId = last ? last.id : ''
-  const unread = !!last && last.from === 'dm' && lastId !== seen
+  const fromDm = !!last && last.from === 'dm'
+  const unread = fromDm && lastId !== seen
+  // Fire the alert for a new DM whisper, unless the thread is already open.
+  const showShush = fromDm && lastId !== notified && !open
 
-  // Mark the newest message seen (clears the unread dot + persists across reloads).
-  const markSeen = (id) => {
+  const persist = (key, id, setter) => {
     if (!id) return
-    setSeen(id)
-    try { localStorage.setItem(`${charKey}_whisper_seen`, id) } catch { /* ignore */ }
+    setter(id)
+    try { localStorage.setItem(`${charKey}_${key}`, id) } catch { /* ignore */ }
   }
-  const openSheet = () => { markSeen(lastId); setOpen(true) }
-  const closeSheet = () => { markSeen(thread[thread.length - 1]?.id); setOpen(false) }
+  const markSeen = (id) => persist('whisper_seen', id, setSeen)
+  const markNotified = (id) => persist('whisper_notified', id, setNotified)
+  const openSheet = () => { markSeen(lastId); markNotified(lastId); setOpen(true) }
+  const closeSheet = () => { const id = thread[thread.length - 1]?.id; markSeen(id); markNotified(id); setOpen(false) }
+  const dismissShush = () => markNotified(lastId)
 
   // Keep the thread pinned to the newest message.
   useEffect(() => {
@@ -53,6 +96,8 @@ export default function PlayerWhisper({ charKey }) {
         <span>Message the DM</span>
         {unread && <span className="wmsg-dot" />}
       </button>
+
+      {showShush && <ShushAlert onDismiss={dismissShush} />}
 
       {open && (
         <div className="wmsg-scrim" onClick={closeSheet}>
