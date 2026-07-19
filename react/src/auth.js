@@ -22,7 +22,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
 } from 'firebase/auth'
-import { ref, get } from 'firebase/database'
+import { ref, get, set as fbSet } from 'firebase/database'
 import { auth, db } from './firebase'
 
 const EMAIL_KEY = 'auth_email_for_link'
@@ -44,7 +44,7 @@ async function resolveRole(user) {
   return owned ? { role: 'player', charKey: owned[0] } : { role: 'none', charKey: null }
 }
 
-export const useAuth = create((set) => ({
+export const useAuth = create((set, getState) => ({
   user: undefined, // undefined = still checking, null = signed out, object = signed in
   role: null, // 'dm' | 'player' | 'none'
   charKey: null,
@@ -98,5 +98,15 @@ export const useAuth = create((set) => ({
 
   signOut() {
     return fbSignOut(auth)
+  },
+
+  // Player self-claim: bind the signed-in account to an (unclaimed) character.
+  // Writes config/roster/{charKey} = my email, then promotes to the player role.
+  // The security rules will only allow claiming a slot that's currently empty.
+  async claimCharacter(charKey) {
+    const user = getState().user
+    if (!user || !charKey) return
+    await fbSet(ref(db, `config/roster/${charKey}`), user.email)
+    set({ role: 'player', charKey })
   },
 }))

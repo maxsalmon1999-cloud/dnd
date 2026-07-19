@@ -5,7 +5,46 @@
 // Shows a sign-in screen when signed out, and a "no access" screen when the
 // signed-in account isn't on the roster (or lacks the required role).
 import { useEffect, useState } from 'react'
+import { ref, get } from 'firebase/database'
+import { db } from './firebase'
 import { useAuth } from './auth'
+
+// Shown to a signed-in user who isn't on the roster yet: pick an unclaimed
+// character to bind to your account. Reads the DM-managed config lists (which
+// stay readable to any signed-in user), so it works under the strict rules too.
+function ClaimScreen() {
+  const { user, claimCharacter, signOut } = useAuth()
+  const [chars, setChars] = useState(null)
+  const [roster, setRoster] = useState({})
+  const [busy, setBusy] = useState('')
+
+  useEffect(() => {
+    Promise.all([get(ref(db, 'config/characters')), get(ref(db, 'config/roster'))])
+      .then(([c, r]) => { setChars(c.val() || {}); setRoster(r.val() || {}) })
+      .catch(() => setChars({}))
+  }, [])
+
+  if (chars === null) return <div style={wrap}><div style={{ opacity: 0.6 }}>Loading…</div></div>
+  const unclaimed = Object.entries(chars).filter(([k]) => !roster[k])
+
+  return (
+    <div style={wrap}>
+      <div style={card}>
+        <h1 style={{ color: '#dcb968', fontSize: 20, marginBottom: 6 }}>Claim your character</h1>
+        <p style={{ opacity: 0.7, fontSize: 13, marginBottom: 18 }}>Signed in as {user.email}. Which one is yours?</p>
+        {unclaimed.length === 0
+          ? <p style={{ opacity: 0.8, fontSize: 14 }}>All characters are already claimed. Ask your DM if this is a mistake.</p>
+          : unclaimed.map(([k, name]) => (
+              <button key={k} style={btn} disabled={!!busy}
+                onClick={async () => { setBusy(k); await claimCharacter(k) }}>
+                {busy === k ? 'Claiming…' : name}
+              </button>
+            ))}
+        <button style={ghost} onClick={signOut}>Sign out</button>
+      </div>
+    </div>
+  )
+}
 
 const wrap = { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0908', color: '#ece0c6', fontFamily: 'system-ui, sans-serif', padding: 24 }
 const card = { width: '100%', maxWidth: 380, background: '#161010', border: '2px solid #473628', borderRadius: 16, padding: 28, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.5)' }
@@ -44,6 +83,11 @@ export default function AuthGate({ require = 'any', children }) {
         </div>
       </div>
     )
+  }
+
+  // Signed in, not yet on the roster, arriving at a player screen → let them claim.
+  if (role === 'none' && (require === 'player' || require === 'any')) {
+    return <ClaimScreen />
   }
 
   // Signed in but not authorized for this screen.

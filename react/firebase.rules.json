@@ -1,0 +1,101 @@
+{
+  "rules": {
+    // ---------------------------------------------------------------------
+    // Per-character access. Everything is denied by default; each node opts in.
+    //
+    //   DM  = the account whose email == config/dmEmail  (verified) → full access
+    //   OWN = the account that owns $charKey via config/roster        → own data
+    //
+    // NB: read rules cascade DOWN, not up. So the DM (who reads WHOLE nodes) needs
+    // a parent-level ".read"; a player reads only their own child node.
+    // Deploy in Firebase console → Realtime Database → Rules. Test before relying.
+    // ---------------------------------------------------------------------
+    ".read": false,
+    ".write": false,
+
+    // Roster + DM identity. Readable by any signed-in user (the app resolves its
+    // own role; the claim screen lists characters). Only the DM edits it — except
+    // a player may claim ONE currently-empty roster slot for their own email.
+    "config": {
+      ".read": "auth != null",
+      "dmEmail":    { ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email" },
+      "characters": { ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email" },
+      "roster": {
+        "$charKey": {
+          ".write": "auth != null && auth.token.email_verified == true && (root.child('config/dmEmail').val() == auth.token.email || (!data.exists() && newData.val() == auth.token.email))"
+        }
+      }
+    },
+
+    // Static sheets — DM reads all + writes; a player reads only their own.
+    "characterSheets": {
+      ".read":  "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      "$charKey": {
+        ".read": "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email"
+      }
+    },
+
+    // Live runtime state — DM reads/writes all; a player reads/writes only their own.
+    "characters": {
+      ".read":  "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      "$charKey": {
+        ".read":  "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email",
+        ".write": "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email"
+      }
+    },
+
+    // Private whispers — DM sees every thread; a player sees only their own.
+    "whispers": {
+      ".read":  "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      "$charKey": {
+        ".read":  "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email",
+        ".write": "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email"
+      }
+    },
+
+    // Player→DM request queues — same shape: DM all, player their own.
+    "inventoryRequests": {
+      ".read":  "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      "$charKey": {
+        ".read":  "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email",
+        ".write": "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email"
+      }
+    },
+    "goldRequests": {
+      ".read":  "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      "$charKey": {
+        ".read":  "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email",
+        ".write": "auth != null && auth.token.email_verified == true && root.child('config/roster').child($charKey).val() == auth.token.email"
+      }
+    },
+
+    // Campaign context — any signed-in user may read; only the DM writes.
+    "campaign": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email"
+    },
+
+    // DM-only nodes.
+    "dmNotes": {
+      ".read":  "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email"
+    },
+    "sessions": {
+      ".read":  "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      ".write": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email"
+    },
+
+    // Dice log — DM reads all; any signed-in user may append a new roll (no edits).
+    "diceLog": {
+      ".read": "auth != null && auth.token.email_verified == true && root.child('config/dmEmail').val() == auth.token.email",
+      "$id": {
+        ".write": "auth != null && auth.token.email_verified == true && !data.exists()"
+      }
+    }
+  }
+}

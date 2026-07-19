@@ -9,6 +9,7 @@ import { useSearchParams } from 'react-router-dom'
 import { CHARACTER } from './characterData'
 import { adaptCharacter } from './characterAdapter'
 import { useGameStore } from '../store/gameStore'
+import { useAuth } from '../auth'
 import { rollLabDice } from './refreshedDice'
 import PlayerWhisper from './PlayerWhisper'
 import { CONDITIONS as COND_INFO } from '../data/gameData'
@@ -1074,17 +1075,25 @@ function CharacterPicker({ sheets, onPick }) {
 // chosen by ?char=<key>; a picker is shown when it's absent or unknown.
 function RefreshedPlayer() {
   const subscribe = useGameStore((s) => s.subscribe)
-  useEffect(() => { subscribe() }, [subscribe])
+  const subscribePlayer = useGameStore((s) => s.subscribePlayer)
+  // When gated, the player is bound to their own character from their login.
+  const authCharKey = useAuth((s) => s.charKey)
+  useEffect(() => {
+    if (authCharKey) subscribePlayer(authCharKey)
+    else subscribe()
+  }, [authCharKey, subscribe, subscribePlayer])
   const sheets = useGameStore((s) => s.sheets)
   const characters = useGameStore((s) => s.characters)
   const [params, setParams] = useSearchParams()
-  const charKey = params.get('char')
+  // Prefer the signed-in character; the ?char= param only matters when un-gated.
+  const charKey = authCharKey || params.get('char')
 
   // wait for the sheets to load before deciding anything
   const keys = Object.keys(sheets || {})
   if (keys.length === 0) return <RefreshedShell>Loading…</RefreshedShell>
 
-  // no character chosen, or an unknown key → let the player pick
+  // no character chosen, or an unknown key → let the player pick (un-gated only;
+  // a gated player always has their bound charKey)
   if (!charKey || !sheets[charKey]) {
     return <CharacterPicker sheets={sheets} onPick={(k) => setParams({ char: k })} />
   }

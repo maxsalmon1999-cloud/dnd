@@ -15,7 +15,7 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/dm" element={<AuthGate require="dm"><DmRefresh /></AuthGate>} />
-        <Route path="/play" element={<RefreshedPlayer />} />
+        <Route path="/play" element={<AuthGate require="player"><RefreshedPlayer /></AuthGate>} />
         <Route path="/callback" element={<Callback />} />
         {/* legacy aliases from the refresh rollout */}
         <Route path="/dm-refresh" element={<RedirectTo path="/dm" />} />
