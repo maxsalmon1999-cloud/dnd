@@ -7,6 +7,16 @@
 //  - reports token usage so the budget tracker can estimate cost
 // ---------------------------------------------------------------------------
 import { WORKER_URL, API_MODEL } from '../config'
+import { auth } from '../firebase'
+
+// The proxy only serves the signed-in DM, so every call carries their Firebase
+// ID token. Returns just the content-type when signed out (the worker 401s).
+async function authHeaders() {
+  const user = auth.currentUser
+  if (!user) return { 'Content-Type': 'application/json' }
+  const token = await user.getIdToken()
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+}
 
 // One-shot, non-streaming completion. Returns { text, usage }.
 // No live callers yet — kept for the one-shot features not yet ported to the
@@ -14,7 +24,7 @@ import { WORKER_URL, API_MODEL } from '../config'
 export async function complete({ system, messages, maxTokens = 1024, model = API_MODEL }) {
   const res = await fetch(WORKER_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({
       model,
       max_tokens: maxTokens,
@@ -39,7 +49,7 @@ export async function stream({
 }) {
   const res = await fetch(WORKER_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({
       model,
       max_tokens: maxTokens,

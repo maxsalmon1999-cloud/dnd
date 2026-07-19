@@ -1,3 +1,10 @@
 name = "dnd-anthropic-proxy"
 main = "index.js"
 compatibility_date = "2024-09-01"
+
+# Non-secret config. FIREBASE_API_KEY is the public web API key (used only to ask
+# Google to verify a user's ID token). DM_EMAIL is who's allowed to use the AI.
+# The Anthropic key stays a secret: wrangler secret put ANTHROPIC_API_KEY.
+[vars]
+FIREBASE_API_KEY = "AIzaSyDdZfJ1J0VL9j0UMW5GujimRJISFaun8ls"
+DM_EMAIL = "max.salmon1999@gmail.com"

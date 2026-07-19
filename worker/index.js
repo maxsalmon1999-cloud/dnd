@@ -1,9 +1,15 @@
 // Cloudflare Worker: Anthropic API proxy for the D&D Session Manager.
 // Holds the API key (env.ANTHROPIC_API_KEY) so the browser app never sees it.
 //
-// Hardening: only browser origins on the allowlist may use the proxy, the
-// model must match the app's configured model family, and max_tokens is
-// capped — so a leaked worker URL can't be used to spend the key freely.
+// Hardening:
+//  - AUTH: every request must carry a Firebase ID token (Authorization: Bearer),
+//    verified via Google, and the account's email must match DM_EMAIL. So only
+//    the signed-in DM can spend credits — a leaked worker URL is useless.
+//  - only browser origins on the allowlist may use the proxy;
+//  - the model must be a claude-* model and max_tokens is capped.
+//
+// Config (wrangler.toml [vars]): FIREBASE_API_KEY, DM_EMAIL.
+// Secret (wrangler secret put ANTHROPIC_API_KEY): ANTHROPIC_API_KEY.
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 
@@ -23,7 +29,7 @@ const MAX_TOKENS_CAP = 8192;
 const corsHeaders = (origin) => ({
   'Access-Control-Allow-Origin': origin,
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 });
 
 const jsonError = (origin, status, message) =>
@@ -31,6 +37,29 @@ const jsonError = (origin, status, message) =>
     status,
     headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
   });
+
+// Verify a Firebase ID token and return its verified email (lowercased), or null.
+// Google's Identity Toolkit checks the signature + expiry for us — no crypto here.
+async function verifiedEmail(idToken, apiKey) {
+  if (!idToken || !apiKey) return null;
+  try {
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const user = data.users && data.users[0];
+    if (!user || user.emailVerified !== true || !user.email) return null;
+    return String(user.email).toLowerCase();
+  } catch {
+    return null;
+  }
+}
 
 export default {
   async fetch(request, env) {
@@ -45,6 +74,14 @@ export default {
     }
     if (request.method !== 'POST') {
       return new Response('Method not allowed', { status: 405, headers: CORS });
+    }
+
+    // Require a signed-in DM. The client sends its Firebase ID token.
+    const authz = request.headers.get('Authorization') || '';
+    const idToken = authz.startsWith('Bearer ') ? authz.slice(7) : '';
+    const email = await verifiedEmail(idToken, env.FIREBASE_API_KEY);
+    if (!email || email !== String(env.DM_EMAIL || '').toLowerCase()) {
+      return jsonError(origin, 401, 'Sign in as the DM to use the AI');
     }
 
     let body;
