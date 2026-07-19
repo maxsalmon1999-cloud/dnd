@@ -166,7 +166,7 @@ export function Whispers() {
                 </div>
               )
             })
-          : <span style={{ fontSize: '13px', color: 'var(--text-faint)', lineHeight: 1.5 }}>{to ? `No whispers yet — send ${toName} a private message.` : 'Select a character to whisper.'}</span>}
+          : (to ? null : <span style={{ fontSize: '13px', color: 'var(--text-faint)', lineHeight: 1.5 }}>Select a character to whisper.</span>)}
       </div>
 
       <div style={{ display: 'flex', gap: '6px' }}>
