@@ -5,7 +5,7 @@
 import { useEffect, useRef } from 'react'
 import DMScreen from './DMScreen'
 import { adaptDmParty } from './dmParty'
-import { flattenRequests } from './liveParts'
+import { flattenRequests } from './requests'
 import { useGameStore } from '../store/gameStore'
 import { stream } from '../lib/ai'
 import { buildSystemPrompt } from '../dm/prompts'
@@ -40,10 +40,15 @@ export default function DmRefresh() {
 
   // Conversation history for the AI (survives re-renders, resets on reload).
   const historyRef = useRef([])
+  // Whether the most recent transcript exchange is history-backed (a failed
+  // call shows an error bubble but contributes no history — Undo must not
+  // pop a real exchange for it).
+  const lastExchangeOk = useRef(false)
 
-  const keys = Object.keys(sheets || {})
-  // Until the sheets load, let the prototype show its own mock party.
-  const liveCharacters = keys.length ? adaptDmParty(sheets, characters) : undefined
+  // Always feed the live party (empty while Firebase loads). Falling back to
+  // the prototype's mock party here let its HP buttons write phantom
+  // characters (e.g. characters/akwan) to Firebase during the load window.
+  const liveCharacters = adaptDmParty(sheets, characters)
   const requestCount = flattenRequests(invReqs).length + flattenRequests(goldReqs).length
 
   // The real DM prompt tool: same pipeline as the classic DM screen —
@@ -52,18 +57,36 @@ export default function DmRefresh() {
     const { campaign, sheets: liveSheets } = useGameStore.getState()
     const system = buildSystemPrompt({ campaign, sheets: liveSheets, mode: MODE_KEY[mode] || 'description' })
     historyRef.current = [...historyRef.current, { role: 'user', content: text }]
-    const { text: reply, usage } = await stream({
-      system,
-      messages: historyRef.current,
-      maxTokens: 1024,
-      onToken: (() => { let acc = ''; return (chunk) => { acc += chunk; onToken(acc) } })(),
-    })
+    let reply, usage
+    try {
+      ;({ text: reply, usage } = await stream({
+        system,
+        messages: historyRef.current,
+        maxTokens: 1024,
+        onToken: (() => { let acc = ''; return (chunk) => { acc += chunk; onToken(acc) } })(),
+      }))
+    } catch (err) {
+      // Roll back the user turn so a failed call doesn't leave an orphan
+      // message in the history (which would desync Undo and the model).
+      historyRef.current = historyRef.current.slice(0, -1)
+      lastExchangeOk.current = false
+      throw err
+    }
     historyRef.current = [...historyRef.current, { role: 'assistant', content: reply }]
+    lastExchangeOk.current = true
     useBudget.getState().record(usage)
     return { reply, spentUsd: useBudget.getState().spentUsd }
   }
 
-  const budget = useBudget()
+  const onAiUndo = () => {
+    // Skip the pop when the exchange being undone was an error bubble.
+    if (lastExchangeOk.current) historyRef.current = historyRef.current.slice(0, -2)
+    lastExchangeOk.current = historyRef.current.length > 0
+  }
+
+  // Seed only — DMScreen reads initialBudget once in its constructor, so a
+  // live subscription here would just re-render this wrapper for nothing.
+  const budget = useBudget.getState()
 
   return (
     <DMScreen
@@ -74,7 +97,7 @@ export default function DmRefresh() {
       onBudgetLimit={(v) => useBudget.getState().setLimit(v)}
       onBudgetReset={() => useBudget.getState().reset()}
       onAiSend={onAiSend}
-      onAiUndo={() => { historyRef.current = historyRef.current.slice(0, -2) }}
+      onAiUndo={onAiUndo}
       onAdjustHp={(id, delta) => changeHp(id, delta)}
       onEndSession={() => endSession()}
     />

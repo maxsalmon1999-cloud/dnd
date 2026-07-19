@@ -2,12 +2,16 @@
 // Kept here so the verbatim DMScreen prototype stays mostly untouched.
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../store/gameStore'
-import { fmtMod } from '../shared/helpers'
+import { fmtMod, threadOf } from '../shared/helpers'
 import { rollDmDice } from './dmDice'
+import { flattenRequests } from './requests'
 import {
   useSpotify, initSpotify, connectSpotify, playMood,
   togglePlay, nextTrack, prevTrack, setVolume, MOOD_PLAYLISTS,
 } from '../dm/spotify'
+
+// "AKWAN AKUSIAN" (or the key itself) → "Akwan" for chips and request cards.
+const firstNameOf = (entity, key) => String(entity?.name || key).split(' ')[0]
 
 const FIELD = {
   background: 'var(--surface-slot)', boxShadow: 'var(--frame-slot)',
@@ -104,11 +108,6 @@ const pill = (sel, waiting) => ({
   border: `2px solid ${sel ? 'var(--brass-600)' : waiting ? 'var(--brass-300)' : 'var(--ink-900)'}`,
 })
 
-// newest-last thread array from a whispers/{charKey} node (push keys sort by time)
-const threadOf = (node) => Object.entries(node || {})
-  .sort(([a], [b]) => (a < b ? -1 : 1))
-  .map(([id, w]) => ({ id, ...w }))
-
 export function Whispers() {
   const whispers = useGameStore((s) => s.whispers)
   const sheets = useGameStore((s) => s.sheets)
@@ -118,7 +117,7 @@ export function Whispers() {
   // Player roster — prefer character sheets (they carry names); fall back to live state.
   const roster = Object.keys(sheets || {}).length ? sheets : (characters || {})
   const keys = Object.keys(roster)
-  const firstName = (k) => String(roster[k]?.name || k).split(' ')[0]
+  const firstName = (k) => firstNameOf(roster[k], k)
 
   const [sel, setSel] = useState('')
   const [draft, setDraft] = useState('')
@@ -183,15 +182,6 @@ export function Whispers() {
 }
 
 // ---- Requests: live inventory + gold requests with approve/deny ----
-// Flatten {charKey: {reqId: req}} into rows, oldest first.
-export function flattenRequests(byChar) {
-  const out = []
-  Object.entries(byChar || {}).forEach(([charKey, reqs]) => {
-    Object.entries(reqs || {}).forEach(([reqId, req]) => out.push({ charKey, reqId, ...req }))
-  })
-  return out.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
-}
-
 const reqBadge = (kind) => ({
   display: 'inline-flex', alignItems: 'center', height: '20px', padding: '0 8px',
   fontFamily: 'var(--font-label)', fontSize: '9px', letterSpacing: 'var(--ls-label)',
@@ -215,7 +205,7 @@ export function RequestsPanel() {
   const rejectInv = useGameStore((s) => s.rejectInventoryRequest)
   const approveGold = useGameStore((s) => s.approveGoldRequest)
   const rejectGold = useGameStore((s) => s.rejectGoldRequest)
-  const firstName = (k) => String(sheets?.[k]?.name || k).split(' ')[0]
+  const firstName = (k) => firstNameOf(sheets?.[k], k)
 
   const rows = [
     ...invReqs.map((r) => ({

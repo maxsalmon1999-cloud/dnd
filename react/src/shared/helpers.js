@@ -14,3 +14,8 @@ export function slotLevel(slot) {
   const m = (slot.label || slot.shortLabel || '').match(/\d+/)
   return m ? parseInt(m[0], 10) : 1
 }
+
+// A whispers/{charKey} node → newest-last thread array (push keys sort by time).
+export const threadOf = (node) => Object.entries(node || {})
+  .sort(([a], [b]) => (a < b ? -1 : 1))
+  .map(([id, w]) => ({ id, ...w }))

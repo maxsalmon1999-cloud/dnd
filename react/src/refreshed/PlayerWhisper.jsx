@@ -3,11 +3,7 @@
 // messages sync live with the DM screen in both directions.
 import { useState, useRef, useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
-
-// newest-last thread from a whispers/{charKey} node (push keys sort by time)
-const threadOf = (node) => Object.entries(node || {})
-  .sort(([a], [b]) => (a < b ? -1 : 1))
-  .map(([id, w]) => ({ id, ...w }))
+import { threadOf } from '../shared/helpers'
 
 // Full-screen "shhhh…" alert when the DM whispers. Blocks until the player drags
 // the knob to the far end (same slide mechanic as slide-to-delete elsewhere).
